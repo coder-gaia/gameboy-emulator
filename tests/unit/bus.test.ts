@@ -18,11 +18,24 @@ describe('MemoryBus', () => {
   it('mapeia fronteiras de VRAM, RAM externa, WRAM, OAM, IO, HRAM e IE', () => {
     const bus = createBus()
     const addresses = [
-      0x8000, 0x9fff, 0xa000, 0xbfff, 0xc000, 0xdfff, 0xfe00, 0xfe9f, 0xff00, 0xff7f, 0xff80,
+      0x8000, 0x9fff, 0xa000, 0xbfff, 0xc000, 0xdfff, 0xfe00, 0xfe9f, 0xff7e, 0xff7f, 0xff80,
       0xfffe, 0xffff,
     ]
     addresses.forEach((address, index) => bus.write8(address, index + 1))
     addresses.forEach((address, index) => expect(bus.read8(address)).toBe(index + 1))
+  })
+
+  it('mapeia FF00 como joypad ativo em zero e conecta sua interrupção', () => {
+    const bus = createBus()
+    expect(bus.read8(0xff00)).toBe(0xff)
+    bus.joypad.setButton('right', true)
+    expect(bus.read8(0xff00)).toBe(0xff)
+    expect(bus.read8(0xff0f) & 0x10).toBe(0)
+    bus.write8(0xff00, 0x20)
+    expect(bus.read8(0xff00)).toBe(0xee)
+    expect(bus.read8(0xff0f) & 0x10).toBe(0x10)
+    bus.joypad.releaseAll()
+    expect(bus.read8(0xff00)).toBe(0xef)
   })
 
   it('espelha WRAM nos dois sentidos até FDFF sem atingir OAM', () => {

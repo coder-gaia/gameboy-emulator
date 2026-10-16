@@ -12,7 +12,7 @@ Na raiz do projeto, com Node 22.12 ou superior:
 node scripts/test-roms/fetch.mjs
 ```
 
-O comando baixa somente os 15 arquivos Blargg necessários, de URLs fixadas por revisão, para `.work/roms/blargg/`. Essa pasta é ignorada pelo Git. As 47 fixtures Mooneye são distribuídas com a licença MIT original em `tests/roms/fixtures/mooneye/LICENSE.txt`.
+O comando baixa somente os 15 arquivos Blargg necessários, de URLs fixadas por revisão, para `.work/roms/blargg/`. Essa pasta é ignorada pelo Git. As 47 fixtures Mooneye são distribuídas com a licença MIT original em `tests/roms/fixtures/mooneye/LICENSE.txt`. A ROM e a referência dmg-acid2 também são fixtures versionadas, com licença MIT em `tests/roms/fixtures/acid2/LICENSE.txt`.
 
 Todo arquivo existente e todo download precisa coincidir com o SHA-256 registrado. Um arquivo divergente causa falha e não é substituído silenciosamente. A opção `--verify` executa apenas a conferência, sem acesso à rede:
 
@@ -22,13 +22,21 @@ node scripts/test-roms/fetch.mjs --verify
 
 O CI pode executar os mesmos comandos antes do runner de hardware. Os testes devem falhar se um arquivo estiver ausente, corrompido ou se a execução atingir o limite de T-cycles.
 
+O comando completo da M05 verifica as fixtures gráficas e executa os 63 testes externos:
+
+```powershell
+npm.cmd run test:hardware
+```
+
+O resultado atual é 62 ROMs de instruções e timing aprovadas e dmg-acid2 aprovado com zero pixels divergentes. Os testes locais de unidade e integração são executados separadamente por `npm.cmd test`.
+
 ## Licenças e procedência
 
 | Suíte     | Origem fixada                                                                                                                                       | Licença e distribuição                                                                                                                                                                            |
 | --------- | --------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Blargg    | [retrio/gb-test-roms, c240dd7](https://github.com/retrio/gb-test-roms/tree/c240dd7d700e5c0b00a7bbba52b53e4ee67b5f15)                                | A revisão não contém licença explícita. Os binários são obtidos diretamente da origem para uso nos testes locais e no CI. Não são incorporados ao repositório, aos artefatos públicos ou ao site. |
 | Mooneye   | [Gekkio/mooneye-test-suite, 31510e1](https://github.com/Gekkio/mooneye-test-suite/tree/31510e12eea6286d36eea060a6adde755e1067aa)                    | [MIT](https://github.com/Gekkio/mooneye-test-suite/blob/31510e12eea6286d36eea060a6adde755e1067aa/LICENSE). As fixtures preservam o aviso original de Joonas Javanainen.                           |
-| dmg-acid2 | [mattcurrie/dmg-acid2, 8a98ce7](https://github.com/mattcurrie/dmg-acid2/tree/8a98ce731f96dde032ffb22ec36dc985d78fdb18), ROM publicada na versão 1.0 | [MIT](https://github.com/mattcurrie/dmg-acid2/blob/8a98ce731f96dde032ffb22ec36dc985d78fdb18/LICENSE). A ROM e a referência preservam o aviso original de Matt Currie. Integração na M05.          |
+| dmg-acid2 | [mattcurrie/dmg-acid2, 8a98ce7](https://github.com/mattcurrie/dmg-acid2/tree/8a98ce731f96dde032ffb22ec36dc985d78fdb18), ROM publicada na versão 1.0 | [MIT](https://github.com/mattcurrie/dmg-acid2/blob/8a98ce731f96dde032ffb22ec36dc985d78fdb18/LICENSE). A ROM e a referência preservam o aviso original de Matt Currie. Executado na M05.           |
 
 O repositório retrio identifica Shay Green como autor das ROMs Blargg e aponta para o antigo endereço oficial. A disponibilidade pública desses arquivos não é tratada como concessão de licença para redistribuição. Downloads não devem ser anexados a releases nem enviados como artefatos do CI.
 
@@ -57,6 +65,8 @@ A seleção da M03 contém 27 ROMs: os 13 testes de timer, DIV, EI, sequência E
 
 As outras 20 entradas ficam na M04 porque esperam LY/VBlank real durante o teste. Elas exercitam acessos de instruções e DMA sincronizados com o LCD. O runner seleciona a milestone pelo campo `milestone`; não simula LY nem injeta resultados para antecipar a execução.
 
+Os casos de instruções que atravessam WRAM e OAM durante DMA também verificam a separação dos barramentos do DMG. Uma cópia de VRAM ocupa seu próprio barramento e permite acesso à memória principal; uma cópia da memória principal permite acesso à VRAM quando a PPU a libera. O bloqueio acompanha a origem ativa durante reinícios do DMA. Essa modelagem foi conferida com os testes Mooneye verificados em hardware e a seleção de barramento em `is_addr_in_dma_use` do [SameBoy](https://github.com/LIJI32/SameBoy/blob/master/Core/memory.c).
+
 O teste `oam_dma/sources-GS` não integra este grupo: seu cartucho é MBC5 com RAM e bateria. Ele pode ser incluído na M12, quando o mapper correspondente existir. Os testes de boot ficam fora da seleção porque o projeto inicializa após o boot e não distribui boot ROM.
 
 ### dmg-acid2
@@ -65,11 +75,15 @@ O teste `oam_dma/sources-GS` não integra este grupo: seu cartucho é MBC5 com R
 
 O protocolo `framebuffer` compara todos os pixels antes da paleta visual, de filtros e da escala da interface. Os quatro níveis de cinza, do mais claro para o mais escuro, são 255, 170, 85 e 0. A referência original é PNG de cinza com profundidade de 2 bits. Uma comparação incorreta deve produzir diagnóstico e imagem de diferenças, preservando a referência original.
 
+O teste usa a mesma classe `GameBoy` da aplicação e captura o décimo quadro. Na M05, todos os 23.040 pixels coincidem. Se houver divergência, os arquivos `dmg-acid2-actual.png`, `dmg-acid2-differences.png` e `dmg-acid2-reference.png` são gravados em `test-results/hardware/`, pasta ignorada pelo Git.
+
 ```powershell
 node scripts/test-roms/fetch.mjs --verify --acid2
 ```
 
 Esse teste valida composição de fundo, janela, sprites e interrupções LYC utilizadas pela ROM. O próprio autor informa que um renderizador por scanline consegue passar. A aprovação não comprova precisão de todos os timings do PPU. [Requisitos oficiais](https://github.com/mattcurrie/dmg-acid2#emulator-requirements).
+
+O núcleo atual não implementa pixel FIFO, mudanças de registradores dentro do modo 3 nem as peculiaridades da janela em WX 0 e 166. Esses limites continuam explícitos mesmo com a aprovação da suíte gráfica.
 
 ## Reconstruir Mooneye
 

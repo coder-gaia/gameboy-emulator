@@ -4,16 +4,15 @@ import { createVisualDiagnosticRom } from '../../src/core/diagnostics/visual-car
 import { buildTestRom } from '../fixtures/rom'
 
 describe('vídeo real da máquina DMG', () => {
-  it('executa a fixture visual pela CPU e apresenta quatro tons com scroll', () => {
+  it('executa a fixture visual pela CPU e apresenta quatro tons e janela', () => {
     const device = new GameBoy(createVisualDiagnosticRom())
     for (let frame = 0; frame < 5; frame += 1) device.runFrame()
     const before = device.framebuffer.slice()
-    const scroll = device.bus.read8Direct(0xff43)
+    const frameId = device.frameId
     expect(new Set(before)).toEqual(new Set([0, 1, 2, 3]))
     device.runFrame()
-    expect(device.bus.read8Direct(0xff43)).toBe((scroll + 1) & 0xff)
-    expect(device.framebuffer).not.toEqual(before)
-    expect(device.frameId).toBeGreaterThan(0)
+    expect(device.framebuffer).toEqual(before)
+    expect(device.frameId).toBeGreaterThan(frameId)
     expect(device.cpu.totalTCycles).toBe(device.bus.tCycles)
   })
 

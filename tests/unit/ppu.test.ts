@@ -216,13 +216,14 @@ describe('Ppu DMG: fundo', () => {
     expect(ppu.mode).toBe(2)
   })
 
-  it('usa cor zero do BGP quando o fundo está desativado', () => {
+  it('mantém fundo desligado branco independentemente de BGP', () => {
     const { ppu } = createPpu()
     ppu.vram.fill(0xff, 0, 16)
     ppu.writeRegister(0xff40, 0x90)
     ppu.writeRegister(0xff47, 0xe7)
     ppu.tick(456)
-    expect(ppu.framebuffer.subarray(0, 160).every((pixel) => pixel === 3)).toBe(true)
+    // LCDC.0 no DMG apaga BG e janela; BGP não recolore a tela em branco.
+    expect(ppu.framebuffer.subarray(0, 160).every((pixel) => pixel === 0)).toBe(true)
   })
 
   it('produz quadros determinísticos com ticks agrupados ou pequenos', () => {

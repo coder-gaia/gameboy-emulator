@@ -12,7 +12,7 @@
 - Confirmar o commit no GitHub antes de avançar para a próxima milestone. Não enviar links individuais de commits, salvo pedido.
 - Pausar ao concluir cada grupo de três milestones para o proprietário testar.
 - Na pausa, entregar instruções concretas de teste e os resultados esperados. Aguardar o ok antes de continuar.
-- O grupo M00, M01 e M02 foi aprovado. O grupo atual contém M03, M04 e M05. Pausar antes de M06.
+- O grupo M00, M01 e M02 foi aprovado. M03, M04 e M05 encerram o segundo grupo. Entregar docs/testing-m03-m05.md e pausar antes de M06; aguardar novo ok do proprietário.
 
 ## Escrita
 

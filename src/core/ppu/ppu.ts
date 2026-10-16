@@ -48,6 +48,10 @@ export class Ppu {
   private statLine = false
   private statWriteTCycles = 0
   private completedFrames = 0
+  private windowYTriggered = false
+  private windowLine = 0
+  private readonly selectedObjects = new Uint8Array(10)
+  private selectedObjectCount = 0
 
   constructor(private readonly requestInterrupt: (mask: number) => void = () => {}) {}
 
@@ -89,6 +93,9 @@ export class Ppu {
     this.statLine = false
     this.statWriteTCycles = 0
     this.completedFrames = 0
+    this.windowYTriggered = false
+    this.windowLine = 0
+    this.selectedObjectCount = 0
   }
 
   readRegister(address: number): number {
@@ -132,6 +139,9 @@ export class Ppu {
           this.currentMode = this.lcdEnabled ? 2 : 0
           this.statWriteTCycles = 0
           this.statLine = false
+          this.windowYTriggered = false
+          this.windowLine = 0
+          this.selectedObjectCount = 0
           if (!this.lcdEnabled) this.framebuffer.fill(0)
         }
         this.updateStatLine()
@@ -178,6 +188,9 @@ export class Ppu {
       throw new Error('A PPU exige uma quantidade inteira e não negativa de T-cycles.')
     }
     if (!this.lcdEnabled) return
+    if (tCycles > 0 && this.currentMode === 2 && this.lineTCycles === 0 && this.line === this.wy) {
+      this.windowYTriggered = true
+    }
     let remaining = tCycles
     while (remaining > 0) {
       let boundary = T_CYCLES_PER_LINE
@@ -212,8 +225,9 @@ export class Ppu {
 
   private advanceBoundary(): void {
     if (this.currentMode === 2) {
+      this.selectObjects()
       this.currentMode = 3
-      this.transferEnd = 252 + (this.scx & 7)
+      this.transferEnd = this.computeTransferEnd()
     } else if (this.currentMode === 3) {
       this.renderLine()
       this.currentMode = 0
@@ -223,9 +237,12 @@ export class Ppu {
       if (this.line === SCREEN_HEIGHT) {
         this.currentMode = 1
         this.completedFrames += 1
+        this.windowYTriggered = false
+        this.windowLine = 0
         this.requestInterrupt(0x01)
       } else if (this.line < SCREEN_HEIGHT) {
         this.currentMode = 2
+        if (this.line === this.wy) this.windowYTriggered = true
       }
     }
   }
@@ -245,12 +262,98 @@ export class Ppu {
   private renderLine(): void {
     const bgEnabled = (this.lcdc & 1) !== 0
     const mapBase = (this.lcdc & 8) !== 0 ? 0x1c00 : 0x1800
+    const windowMapBase = (this.lcdc & 0x40) !== 0 ? 0x1c00 : 0x1800
+    const windowVisible = this.isWindowVisible()
+    const windowX = this.wx - 7
     const y = (this.line + this.scy) & 0xff
     const output = this.line * SCREEN_WIDTH
     for (let x = 0; x < SCREEN_WIDTH; x += 1) {
-      const color = bgEnabled ? this.tilePixel(mapBase, (x + this.scx) & 0xff, y) : 0
-      this.framebuffer[output + x] = (this.bgp >>> (color * 2)) & 3
+      let color = 0
+      if (bgEnabled) {
+        color =
+          windowVisible && x >= windowX
+            ? this.tilePixel(windowMapBase, x - windowX, this.windowLine)
+            : this.tilePixel(mapBase, (x + this.scx) & 0xff, y)
+      }
+      const shade = bgEnabled ? (this.bgp >>> (color * 2)) & 3 : 0
+      this.framebuffer[output + x] = this.objectShade(x, color, shade)
     }
+    if (windowVisible) this.windowLine += 1
+  }
+
+  private isWindowVisible(): boolean {
+    return (this.lcdc & 0x21) === 0x21 && this.windowYTriggered && this.wx <= 166
+  }
+
+  private selectObjects(): void {
+    this.selectedObjectCount = 0
+    const height = (this.lcdc & 4) !== 0 ? 16 : 8
+    // A seleção usa apenas Y, inclusive para objetos fora da tela em X.
+    for (let object = 0; object < 40 && this.selectedObjectCount < 10; object += 1) {
+      const y = this.oam[object * 4]! - 16
+      if (this.line < y || this.line >= y + height) continue
+      // Insertion sort estável: menor X primeiro, empate mantém ordem em OAM.
+      let insertion = this.selectedObjectCount
+      const x = this.oam[object * 4 + 1]!
+      while (insertion > 0) {
+        const previous = this.selectedObjects[insertion - 1]!
+        if (this.oam[previous * 4 + 1]! <= x) break
+        this.selectedObjects[insertion] = previous
+        insertion -= 1
+      }
+      this.selectedObjects[insertion] = object
+      this.selectedObjectCount += 1
+    }
+  }
+
+  private computeTransferEnd(): number {
+    let end = 252 + (this.scx & 7)
+    const windowVisible = this.isWindowVisible()
+    if (windowVisible) end += 6
+    if ((this.lcdc & 2) === 0) return end
+    let previousTile = -1
+    for (let index = 0; index < this.selectedObjectCount; index += 1) {
+      const object = this.selectedObjects[index]!
+      const oamX = this.oam[object * 4 + 1]!
+      if (oamX === 0) {
+        end += 11
+        continue
+      }
+      if (oamX >= 168) continue
+      const x = oamX - 8
+      const inWindow = windowVisible && x >= this.wx - 7
+      const tileX = inWindow ? x - (this.wx - 7) : (x + this.scx) & 0xff
+      const tile = (tileX >>> 3) + (inWindow ? 32 : 0)
+      if (tile !== previousTile) end += Math.max(0, 5 - (tileX & 7))
+      end += 6
+      previousTile = tile
+    }
+    return end
+  }
+
+  private objectShade(x: number, backgroundColor: number, backgroundShade: number): number {
+    if ((this.lcdc & 2) === 0) return backgroundShade
+    const height = (this.lcdc & 4) !== 0 ? 16 : 8
+    for (let index = 0; index < this.selectedObjectCount; index += 1) {
+      const offset = this.selectedObjects[index]! * 4
+      const left = this.oam[offset + 1]! - 8
+      if (x < left || x >= left + 8) continue
+      const flags = this.oam[offset + 3]!
+      let row = this.line - (this.oam[offset]! - 16)
+      if ((flags & 0x40) !== 0) row = height - 1 - row
+      let tile = this.oam[offset + 2]!
+      if (height === 16) tile = (tile & 0xfe) + (row >>> 3)
+      const address = tile * 16 + (row & 7) * 2
+      const bit = (flags & 0x20) !== 0 ? x - left : 7 - (x - left)
+      const color =
+        ((this.vram[address]! >>> bit) & 1) | (((this.vram[address + 1]! >>> bit) & 1) << 1)
+      if (color === 0) continue
+      // Primeiro resolve OBJ contra OBJ; só então o vencedor disputa com BG.
+      if ((flags & 0x80) !== 0 && backgroundColor !== 0) return backgroundShade
+      const palette = (flags & 0x10) !== 0 ? this.obp1 : this.obp0
+      return (palette >>> (color * 2)) & 3
+    }
+    return backgroundShade
   }
 
   private tilePixel(mapBase: number, x: number, y: number): number {

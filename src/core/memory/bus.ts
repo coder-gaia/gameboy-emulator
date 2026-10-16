@@ -3,11 +3,13 @@ import { OamDma } from '../dma'
 import { SerialPort } from '../serial'
 import { Timer } from '../timer'
 import { Ppu } from '../ppu'
+import { Joypad } from '../joypad'
 
 export class MemoryBus {
   readonly serial = new SerialPort()
   readonly timer = new Timer()
   readonly ppu = new Ppu((mask) => this.requestInterrupt(mask))
+  readonly joypad = new Joypad((mask) => this.requestInterrupt(mask))
   readonly dma = new OamDma(
     (address) => this.read8Direct(address),
     (address, value) => this.write8Direct(address, value),
@@ -53,6 +55,7 @@ export class MemoryBus {
     if (normalized < 0xff00) return 0xff
     if (normalized === 0xffff) return this.interruptEnable
     if (normalized >= 0xff80) return this.hram[normalized - 0xff80]!
+    if (normalized === 0xff00) return this.joypad.read()
     if (normalized === 0xff01) return this.serial.readData()
     if (normalized === 0xff02) return this.serial.readControl()
     if (normalized >= 0xff04 && normalized <= 0xff07) return this.timer.read8(normalized)
@@ -90,6 +93,7 @@ export class MemoryBus {
     else if (normalized < 0xff00) return
     else if (normalized === 0xffff) this.interruptEnable = byte
     else if (normalized >= 0xff80) this.hram[normalized - 0xff80] = byte
+    else if (normalized === 0xff00) this.joypad.write(byte)
     else if (normalized === 0xff01) this.serial.writeData(byte)
     else if (normalized === 0xff02) this.serial.writeControl(byte)
     else if (normalized >= 0xff04 && normalized <= 0xff07) this.timer.write8(normalized, byte)

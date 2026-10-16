@@ -9,7 +9,7 @@ Stack aprovada: TypeScript estrito, React, Vite, CSS Modules, Canvas 2D, Worker,
 | M02   | CPU SM83, instruções, flags e ciclos                | Concluída |
 | M03   | Timers, interrupções, HALT, DMA e suítes de timing  | Concluída |
 | M04   | PPU, fundo, tiles e scroll                          | Concluída |
-| M05   | Sprites, janela, joypad e dmg-acid2                 | Pendente  |
+| M05   | Sprites, janela, joypad e dmg-acid2                 | Concluída |
 | M06   | MBC1, bateria e demo autorizada                     | Pendente  |
 | M07   | APU, Worker e sincronização de áudio                | Pendente  |
 | M08   | Save states versionados e slots                     | Pendente  |
@@ -20,11 +20,17 @@ Stack aprovada: TypeScript estrito, React, Vite, CSS Modules, Canvas 2D, Worker,
 | M13   | Painel técnico completo                             | Pendente  |
 | M14   | Release, README, portfólio e material para LinkedIn | Pendente  |
 
-## Primeiro ponto de revisão
+## Pontos de revisão
 
-O primeiro grupo foi aprovado pelo proprietário. Continuar com M03, M04 e M05 e pausar antes de M06, entregando roteiro de teste com resultados esperados.
+O primeiro grupo, M00 a M02, foi aprovado pelo proprietário. O segundo grupo, M03 a M05, está concluído. M03 e M04 foram validadas e enviadas ao GitHub antes de iniciar a milestone seguinte. A M05 encerra o grupo com seu próprio commit e push após os checks.
+
+**Pausar antes da M06 e aguardar o ok do proprietário.** O [roteiro de teste M03 a M05](testing-m03-m05.md) registra preparação, ações, resultados esperados e limitações atuais.
 
 O cartucho sintético POCKET TEST permite testar CPU, memória e serial sem obter jogos. O [README](../README.md#testar-o-primeiro-grupo-de-milestones) explica o roteiro inicial. M03 adiciona timers, DMA, correção de EI seguido de HALT e prioridades de interrupção durante escrita na pilha, com 42 ROMs externas aprovadas.
+
+M04 adiciona modos do LCD, fundo, tiles, scroll e o cartucho próprio POCKET GARDEN, com 62 ROMs externas de timing aprovadas. A validação também corrigiu a separação dos barramentos de VRAM e memória principal durante DMA.
+
+M05 adiciona sprites de 8 por 8 e 8 por 16 pixels, janela com contador interno, joypad, teclado, toque e ajuda para carregar cartuchos. O jardim mantém o cenário parado, permite mover e trocar o personagem e apresenta uma legenda fixa. dmg-acid2 compara todos os 23.040 pixels com a referência oficial, somando 63 ROMs externas aprovadas no grupo.
 
 Cada milestone recebe um commit, com título Conventional Commits em inglês e corpo em pt-br. Sem autoria ou coautoria de ferramentas de IA e sem caracteres de travessão.
 
@@ -36,12 +42,14 @@ Cada commit validado deve receber push imediatamente e ser confirmado no GitHub.
 - Núcleo sem dependências de navegador, verificado por configuração TypeScript própria.
 - Testes determinísticos de instruções, memória e serial quando disponíveis.
 - Testes de navegador para os fluxos implementados, incluindo viewport móvel.
-- Informar resultados reais. Blargg, Mooneye e dmg-acid2 serão introduzidos depois com revisão, hash, licença e protocolo registrados.
+- Informar resultados reais. Blargg, Mooneye e dmg-acid2 têm revisão, hash, licença e protocolo registrados em [ROMs externas de teste](test-roms.md).
 - A demo pública só entra após MBC1, bateria e seus créditos estarem prontos.
 
 ## Escopo e metas
 
 A beta da M10 terá demo, áudio, toque, teclado, gamepad, paletas, bateria e save states. O lançamento completo adiciona rewind, cartuchos ampliados e debugger.
+
+A aplicação atual executa ROM Only de 32 KiB. MBC1, bateria e Tobu Tobu Girl pertencem à M06; áudio à M07; save states à M08. O jardim é uma fixture interativa própria, sem áudio ou saves. A PPU por scanline ainda não cobre pixel FIFO, escritas dentro do modo 3 ou peculiaridades de WX 0 e 166.
 
 Meta de demo pronta em três segundos em perfil de teste documentado. Medir velocidade real da emulação, áudio e memória em celular. Cloudflare Pages elimina cold start de servidor, mantendo os custos normais de rede e inicialização no navegador.
 

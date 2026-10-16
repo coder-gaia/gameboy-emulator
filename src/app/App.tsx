@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
 import {
   ArrowUpRight,
@@ -20,6 +20,8 @@ import { parseCartridgeHeader } from '../core/cartridge'
 import { createVisualDiagnosticRom } from '../core/diagnostics/visual-cartridge'
 import { GameBoy } from '../core/gameboy'
 import { GameScreen } from '../ui/screen/GameScreen'
+import { InputController } from '../platform/input/controller'
+import { TouchControls } from '../ui/controls/TouchControls'
 import styles from './App.module.css'
 
 const palettes = [
@@ -97,6 +99,12 @@ export function App() {
   const fileInput = useRef<HTMLInputElement>(null)
   const loadRequest = useRef(0)
   const aboutDialog = useRef<HTMLDialogElement>(null)
+  const cartridgeHelp = useRef<HTMLDialogElement>(null)
+  const controller = useMemo(
+    () =>
+      device ? new InputController((button, pressed) => device.setButton(button, pressed)) : null,
+    [device],
+  )
   const palette = palettes.find((item) => item.id === paletteId) ?? palettes[0]
   const screenStyle = {
     '--lcd-background': palette.background,
@@ -109,6 +117,23 @@ export function App() {
     setError(cause.message)
   }, [])
   const refreshScreen = useCallback(() => setViewRevision((value) => value + 1), [])
+
+  useEffect(() => {
+    if (!controller) return
+    return controller.bindKeyboard(
+      window,
+      () => playing && !loading && !aboutDialog.current?.open && !cartridgeHelp.current?.open,
+    )
+  }, [controller, playing, loading])
+
+  function showCartridgeHelp() {
+    pausePlayback()
+    cartridgeHelp.current?.showModal()
+  }
+  function showAbout() {
+    pausePlayback()
+    aboutDialog.current?.showModal()
+  }
 
   function openCartridge(loaded: LoadedCartridge, autoplay = false) {
     const machine = loaded.metadata.isSupported ? new GameBoy(loaded.rom) : null
@@ -189,11 +214,7 @@ export function App() {
           <span className={styles.brandBadge}>um projeto de bolso</span>
         </a>
         <nav className={styles.navigation} aria-label="Navegação principal">
-          <button
-            className={styles.aboutButton}
-            type="button"
-            onClick={() => aboutDialog.current?.showModal()}
-          >
+          <button className={styles.aboutButton} type="button" onClick={showAbout}>
             <Info size={15} aria-hidden="true" />
             Sobre
           </button>
@@ -282,31 +303,7 @@ export function App() {
               </div>
             </div>
 
-            <div className={styles.consoleControls} aria-hidden="true">
-              <div className={styles.dpad}>
-                <span className={styles.dpadHorizontal} />
-                <span className={styles.dpadVertical} />
-                <span className={styles.dpadCenter} />
-              </div>
-              <div className={styles.menuButtons}>
-                <span>
-                  <i />
-                  SELEC.
-                </span>
-                <span>
-                  <i />
-                  INÍCIO
-                </span>
-              </div>
-              <div className={styles.actionButtons}>
-                <span>
-                  <i />B
-                </span>
-                <span>
-                  <i />A
-                </span>
-              </div>
-            </div>
+            <TouchControls controller={controller} disabled={!playing || loading} />
             <div className={styles.consoleBottom} aria-hidden="true">
               <span>BOAS HISTÓRIAS CABEM NO BOLSO.</span>
               <div className={styles.speaker}>
@@ -439,6 +436,9 @@ export function App() {
               Experimentar cartucho de diagnóstico <ArrowUpRight size={13} aria-hidden="true" />
             </button>
             {cartridge && <CartridgeDetails cartridge={cartridge} />}
+            <button className={styles.diagnosticButton} type="button" onClick={showCartridgeHelp}>
+              Quais arquivos posso usar?
+            </button>
             {device && (
               <CpuInspector
                 key={cartridgeRevision}
@@ -449,6 +449,13 @@ export function App() {
               />
             )}
           </div>
+
+          {device && (
+            <p className={styles.controlHint}>
+              Setas para mover · Z: botão A · X: botão B<br />
+              Enter: Start · Shift: Select · ou use os botões do console
+            </p>
+          )}
 
           <p className={styles.privacyNote}>
             <LockKeyhole size={16} aria-hidden="true" />
@@ -511,6 +518,40 @@ export function App() {
           Acompanhar no GitHub <ArrowUpRight size={16} aria-hidden="true" />
           <span className="sr-only">, abre em nova aba</span>
         </a>
+      </dialog>
+      <dialog ref={cartridgeHelp} className={styles.dialog} aria-labelledby="cartridge-help-title">
+        <button
+          className={styles.closeButton}
+          type="button"
+          aria-label="Fechar ajuda de cartuchos"
+          onClick={() => cartridgeHelp.current?.close()}
+        >
+          <X size={20} aria-hidden="true" />
+        </button>
+        <p className={styles.tinyLabel}>SEU PRÓPRIO CARTUCHO</p>
+        <h2 id="cartridge-help-title">Um arquivo. Um novo mundo.</h2>
+        <p>
+          Escolha um jogo do Game Boy original em arquivo <strong>.gb</strong>. Arquivos{' '}
+          <strong>.gbc</strong> só funcionam quando o jogo também é compatível com o Game Boy
+          original.
+        </p>
+        <p>
+          Se estiver em <strong>.zip</strong>, extraia o arquivo antes. Trocar a extensão de outro
+          arquivo não o transforma em um jogo.
+        </p>
+        <p>
+          Nesta etapa, a reprodução aceita cartuchos <strong>ROM Only de 32 KiB</strong>. Jogos que
+          precisam de MBC1, MBC2, MBC3 ou MBC5 ainda podem ter seus dados consultados, mas o suporte
+          de execução chega depois. O limite de leitura é 8 MiB.
+        </p>
+        <p>
+          O arquivo fica no seu dispositivo e não é enviado para um servidor. Você não precisa
+          fornecer BIOS nem boot ROM.
+        </p>
+        <p>
+          Para experimentar sem arquivo, feche a ajuda e use <strong>Explorar jardim</strong>. Nosso
+          jardim é um teste interativo próprio, ainda sem áudio ou saves.
+        </p>
       </dialog>
     </div>
   )

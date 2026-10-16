@@ -129,27 +129,125 @@ function emitCopy(
   assembler.address(0xcd, 'copy')
 }
 
-/** ROM própria para validar vídeo. Todo o cenário é enviado à VRAM pela CPU SM83. */
+const CHARACTER_TILES = [
+  ['00011000', '00122100', '01222210', '12333321', '00111100', '00131300', '00111100', '00011000'],
+  ['00122100', '01222210', '12322321', '00322300', '00322300', '00322300', '00300300', '03300330'],
+  ['00100100', '01211210', '12322321', '01233210', '00111100', '00131300', '00111100', '00011000'],
+  ['00133100', '01333310', '13311331', '00311300', '00311300', '00311300', '00300300', '03300330'],
+] as const
+
+const LETTERS: Readonly<Record<string, readonly string[]>> = {
+  A: ['01110', '10001', '11111', '10001', '10001'],
+  C: ['01111', '10000', '10000', '10000', '01111'],
+  D: ['11110', '10001', '10001', '10001', '11110'],
+  E: ['11111', '10000', '11110', '10000', '11111'],
+  G: ['01111', '10000', '10111', '10001', '01111'],
+  K: ['10001', '10010', '11100', '10010', '10001'],
+  L: ['10000', '10000', '10000', '10000', '11111'],
+  M: ['10001', '11011', '10101', '10001', '10001'],
+  N: ['10001', '11001', '10101', '10011', '10001'],
+  O: ['01110', '10001', '10001', '10001', '01110'],
+  P: ['11110', '10001', '11110', '10000', '10000'],
+  R: ['11110', '10001', '11110', '10010', '10001'],
+  S: ['01111', '10000', '01110', '00001', '11110'],
+  T: ['11111', '00100', '00100', '00100', '00100'],
+  U: ['10001', '10001', '10001', '10001', '01110'],
+  V: ['10001', '10001', '10001', '01010', '00100'],
+  X: ['10001', '01010', '00100', '01010', '10001'],
+  Z: ['11111', '00010', '00100', '01000', '11111'],
+}
+
+function addWindowText(tiles: Uint8Array): Uint8Array {
+  const map = new Uint8Array(1024)
+  map.fill(24)
+  tiles.set(encodeTiles([Array<string>(8).fill('33333333')]), 24 * 16)
+  const tileByLetter = new Map<string, number>()
+  Object.entries(LETTERS).forEach(([letter, pixels], index) => {
+    const tile = 25 + index
+    const pattern = Array<string>(8).fill('33333333')
+    pixels.forEach((row, y) => {
+      pattern[y + 2] = `3${row.replaceAll('0', '3').replaceAll('1', '0')}33`
+    })
+    tiles.set(encodeTiles([pattern]), tile * 16)
+    tileByLetter.set(letter, tile)
+  })
+  for (const [line, text] of ['POCKET GARDEN', 'Z MUDA  X VOLTA'].entries()) {
+    const start = Math.floor((20 - text.length) / 2)
+    for (let column = 0; column < text.length; column += 1) {
+      map[line * 32 + start + column] = tileByLetter.get(text[column]!) ?? 24
+    }
+  }
+  return map
+}
+
+function emitDirection(
+  assembler: FixtureAssembler,
+  bit: number,
+  variable: number,
+  limit: number,
+  increment: boolean,
+): void {
+  const end = `direction${bit}`
+  assembler.emit(0xcb, 0x40 + bit * 8) // BIT n,B, entradas ativas em zero.
+  assembler.relative(0x20, end)
+  assembler.emit(0xfa, variable & 0xff, variable >>> 8, 0xfe, limit)
+  assembler.relative(0x28, end)
+  assembler.emit(increment ? 0x3c : 0x3d, 0xea, variable & 0xff, variable >>> 8)
+  assembler.label(end)
+}
+
+/** ROM interativa própria: setas movem, A troca o personagem e B recentraliza. */
 export function createVisualDiagnosticRom(): Uint8Array {
   const rom = new Uint8Array(0x8000)
   const title = 'POCKET GARDEN'
   for (let index = 0; index < title.length; index += 1) rom[0x134 + index] = title.charCodeAt(index)
   rom.set([0xc3, 0x50, 0x01], 0x100)
   rom[0x40] = 0xd9 // RETI da interrupção de VBlank.
-  const tiles = encodeTiles(GARDEN_TILES)
+  const tiles = new Uint8Array(48 * 16)
+  tiles.set(encodeTiles(GARDEN_TILES))
+  tiles.set(encodeTiles(CHARACTER_TILES), 16 * 16)
+  const window = addWindowText(tiles)
   rom.set(tiles, 0x1000)
   rom.set(createGardenMap(), 0x2000)
+  rom.set(window, 0x2400)
   const assembler = new FixtureAssembler(rom)
   assembler.emit(0xf3, 0x31, 0xfe, 0xff, 0xaf, 0xe0, 0x40) // DI, SP, LCD desligado.
   emitCopy(assembler, 0x1000, 0x8000, tiles.length)
   emitCopy(assembler, 0x2000, 0x9800, 1024)
-  assembler.emit(0x3e, 0xe4, 0xe0, 0x47) // Paleta identidade.
+  emitCopy(assembler, 0x2400, 0x9c00, 1024)
+  assembler.emit(0x21, 0x00, 0xfe, 0x06, 160, 0xaf)
+  assembler.label('clearOam')
+  assembler.emit(0x22, 0x05)
+  assembler.relative(0x20, 'clearOam')
+  assembler.emit(0x3e, 84, 0xea, 0x00, 0xc0, 0x3e, 88, 0xea, 0x01, 0xc0)
+  assembler.emit(0x3e, 16, 0xea, 0x02, 0xc0, 0x3e, 0xff, 0xea, 0x03, 0xc0)
+  assembler.address(0xcd, 'writeObject')
+  assembler.emit(0x3e, 0xe4, 0xe0, 0x47, 0xe0, 0x48, 0xe0, 0x49) // Paletas identidade.
+  assembler.emit(0x3e, 128, 0xe0, 0x4a, 0x3e, 7, 0xe0, 0x4b)
   assembler.emit(0xaf, 0xe0, 0x42, 0xe0, 0x43, 0xe0, 0x0f)
   assembler.emit(0x3e, 1, 0xea, 0xff, 0xff) // IE: VBlank.
-  assembler.emit(0x3e, 0x91, 0xe0, 0x40, 0xfb, 0x00) // LCD e interrupções ativos.
+  assembler.emit(0x3e, 0xf7, 0xe0, 0x40, 0xfb, 0x00) // LCD, janela, objetos 8x16.
   assembler.label('frame')
-  assembler.emit(0x76, 0xf0, 0x43, 0x3c, 0xe0, 0x43) // HALT; SCX += 1.
+  assembler.emit(0x76, 0x3e, 0x20, 0xe0, 0x00, 0xf0, 0x00, 0x47)
+  emitDirection(assembler, 0, 0xc000, 160, true)
+  emitDirection(assembler, 1, 0xc000, 8, false)
+  emitDirection(assembler, 2, 0xc001, 16, false)
+  emitDirection(assembler, 3, 0xc001, 128, true)
+  assembler.emit(0x3e, 0x10, 0xe0, 0x00, 0xf0, 0x00, 0x47)
+  assembler.emit(0xfa, 0x03, 0xc0, 0xa8, 0x4f, 0x78, 0x2f, 0xa1, 0xcb, 0x47)
+  assembler.relative(0x28, 'keepCharacter')
+  assembler.emit(0xfa, 0x02, 0xc0, 0xee, 2, 0xea, 0x02, 0xc0)
+  assembler.label('keepCharacter')
+  assembler.emit(0xcb, 0x48) // BIT 1,B: botão B.
+  assembler.relative(0x20, 'keepPosition')
+  assembler.emit(0x3e, 84, 0xea, 0x00, 0xc0, 0x3e, 88, 0xea, 0x01, 0xc0)
+  assembler.label('keepPosition')
+  assembler.emit(0x78, 0xea, 0x03, 0xc0)
+  assembler.address(0xcd, 'writeObject')
   assembler.address(0xc3, 'frame')
+  assembler.label('writeObject')
+  assembler.emit(0x21, 0x00, 0xfe, 0xfa, 0x01, 0xc0, 0x22)
+  assembler.emit(0xfa, 0x00, 0xc0, 0x22, 0xfa, 0x02, 0xc0, 0x22, 0xaf, 0x77, 0xc9)
   assembler.label('copy')
   assembler.emit(0x2a, 0x12, 0x13, 0x0b, 0x78, 0xb1)
   assembler.relative(0x20, 'copy')

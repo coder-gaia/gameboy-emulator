@@ -2,6 +2,7 @@ import { Cpu } from './cpu'
 import { MemoryBus } from './memory'
 import { RomOnlyCartridge } from './cartridge'
 import { DMG_FRAME_T_CYCLES } from './model'
+import type { JoypadButton } from './joypad'
 
 /** Máquina DMG independente do navegador. A execução sempre possui orçamento. */
 export class GameBoy {
@@ -22,6 +23,16 @@ export class GameBoy {
   }
   step(): number {
     return this.cpu.step()
+  }
+
+  setButton(button: JoypadButton, pressed: boolean): void {
+    const previous = this.bus.joypad.read()
+    this.bus.joypad.setButton(button, pressed)
+    if ((previous & ~this.bus.joypad.read() & 0x0f) !== 0) this.cpu.wakeFromStop()
+  }
+
+  releaseButtons(): void {
+    this.bus.joypad.releaseAll()
   }
 
   runCycles(budget: number): number {
