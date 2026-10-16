@@ -1,5 +1,10 @@
 {
   "extends": "./tsconfig.app.json",
   "compilerOptions": { "lib": ["ES2022"], "types": ["node"] },
-  "include": ["vite.config.ts", "vitest.config.ts", "playwright.config.ts"]
+  "include": [
+    "vite.config.ts",
+    "vitest.config.ts",
+    "vitest.hardware.config.ts",
+    "playwright.config.ts"
+  ]
 }

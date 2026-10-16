@@ -637,11 +637,11 @@ describe('SM83: interrupções e espera', () => {
     expect(cpu.ime).toBe(false)
     expect(bus.memory[0xff0f]).toBe(0xf4)
     expect(bus.executionEvents()).toEqual([
-      'w:ff0f:f4',
       't:4',
       't:4',
       'w:cfff:1',
       't:4',
+      'w:ff0f:f4',
       'w:cffe:0',
       't:4',
       't:4',

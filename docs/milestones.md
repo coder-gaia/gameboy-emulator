@@ -7,7 +7,7 @@ Stack aprovada: TypeScript estrito, React, Vite, CSS Modules, Canvas 2D, Worker,
 | M00   | Fundação, regras, CI e direção visual               | Concluída |
 | M01   | Header, ROM Only, bus, serial e runner de ROMs      | Concluída |
 | M02   | CPU SM83, instruções, flags e ciclos                | Concluída |
-| M03   | Timers, interrupções, HALT, DMA e suítes de timing  | Pendente  |
+| M03   | Timers, interrupções, HALT, DMA e suítes de timing  | Concluída |
 | M04   | PPU, fundo, tiles e scroll                          | Pendente  |
 | M05   | Sprites, janela, joypad e dmg-acid2                 | Pendente  |
 | M06   | MBC1, bateria e demo autorizada                     | Pendente  |
@@ -22,13 +22,13 @@ Stack aprovada: TypeScript estrito, React, Vite, CSS Modules, Canvas 2D, Worker,
 
 ## Primeiro ponto de revisão
 
-Pausar após M02, sem iniciar M03. O proprietário testa a interface, o carregamento de cartuchos e a CPU. Jogos ainda não terão vídeo ou áudio nesse ponto.
+O primeiro grupo foi aprovado pelo proprietário. Continuar com M03, M04 e M05 e pausar antes de M06, entregando roteiro de teste com resultados esperados.
 
-O cartucho sintético POCKET TEST permite testar CPU, memória e serial sem obter jogos. O [README](../README.md#testar-o-primeiro-grupo-de-milestones) explica o roteiro de teste. Interrupções avançadas, incluindo retorno de EI seguido de HALT com interrupção pendente, e STOP completo continuam previstos para M03.
+O cartucho sintético POCKET TEST permite testar CPU, memória e serial sem obter jogos. O [README](../README.md#testar-o-primeiro-grupo-de-milestones) explica o roteiro inicial. M03 adiciona timers, DMA, correção de EI seguido de HALT e prioridades de interrupção durante escrita na pilha, com 42 ROMs externas aprovadas.
 
 Cada milestone recebe um commit, com título Conventional Commits em inglês e corpo em pt-br. Sem autoria ou coautoria de ferramentas de IA e sem caracteres de travessão.
 
-Cada commit validado deve receber push imediatamente e ter seu link informado ao proprietário. A pausa a cada três milestones não adia o envio dos commits ao GitHub.
+Cada commit validado deve receber push imediatamente e ser confirmado no GitHub. O proprietário não precisa receber links individuais. A pausa a cada três milestones não adia o envio dos commits ao GitHub. Aguardar o ok dos testes antes de iniciar o próximo grupo.
 
 ## Critérios de qualidade
 

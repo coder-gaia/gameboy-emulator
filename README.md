@@ -32,9 +32,18 @@ Canvas 2D, Web Worker, AudioWorklet e IndexedDB serão introduzidos nas mileston
 
 Selecione um arquivo `.gb` ou `.gbc`, ou arraste-o para a página. Os bytes são lidos localmente e não são enviados. O header informa título, controlador, ROM, RAM e bateria. ROMs que exigem Game Boy Color e controladores futuros são identificados sem prometer suporte de execução.
 
-O bus implementa ROM Only, memória de trabalho, echo RAM, VRAM, OAM, HRAM e interrupções de serial. A transferência serial interna leva 4096 T-cycles por byte. Timers, DMA, PPU e APU ainda estão pendentes.
+O bus implementa ROM Only, memória de trabalho, echo RAM, VRAM, OAM, HRAM, timer, DMA de OAM e interrupções. A transferência serial interna leva 4096 T-cycles por byte. PPU e APU ainda estão pendentes.
 
-`npm test` executa fixtures sintéticas próprias, incluindo validação de headers, memória, serial e limites do runner. Nenhuma suíte externa de ROMs foi executada neste estágio.
+`npm test` executa fixtures sintéticas próprias, incluindo headers, memória, serial, CPU, timer, DMA e limites do runner. `npm run test:hardware` executa 42 ROMs externas fixadas por revisão e SHA-256. Consulte [procedência e protocolos](docs/test-roms.md).
+
+| Suíte                         | Resultado atual |
+| ----------------------------- | --------------- |
+| Blargg cpu_instrs individuais | 11 de 11        |
+| Blargg instr_timing           | 1 de 1          |
+| Blargg mem_timing individuais | 3 de 3          |
+| Mooneye, seleção DMG da M03   | 27 de 27        |
+
+As ROMs Blargg são baixadas para uma pasta ignorada. O runner usa um adapter de cartucho de teste MBC1 limitado a 32 KiB, preservando os binários originais. Isso não habilita MBC1 na aplicação. As fixtures Mooneye preservam a licença MIT.
 
 ## Testar o primeiro grupo de milestones
 
@@ -48,11 +57,11 @@ O bus implementa ROM Only, memória de trabalho, echo RAM, VRAM, OAM, HRAM e int
 
 A CPU implementa todas as instruções base válidas e as 256 instruções CB, com testes de aritmética, flags, saltos, pilha, ordem de acessos e snapshots. Os opcodes inválidos geram diagnóstico em vez de serem tratados como NOP.
 
-Os registradores da CPU usam inicialização pós boot DMG, incluindo F dependente do checksum do header. Os periféricos ainda não têm inicialização pós boot completa. STOP tem comportamento básico e interrupções ainda não cobrem corridas durante o atendimento. Esses pontos serão aprofundados nas próximas milestones.
+Os registradores da CPU usam inicialização pós boot DMG, incluindo F dependente do checksum do header. Os periféricos ainda não têm inicialização pós boot completa. STOP tem comportamento básico, com reset do divisor, e a plataforma conectará a entrada do joypad na M05.
 
-Há uma limitação conhecida a resolver na M03: `EI;HALT` com interrupção já pendente precisa ajustar o endereço de retorno ao HALT. O atendimento atual usa o PC seguinte. A validação de timing por suítes externas permanece pendente.
+A M03 corrige `EI;HALT` com interrupção pendente e a resseleção de interrupção quando a pilha escreve sobre IE. Os testes externos não representam aprovação de todos os comportamentos de todas as revisões do hardware.
 
-Esta é a pausa após M00, M01 e M02. M03 ainda não foi iniciada.
+O primeiro grupo foi aprovado. O grupo atual contém M03, M04 e M05, com a próxima pausa antes da M06.
 
 ## Planejamento
 

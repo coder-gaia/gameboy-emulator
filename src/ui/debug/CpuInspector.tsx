@@ -57,8 +57,7 @@ export function CpuInspector({ rom }: { rom: Uint8Array }) {
     <details className={styles.panel}>
       <summary>Inspecionar CPU</summary>
       <p className={styles.explanation}>
-        Avance instruções e observe os registradores. Vídeo, timers e áudio ainda estão em
-        preparação.
+        Avance instruções e observe os registradores. Vídeo e áudio ainda estão em preparação.
       </p>
       <dl className={styles.registers}>
         {Object.entries(registers).map(([name, value]) => (

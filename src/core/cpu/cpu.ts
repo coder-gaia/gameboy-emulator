@@ -4,6 +4,12 @@ const { Z, N, H, C } = CPU_FLAGS
 const IF = 0xff0f
 const IE = 0xffff
 
+interface PeripheralBus extends CpuBus {
+  pendingInterrupts?(): number
+  acknowledgeInterrupt?(mask: number): void
+  resetDivider?(): void
+}
+
 export class InvalidOpcodeError extends Error {
   constructor(
     public readonly opcode: number,
@@ -34,7 +40,7 @@ export class Cpu {
   public halted = false
   public stopped = false
 
-  constructor(private readonly bus: CpuBus) {
+  constructor(private readonly bus: PeripheralBus) {
     this.reset()
   }
 
@@ -170,7 +176,7 @@ export class Cpu {
     if (pending !== 0) {
       this.halted = false
       if (this.ime) {
-        this.serviceInterrupt(pending)
+        this.serviceInterrupt()
         return this.instructionTCycles
       }
     }
@@ -322,19 +328,32 @@ export class Cpu {
 
   private pendingInterrupts(): number {
     // IE/IF são consultados por fios internos, sem consumir M-cycles extras.
-    return this.bus.read8(IE) & this.bus.read8(IF) & 0x1f
+    return this.bus.pendingInterrupts?.() ?? this.bus.read8(IE) & this.bus.read8(IF) & 0x1f
   }
 
-  private serviceInterrupt(pending: number): void {
-    let index = 0
-    while ((pending & (1 << index)) === 0) index += 1
+  private serviceInterrupt(): void {
     this.ime = false
     this.imeEnableDelay = 0
+    // EI;HALT com IRQ já pendente retorna ao HALT, conforme SameSuite.
+    if (this.haltBug) this.pc -= 1
     this.haltBug = false
-    this.bus.write8(IF, this.bus.read8(IF) & ~(1 << index))
     this.idle(8)
-    this.push(this.pc)
-    this.pc = 0x40 + index * 8
+    this.sp -= 1
+    this.write8(this.sp, this.pc >>> 8)
+    // Uma escrita em IE pelo byte alto da pilha pode cancelar ou mudar o IRQ.
+    // O byte baixo chega depois da seleção e não cancela mais o despacho.
+    const pending = this.pendingInterrupts()
+    let vector = 0
+    if (pending !== 0) {
+      let index = 0
+      while ((pending & (1 << index)) === 0) index += 1
+      vector = 0x40 + index * 8
+      if (this.bus.acknowledgeInterrupt) this.bus.acknowledgeInterrupt(1 << index)
+      else this.bus.write8(IF, this.bus.read8(IF) & ~(1 << index))
+    }
+    this.sp -= 1
+    this.write8(this.sp, this.pc)
+    this.pc = vector
     this.idle()
   }
 
@@ -521,6 +540,7 @@ export class Cpu {
       case 0x10:
         // STOP 00 ocupa dois bytes, mas somente um M-cycle no DMG.
         this.pc += 1
+        this.bus.resetDivider?.()
         this.stopped = true
         return
       case 0x18: {

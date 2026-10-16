@@ -9,9 +9,10 @@
 - Escrever o título do commit em inglês e o corpo em pt-br.
 - Conferir mensagem, autor e committer antes de enviar cada commit.
 - Fazer push imediatamente após cada commit validado, sem acumular commits para o final do grupo.
-- Confirmar o commit no GitHub e informar seu link antes de avançar para a próxima milestone.
+- Confirmar o commit no GitHub antes de avançar para a próxima milestone. Não enviar links individuais de commits, salvo pedido.
 - Pausar ao concluir cada grupo de três milestones para o proprietário testar.
-- O primeiro grupo contém M00, M01 e M02. Não iniciar M03 antes do retorno.
+- Na pausa, entregar instruções concretas de teste e os resultados esperados. Aguardar o ok antes de continuar.
+- O grupo M00, M01 e M02 foi aprovado. O grupo atual contém M03, M04 e M05. Pausar antes de M06.
 
 ## Escrita
 
@@ -37,4 +38,5 @@
 - Corrigir causas das falhas sem enfraquecer checks ou excluir casos válidos.
 - Testes de CPU, bus e cartucho devem rodar sem navegador.
 - Interface com foco visível, contraste, teclado, toque e movimento reduzido.
+- Explicar os formatos de cartucho perto do carregamento e validar arquivos com mensagens úteis. ROMs próprias ficam locais.
 - Design com superfícies neutras e uma cor de destaque usada estrategicamente.

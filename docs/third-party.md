@@ -13,4 +13,4 @@ Nenhuma ROM comercial ou boot ROM original é distribuída. As fixtures e o cart
 
 Tobu Tobu Girl está planejado para M06. Antes da inclusão, registrar versão, SHA-256, aviso MIT do código e atribuição CC BY 4.0 dos assets. Origem: https://github.com/SimonLarsen/tobutobugirl.
 
-As suítes Blargg, Mooneye e dmg-acid2 ainda não são incluídas nem executadas. Confirmar permissões e fixar revisões antes de integrá-las. Download no CI não substitui essa verificação.
+Blargg e Mooneye são executados na M03 com revisões e hashes fixos. Os binários Blargg permanecem em `.work` e não são redistribuídos. As fixtures Mooneye preservam a licença MIT. dmg-acid2 está preparado para M05. Consulte [procedência, licenças e reconstrução](test-roms.md).

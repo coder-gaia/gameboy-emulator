@@ -1,8 +1,15 @@
 import type { RomOnlyCartridge } from '../cartridge'
+import { OamDma } from '../dma'
 import { SerialPort } from '../serial'
+import { Timer } from '../timer'
 
 export class MemoryBus {
   readonly serial = new SerialPort()
+  readonly timer = new Timer()
+  readonly dma = new OamDma(
+    (address) => this.read8Direct(address),
+    (address, value) => this.write8Direct(address, value),
+  )
   tCycles = 0
   private readonly vram = new Uint8Array(0x2000)
   private readonly wram = new Uint8Array(0x2000)
@@ -11,9 +18,19 @@ export class MemoryBus {
   private readonly hram = new Uint8Array(0x7f)
   private interruptEnable = 0
 
-  constructor(readonly cartridge: RomOnlyCartridge) {}
+  constructor(
+    readonly cartridge: Pick<RomOnlyCartridge, 'readRom' | 'writeRom' | 'readRam' | 'writeRam'>,
+  ) {}
 
   read8(address: number): number {
+    const normalized = address & 0xffff
+    // IE possui ligação interna própria; permanece acessível durante DMA.
+    if (this.dma.active && normalized < 0xff80 && normalized !== 0xff46) return 0xff
+    return this.read8Direct(normalized)
+  }
+
+  /** Acesso interno, sem restrições da CPU e sem avanço do relógio. */
+  read8Direct(address: number): number {
     const normalized = address & 0xffff
     if (normalized < 0x8000) return this.cartridge.readRom(normalized)
     if (normalized < 0xa000) return this.vram[normalized - 0x8000]!
@@ -26,11 +43,20 @@ export class MemoryBus {
     if (normalized >= 0xff80) return this.hram[normalized - 0xff80]!
     if (normalized === 0xff01) return this.serial.readData()
     if (normalized === 0xff02) return this.serial.readControl()
+    if (normalized >= 0xff04 && normalized <= 0xff07) return this.timer.read8(normalized)
+    if (normalized === 0xff46) return this.dma.readRegister()
     if (normalized === 0xff0f) return this.io[0x0f]! | 0xe0
     return this.io[normalized - 0xff00]!
   }
 
   write8(address: number, value: number): void {
+    const normalized = address & 0xffff
+    if (this.dma.active && normalized < 0xff80 && normalized !== 0xff46) return
+    this.write8Direct(normalized, value)
+  }
+
+  /** Acesso interno de DMA/fixtures; os registradores mantêm seus efeitos. */
+  write8Direct(address: number, value: number): void {
     const normalized = address & 0xffff
     const byte = value & 0xff
     if (normalized < 0x8000) this.cartridge.writeRom(normalized, byte)
@@ -44,8 +70,26 @@ export class MemoryBus {
     else if (normalized >= 0xff80) this.hram[normalized - 0xff80] = byte
     else if (normalized === 0xff01) this.serial.writeData(byte)
     else if (normalized === 0xff02) this.serial.writeControl(byte)
+    else if (normalized >= 0xff04 && normalized <= 0xff07) this.timer.write8(normalized, byte)
+    else if (normalized === 0xff46) this.dma.start(byte)
     else if (normalized === 0xff0f) this.io[0x0f] = byte & 0x1f
     else this.io[normalized - 0xff00] = byte
+  }
+
+  requestInterrupt(mask: number): void {
+    this.io[0x0f] = this.io[0x0f]! | (mask & 0x1f)
+  }
+
+  pendingInterrupts(): number {
+    return this.interruptEnable & this.io[0x0f]! & 0x1f
+  }
+
+  acknowledgeInterrupt(mask: number): void {
+    this.io[0x0f] = this.io[0x0f]! & ~mask & 0x1f
+  }
+
+  resetDivider(): void {
+    this.timer.resetDivider()
   }
 
   tick(tCycles: number): void {
@@ -53,6 +97,11 @@ export class MemoryBus {
       throw new Error('O barramento exige uma quantidade inteira e não negativa de T-cycles.')
     }
     this.tCycles += tCycles
-    if (this.serial.tick(tCycles)) this.io[0x0f] = this.io[0x0f]! | 0x08
+    // Periféricos compartilham a ordem de cada T-cycle, inclusive durante HALT.
+    for (let elapsed = 0; elapsed < tCycles; elapsed += 1) {
+      if (this.timer.tick(1)) this.requestInterrupt(0x04)
+      this.dma.tick(1)
+    }
+    if (this.serial.tick(tCycles)) this.requestInterrupt(0x08)
   }
 }

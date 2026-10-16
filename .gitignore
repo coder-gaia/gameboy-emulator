@@ -13,3 +13,4 @@ test-results/
 *.gbc
 *.sav
 !tests/fixtures/*.gb
+!tests/roms/fixtures/**/*.gb
