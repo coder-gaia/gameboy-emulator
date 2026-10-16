@@ -2,23 +2,23 @@
 
 Stack aprovada: TypeScript estrito, React, Vite, CSS Modules, Canvas 2D, Worker, AudioWorklet, IndexedDB, Vitest, Playwright e GitHub Actions. Um pacote npm, sem monorepo. Publicação estática futura no Cloudflare Pages Free.
 
-| Marco | Entrega                                             | Estado    |
-| ----- | --------------------------------------------------- | --------- |
-| M00   | Fundação, regras, CI e direção visual               | Concluída |
-| M01   | Header, ROM Only, bus, serial e runner de ROMs      | Concluída |
-| M02   | CPU SM83, instruções, flags e ciclos                | Concluída |
-| M03   | Timers, interrupções, HALT, DMA e suítes de timing  | Concluída |
-| M04   | PPU, fundo, tiles e scroll                          | Concluída |
-| M05   | Sprites, janela, joypad e dmg-acid2                 | Concluída |
-| M06   | MBC1, bateria e biblioteca de demos autorizadas     | Concluída |
-| M07   | APU, Worker e sincronização de áudio                | Concluída |
-| M08   | Save states versionados e slots                     | Concluída |
-| M09   | Interface completa, controles e acessibilidade      | Concluída |
-| M10   | Desempenho móvel e beta pública                     | Pendente  |
-| M11   | Rewind com memória limitada                         | Pendente  |
-| M12   | MBC2, MBC3 com RTC e MBC5                           | Pendente  |
-| M13   | Painel técnico completo                             | Pendente  |
-| M14   | Release, README, portfólio e material para LinkedIn | Pendente  |
+| Marco | Entrega                                             | Estado          |
+| ----- | --------------------------------------------------- | --------------- |
+| M00   | Fundação, regras, CI e direção visual               | Concluída       |
+| M01   | Header, ROM Only, bus, serial e runner de ROMs      | Concluída       |
+| M02   | CPU SM83, instruções, flags e ciclos                | Concluída       |
+| M03   | Timers, interrupções, HALT, DMA e suítes de timing  | Concluída       |
+| M04   | PPU, fundo, tiles e scroll                          | Concluída       |
+| M05   | Sprites, janela, joypad e dmg-acid2                 | Concluída       |
+| M06   | MBC1, bateria e biblioteca de demos autorizadas     | Concluída       |
+| M07   | APU, Worker e sincronização de áudio                | Concluída       |
+| M08   | Save states versionados e slots                     | Concluída       |
+| M09   | Interface completa, controles e acessibilidade      | Concluída       |
+| M10   | Desempenho móvel e beta pública                     | Deploy pendente |
+| M11   | Rewind com memória limitada                         | Pendente        |
+| M12   | MBC2, MBC3 com RTC e MBC5                           | Pendente        |
+| M13   | Painel técnico completo                             | Pendente        |
+| M14   | Release, README, portfólio e material para LinkedIn | Pendente        |
 
 ## Pontos de revisão
 
@@ -41,6 +41,8 @@ M07 implementa os quatro canais da APU DMG, mixer estéreo, filtro passa-altas e
 M08 adiciona estados completos e versionados, três slots por SHA-256 da ROM e importação ou exportação de arquivos `.pocketstate`. CPU, memória, mapper, PPU, timer, DMA, serial, joypad e APU são capturados, incluindo fases pendentes necessárias à continuação. A restauração valida uma máquina candidata antes de alterar a atual. As filas PCM de apresentação são descartadas; a fase de amostragem e o filtro da APU são preservados na mesma taxa de áudio. IndexedDB v2 acrescenta os slots e preserva a bateria existente. O formato limita arquivos a 1 MiB e confere versões, modelo DMG-CPU-B, ROM e checksum SHA-256. Consulte [estados salvos](save-states.md).
 
 M09 acrescenta remapeamento das oito ações do teclado, preferências versionadas em localStorage, gamepads com mapeamento padrão e tela cheia nativa com fallback. Entradas simultâneas mantêm fontes independentes e são liberadas ao perder foco, pausar ou desconectar. A revisão corrige contraste e nomes acessíveis, amplia foco visível, preserva a ativação nativa de painéis e evita anúncios contínuos dos registradores. Os testes incluem axe, larguras de 320, 390 e 1440 pixels e jogo em tela cheia em retrato e paisagem. Controle físico e leitores de tela reais continuam dependendo da revisão manual. Consulte [controles e preferências](controls-and-preferences.md).
+
+M10 tem implementação validada e preparada para publicação. A otimização mantém estado e PCM idênticos e apresenta ganhos nos três cenários de núcleo medidos. O build estático recebe cache, CSP e testes de produção; os benchmarks separam Node, desktop e viewport móvel com CPU simulada. **A publicação pública aguarda a criação e conexão da conta Cloudflare do proprietário.** Não há URL pública verificada. Consulte [metodologia e resultados](performance.md) e [passos de publicação](deployment.md). Essa pendência externa não impede implementar e testar o rewind autorizado da M11.
 
 Cada milestone recebe um commit, com título Conventional Commits em inglês e corpo em pt-br. Sem autoria ou coautoria de ferramentas de IA e sem caracteres de travessão.
 

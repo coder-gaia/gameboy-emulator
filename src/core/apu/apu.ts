@@ -336,36 +336,43 @@ export class Apu {
       throw new Error('A APU exige uma quantidade inteira e não negativa de T-cycles.')
     }
     for (let elapsed = 0; elapsed < tCycles; elapsed += 1) {
-      let changed = false
-      if (this.powered) {
-        changed = this.tickPulse(this.pulse1) || changed
-        changed = this.tickPulse(this.pulse2) || changed
-        if (this.wave.accessWindow > 0) this.wave.accessWindow -= 1
-        if (this.wave.enabled && --this.wave.timer <= 0) {
-          this.wave.timer = (2048 - this.wave.frequency) * 2
-          this.wave.position = (this.wave.position + 1) & 31
-          this.wave.sampleBuffer = this.waveRam[this.wave.position >>> 1]!
-          this.wave.accessWindow = 2
-          changed = true
-        }
-        if (this.noise.enabled && this.registers[0x12]! >>> 4 < 14 && --this.noise.timer <= 0) {
-          this.noise.timer = this.noisePeriod()
-          const feedback = (this.noise.lfsr ^ (this.noise.lfsr >>> 1)) & 1
-          this.noise.lfsr = (this.noise.lfsr >>> 1) | (feedback << 14)
-          if ((this.registers[0x12]! & 8) !== 0)
-            this.noise.lfsr = (this.noise.lfsr & ~0x40) | (feedback << 6)
-          changed = true
-        }
+      this.tickCycle()
+    }
+  }
+
+  /** Um T-cycle interno; canais e amostrador avançam inclusive sem saída de áudio. */
+  tickCycle(): void {
+    let changed = false
+    if (this.powered) {
+      changed = this.tickPulse(this.pulse1, 1) || changed
+      changed = this.tickPulse(this.pulse2, 6) || changed
+      if (this.wave.accessWindow > 0) this.wave.accessWindow -= 1
+      if (this.wave.enabled && --this.wave.timer <= 0) {
+        const previous = this.waveOutput()
+        this.wave.timer = (2048 - this.wave.frequency) * 2
+        this.wave.position = (this.wave.position + 1) & 31
+        this.wave.sampleBuffer = this.waveRam[this.wave.position >>> 1]!
+        this.wave.accessWindow = 2
+        changed = this.waveOutput() !== previous || changed
       }
-      if (changed) this.refreshMixer()
-      this.sampleSumLeft += this.mixedLeft
-      this.sampleSumRight += this.mixedRight
-      this.sampleSpan += 1
-      this.samplePhase += this.rate
-      if (this.samplePhase >= DMG_CLOCK_HZ) {
-        this.samplePhase -= DMG_CLOCK_HZ
-        this.emitSample()
+      if (this.noise.enabled && this.registers[0x12]! >>> 4 < 14 && --this.noise.timer <= 0) {
+        const previous = this.noise.lfsr & 1
+        this.noise.timer = this.noisePeriod()
+        const feedback = (this.noise.lfsr ^ (this.noise.lfsr >>> 1)) & 1
+        this.noise.lfsr = (this.noise.lfsr >>> 1) | (feedback << 14)
+        if ((this.registers[0x12]! & 8) !== 0)
+          this.noise.lfsr = (this.noise.lfsr & ~0x40) | (feedback << 6)
+        changed = (this.noise.volume !== 0 && (this.noise.lfsr & 1) !== previous) || changed
       }
+    }
+    if (changed) this.refreshMixer()
+    this.sampleSumLeft += this.mixedLeft
+    this.sampleSumRight += this.mixedRight
+    this.sampleSpan += 1
+    this.samplePhase += this.rate
+    if (this.samplePhase >= DMG_CLOCK_HZ) {
+      this.samplePhase -= DMG_CLOCK_HZ
+      this.emitSample()
     }
   }
 
@@ -599,12 +606,17 @@ export class Apu {
     this.wave.accessWindow = 0
   }
 
-  private tickPulse(channel: PulseState): boolean {
+  private tickPulse(channel: PulseState, dutyOffset: number): boolean {
     if (!channel.triggered || --channel.timer > 0) return false
+    const previousPosition = channel.dutyPosition
+    const wasFirstSample = channel.firstSample
     channel.timer = (2048 - channel.frequency) * 4
     channel.dutyPosition = (channel.dutyPosition + 1) & 7
     channel.firstSample = false
-    return true
+    if (!channel.enabled || channel.volume === 0) return false
+    const pattern = DUTY_PATTERNS[this.registers[dutyOffset]! >>> 6]!
+    const previous = wasFirstSample ? 0 : (pattern >>> (7 - previousPosition)) & 1
+    return previous !== ((pattern >>> (7 - channel.dutyPosition)) & 1)
   }
 
   private noisePeriod(): number {

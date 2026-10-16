@@ -217,24 +217,25 @@ export class Ppu {
     if (!Number.isSafeInteger(tCycles) || tCycles < 0) {
       throw new Error('A PPU exige uma quantidade inteira e não negativa de T-cycles.')
     }
+    for (let elapsed = 0; elapsed < tCycles; elapsed += 1) {
+      this.tickCycle()
+    }
+  }
+
+  /** Um dot interno, sem reconstruir um intervalo para cada chamada do bus. */
+  tickCycle(): void {
     if (!this.lcdEnabled) return
-    if (tCycles > 0 && this.currentMode === 2 && this.lineTCycles === 0 && this.line === this.wy) {
+    if (this.currentMode === 2 && this.lineTCycles === 0 && this.line === this.wy) {
       this.windowYTriggered = true
     }
-    let remaining = tCycles
-    while (remaining > 0) {
-      let boundary = T_CYCLES_PER_LINE
-      if (this.currentMode === 2) boundary = 80
-      else if (this.currentMode === 3) boundary = this.transferEnd
-      else if (this.line === 153 && this.lineTCycles < 4) boundary = 4
-      let elapsed = Math.min(remaining, boundary - this.lineTCycles)
-      if (this.statWriteTCycles > 0) elapsed = Math.min(elapsed, this.statWriteTCycles)
-      this.lineTCycles += elapsed
-      remaining -= elapsed
-      this.statWriteTCycles = Math.max(0, this.statWriteTCycles - elapsed)
-      if (this.lineTCycles === boundary) this.advanceBoundary()
-      this.updateStatLine()
-    }
+    let boundary = T_CYCLES_PER_LINE
+    if (this.currentMode === 2) boundary = 80
+    else if (this.currentMode === 3) boundary = this.transferEnd
+    else if (this.line === 153 && this.lineTCycles < 4) boundary = 4
+    this.lineTCycles += 1
+    if (this.statWriteTCycles > 0) this.statWriteTCycles -= 1
+    if (this.lineTCycles === boundary) this.advanceBoundary()
+    this.updateStatLine()
   }
 
   snapshot(): PpuSnapshot {

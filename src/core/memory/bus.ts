@@ -202,12 +202,12 @@ export class MemoryBus {
     // Periféricos compartilham a ordem de cada T-cycle, inclusive durante HALT.
     for (let elapsed = 0; elapsed < tCycles; elapsed += 1) {
       const previousDivider = this.timer.systemCounter
-      if (this.timer.tick(1)) this.requestInterrupt(0x04)
+      if (this.timer.tickCycle()) this.requestInterrupt(0x04)
       if ((previousDivider & 0x1000) !== 0 && (this.timer.systemCounter & 0x1000) === 0)
         this.apu.clockFrameSequencer()
-      this.apu.tick(1)
-      this.dma.tick(1)
-      this.ppu.tick(1)
+      this.apu.tickCycle()
+      this.dma.tickCycle()
+      this.ppu.tickCycle()
     }
     if (this.serial.tick(tCycles)) this.requestInterrupt(0x08)
   }

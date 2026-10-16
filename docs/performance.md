@@ -1,0 +1,67 @@
+# Desempenho e validação de produção
+
+O Pocket Lab executa a máquina em um Web Worker e apresenta vídeo e controles na página. O AudioWorklet solicita PCM diretamente ao Worker quando o som está ativo. Sem som, a execução usa tempo monotônico com orçamento limitado. A aplicação não depende de um processo de servidor para emular o console.
+
+## Reproduzir as medições
+
+Com as dependências instaladas:
+
+```powershell
+npm.cmd run benchmark:core -- .work/core-benchmark.json
+npm.cmd run build
+npm.cmd run test:production
+npm.cmd run benchmark:browser
+```
+
+O benchmark de núcleo compila o código para Node, prepara checkpoints determinísticos do jardim, 2048 e Tobu Tobu Girl, aquece cada cenário e mede cinco repetições. Calcula a velocidade pela quantidade real de T-cycles dividida por 4.194.304 e pelo tempo transcorrido. Restaurar checkpoints e calcular hashes ficam fora do intervalo medido. A APU continua gerando PCM mesmo quando a apresentação é descartada.
+
+O benchmark de navegador usa o build estático servido com os mesmos cabeçalhos previstos para Cloudflare. Registra inicialização da interface e clique no jogo até o primeiro quadro separadamente. Mede uma janela de 30 segundos sem som e outra de 30 segundos com som em Tobu Tobu Girl. As observações vêm de Worker e AudioWorklet nativos; não há uma API de teste na aplicação.
+
+O projeto `desktop` usa Chromium no computador de teste. O projeto `mobile` usa viewport e entrada do Pixel 7, com redução de CPU 4x pelo CDP na página. Isso é uma simulação relativa ao computador, não uma medição em um Pixel 7 físico. O alcance da redução sobre o Worker não é presumido. A rede é local, sem representar latência, compressão ou distribuição geográfica do CDN. [Limites da simulação](https://developer.chrome.com/docs/devtools/performance/reference), [comando de redução de CPU](https://chromedevtools.github.io/devtools-protocol/tot/Emulation/#method-setCPUThrottlingRate).
+
+Os relatórios de navegador são anexados aos resultados em `.work/benchmark-browser`. Eles registram ambiente, perfil, T-cycles, tempo, quadros observados e estatísticas PCM. Execute benchmarks sem outras tarefas intensivas de CPU; não use o tempo de execução de uma suíte concorrente como resultado de desempenho.
+
+## Medição do núcleo na M10
+
+Medição em 16 de outubro de 2026, Windows x64, Ryzen 7 5700U, Node 22.13.0 e V8 12.4. Cada execução parte do mesmo checkpoint e usa dois aquecimentos e cinco repetições de 120 frames. A comparação abaixo usa a passagem identificada B, executando o otimizado antes do original para conferir que o ganho não depende de aquecer somente a segunda versão.
+
+| Cenário        | Original, mediana | M10, mediana | Original, pior | M10, pior |
+| -------------- | ----------------: | -----------: | -------------: | --------: |
+| Jardim         |            5,063x |       8,202x |         4,516x |    7,030x |
+| 2048           |            5,037x |       8,169x |         4,901x |    8,104x |
+| Tobu Tobu Girl |            5,226x |       5,656x |         5,217x |    5,644x |
+
+O bus passou a avançar cada periférico por um método unitário interno, mantendo validação dos orçamentos nas APIs públicas e a mesma ordem dos T-cycles. A APU recalcula o mixer quando a amplitude muda; timers, canais, amostrador e filtro continuam avançando. Os hashes dos estados finais e das sequências PCM completas foram idênticos nos três cenários. Nenhum campo obrigatório ou versão dos estados salvos foi alterado.
+
+O [relatório completo do núcleo](performance-core-results.json) preserva todas as amostras dessa comparação, ambiente, buffers conhecidos e identificação SHA-256 dos bundles executados. O hash da árvore do worktree descreve os arquivos presentes; os hashes compilados distinguem o código original preservado do otimizado executado no mesmo checkout.
+
+## Medição do navegador na M10
+
+O mesmo computador executou Chromium 156 e o build de produção com cache desativado em loopback. Tobu Tobu Girl estava em fase jogável antes das duas janelas de 30 segundos. O áudio utilizou AudioContext e AudioWorklet nativos.
+
+| Perfil                          | Interface inicial | Clique até primeiro quadro | Velocidade sem som | Velocidade com som | Underruns na janela com som |
+| ------------------------------- | ----------------: | -------------------------: | -----------------: | -----------------: | --------------------------: |
+| Desktop                         |            201 ms |                      97 ms |             99,94% |            100,04% |                           0 |
+| Pixel 7 simulado, página CDP 4x |            823 ms |                     295 ms |            100,03% |            100,01% |                           0 |
+
+Os dois perfis apresentaram cerca de 59,6 quadros observados por segundo e nenhuma amostra descartada nas janelas medidas. Esses números descrevem esse host, esse build e essa rede local. Não comprovam velocidade em aparelho físico nem tempo de abertura pela internet. O [relatório completo de navegador](performance-browser-results.json) registra ambiente, contadores, intervalos e limitações.
+
+## Interpretar os resultados
+
+Velocidade `1x` significa avançar um segundo do console em um segundo real. O benchmark de núcleo roda sem limitar a velocidade; o de navegador observa a reprodução, cuja meta é acompanhar `1x`. Um resultado de vários múltiplos no Node não garante o mesmo desempenho em outro processador ou navegador.
+
+Quadros observados pela página não são uma comparação acústica ou um registro de cada quadro interno. O Worker pode publicar somente o quadro mais recente entre solicitações de áudio. As filas PCM são limitadas; os contadores de underrun mostram falta de amostras na apresentação durante a janela medida. Um resultado sem underruns nesse teste não garante ausência de cortes em qualquer dispositivo.
+
+A meta de primeiro jogo pronto em até três segundos só pode ser avaliada no perfil e na origem descritos no relatório. Download inicial, inicialização do JavaScript e abertura do cartucho continuam existindo em hospedagem estática. A validação pública será repetida quando houver uma URL Cloudflare conectada pelo proprietário.
+
+## Memória e limites
+
+O relatório do núcleo soma buffers tipados conhecidos da máquina, incluindo cópias internas da ROM, RAM, vídeo, fila PCM e serial. Isso não mede objetos JavaScript, snapshots temporários, UI, heap do Worker, heap da página ou memória interna do navegador. Não use `performance.memory` da página como consumo total do emulador.
+
+A fila PCM do núcleo e do Worklet tem limites explícitos. Bateria é gravada somente quando sua revisão muda. Os slots persistidos são limitados a três por ROM e o formato de arquivo aceita no máximo 1 MiB. A página apresenta as cópias mais recentes sem executar a CPU dentro do React.
+
+## Build e regressões
+
+`npm.cmd run check` valida regras, formatação, lint, testes, tipos e build. A suíte de desenvolvimento cobre os fluxos detalhados da interface. `npm.cmd run test:production` verifica o artefato final, MIME, cache, CSP, Worker, áudio, demos, slots, arquivos, preferências e tela cheia. O CI executa as duas suítes de navegador e os 87 testes externos de hardware.
+
+Os artefatos de QA em `.work` e `test-results` são ignorados pelo watcher do Vite, evitando recarregar a página por causa de um trace de teste. O servidor estático de QA aplica o subconjunto de `_headers` usado no projeto e não substitui a infraestrutura da Cloudflare. Consulte [preparação e publicação](deployment.md).

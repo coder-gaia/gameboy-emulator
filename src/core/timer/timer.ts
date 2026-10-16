@@ -120,19 +120,26 @@ export class Timer {
     }
     let interrupt = false
     for (let elapsed = 0; elapsed < tCycles; elapsed += 1) {
-      if (this.reloadWindow > 0) this.reloadWindow -= 1
-      if (this.reloadDelay > 0) {
-        this.reloadDelay -= 1
-        if (this.reloadDelay === 0) {
-          this.counter = this.modulo
-          this.reloadWindow = 4
-          interrupt = true
-        }
-      }
-      const previous = this.timerSignal()
-      this.divider = (this.divider + 1) & 0xffff
-      if (previous && !this.timerSignal()) this.increment()
+      interrupt = this.tickCycle() || interrupt
     }
+    return interrupt
+  }
+
+  /** Um T-cycle interno; o bus já validou o orçamento total. */
+  tickCycle(): boolean {
+    let interrupt = false
+    if (this.reloadWindow > 0) this.reloadWindow -= 1
+    if (this.reloadDelay > 0) {
+      this.reloadDelay -= 1
+      if (this.reloadDelay === 0) {
+        this.counter = this.modulo
+        this.reloadWindow = 4
+        interrupt = true
+      }
+    }
+    const previous = this.timerSignal()
+    this.divider = (this.divider + 1) & 0xffff
+    if (previous && !this.timerSignal()) this.increment()
     return interrupt
   }
 

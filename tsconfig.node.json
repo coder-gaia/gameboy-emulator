@@ -5,6 +5,9 @@
     "vite.config.ts",
     "vitest.config.ts",
     "vitest.hardware.config.ts",
-    "playwright.config.ts"
+    "playwright.config.ts",
+    "playwright.production.config.ts",
+    "playwright.benchmark.config.ts",
+    "scripts/benchmarks/**/*.ts"
   ]
 }

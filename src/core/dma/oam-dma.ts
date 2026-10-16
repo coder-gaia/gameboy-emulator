@@ -134,23 +134,28 @@ export class OamDma {
       throw new Error('O DMA exige uma quantidade inteira e não negativa de T-cycles.')
     }
     for (let elapsed = 0; elapsed < tCycles; elapsed += 1) {
-      if (this.transferring) {
-        this.byteTCycles += 1
-        if (this.byteTCycles === 4) {
-          this.byteTCycles = 0
-          this.writeOam(0xfe00 | this.index, this.readSource(this.source | this.index))
-          this.index += 1
-          if (this.index === 160) this.transferring = false
-        }
+      this.tickCycle()
+    }
+  }
+
+  /** Um T-cycle interno, preservando a ordem de cópia e startup. */
+  tickCycle(): void {
+    if (this.transferring) {
+      this.byteTCycles += 1
+      if (this.byteTCycles === 4) {
+        this.byteTCycles = 0
+        this.writeOam(0xfe00 | this.index, this.readSource(this.source | this.index))
+        this.index += 1
+        if (this.index === 160) this.transferring = false
       }
-      if (this.startupTCycles > 0) {
-        this.startupTCycles -= 1
-        if (this.startupTCycles === 0) {
-          this.source = this.pendingSource
-          this.index = 0
-          this.byteTCycles = 0
-          this.transferring = true
-        }
+    }
+    if (this.startupTCycles > 0) {
+      this.startupTCycles -= 1
+      if (this.startupTCycles === 0) {
+        this.source = this.pendingSource
+        this.index = 0
+        this.byteTCycles = 0
+        this.transferring = true
       }
     }
   }

@@ -29,7 +29,11 @@ Um repositório e um pacote npm, sem monorepo. React e Vite compõem a interface
 
 O Web Worker possui a máquina `GameBoy` e executa todas as instruções. A interface mantém cópias para apresentação no Canvas 2D de 160 por 144 pixels e para inspeção da CPU. Sem som, o Worker usa tempo monotônico e um orçamento de ciclos, independentemente da frequência do monitor. Com som, o AudioWorklet solicita PCM ao Worker por MessageChannel e controla a cadência. A implementação usa mensagens e buffers transferíveis, sem SharedArrayBuffer ou exigência de COOP/COEP.
 
+A M10 acrescenta benchmarks reproduzíveis, avanço interno por T-cycle sem validações repetidas e recálculo do mixer quando a amplitude muda. Os formatos dos estados são preservados. A suíte de produção testa o build final sob CSP, incluindo Worker, áudio e arquivos locais. Consulte [desempenho e metodologia](docs/performance.md).
+
 IndexedDB armazena a RAM de bateria e três slots de estado por cartucho, identificados pelo SHA-256 da ROM. Paleta, volume, mute e teclas usam preferências versionadas em localStorage, separadas desses saves. O destino de publicação é Cloudflare Pages Free, como site estático. Consulte a [arquitetura de áudio e execução](docs/audio-runtime.md), o [formato dos estados salvos](docs/save-states.md) e os [controles e preferências](docs/controls-and-preferences.md).
+
+O build está preparado para Cloudflare Pages Free, com cache e cabeçalhos de segurança. A publicação pública ainda depende da criação e conexão da conta do proprietário; não existe uma URL pública validada. O [guia de deploy](docs/deployment.md) contém os campos e os passos necessários.
 
 ## Cartuchos e testes atuais
 

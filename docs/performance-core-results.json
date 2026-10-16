@@ -1,0 +1,469 @@
+{
+  "schemaVersion": 1,
+  "milestone": "M10",
+  "baseRevision": "5a07118c2637c1660649913a688d20ab75cc2958",
+  "sourceContext": "Comparação no worktree da M10. Bundle original preserva o núcleo M09. Bundle otimizado inclui avanço unitário por T-cycle e mixer por amplitude; o código é versionado junto com este relatório.",
+  "order": "otimizado, original, com dois aquecimentos e cinco repetições por cenário em cada execução",
+  "scope": "Passagem B com identificação dos bundles completos. A passagem exploratória A também apresentou ganhos, mas seus bundles completos foram substituídos ao acrescentar metadados e não integram esta evidência versionada.",
+  "comparison": [
+    {
+      "id": "garden",
+      "originalMedian": 5.062998171888257,
+      "optimizedMedian": 8.201724401857806,
+      "originalWorst": 4.51638104977506,
+      "optimizedWorst": 7.030039237917502,
+      "medianGainPercent": 61.9934300469825,
+      "identicalStateAndPcm": true
+    },
+    {
+      "id": "2048",
+      "originalMedian": 5.037411567724587,
+      "optimizedMedian": 8.16856179570097,
+      "originalWorst": 4.901015527520156,
+      "optimizedWorst": 8.1042767104221,
+      "medianGainPercent": 62.15791951640617,
+      "identicalStateAndPcm": true
+    },
+    {
+      "id": "tobu-tobu-girl",
+      "originalMedian": 5.2257458168523625,
+      "optimizedMedian": 5.655839551436635,
+      "originalWorst": 5.21715254746794,
+      "optimizedWorst": 5.643592883994174,
+      "medianGainPercent": 8.230284243777719,
+      "identicalStateAndPcm": true
+    }
+  ],
+  "original": {
+    "schemaVersion": 1,
+    "generatedAt": "2026-10-16T23:34:03.876Z",
+    "source": {
+      "baseRevision": null,
+      "worktreeDirty": null,
+      "worktreeCoreSourceSha256": "07b9c141b6197ddf183ace6395d9949b8ba0b7779fcf65e3cf30477c444a9615",
+      "coreSourceFiles": 30,
+      "executedBundle": "m10-core-original-comparable.js",
+      "executedBundleSha256": "cdc7bc8e95871ec61bf2dc4db5c2aa70460532420322180e90cca0491a08c655",
+      "compiledCoreSha256": "dd69ab3564d94be622900dbac8daa3de47e81b3d2b2f47d66debb70f7ed0fccc",
+      "scope": "O hash worktree descreve os arquivos src/core presentes. O hash compiledCore identifica o código compilado executado, inclusive ao comparar um bundle original preservado com um worktree modificado."
+    },
+    "environment": {
+      "node": "v22.13.0",
+      "v8": "12.4.254.21-node.22",
+      "platform": "win32",
+      "release": "10.0.26300",
+      "architecture": "x64",
+      "cpu": "AMD Ryzen 7 5700U with Radeon Graphics         ",
+      "availableParallelism": 16,
+      "totalMemoryBytes": 19165339648
+    },
+    "protocol": {
+      "clockHz": 4194304,
+      "warmupRepetitions": 2,
+      "measuredRepetitions": 5,
+      "measuredFrames": 120,
+      "audioSampleRate": 48000,
+      "speedFormula": "T-cycles / 4194304 / segundos reais",
+      "measurement": "CPU, bus, PPU, DMA, timer e APU completos em Node. Checkpoint e hashes de estado/PCM ficam fora do intervalo medido. PCM é gerado e descartado a cada frame; uma passagem adicional sem cronometragem confere suas amostras.",
+      "limitation": "Medição desta máquina e deste runtime. Não representa hardware móvel, renderização, Web Audio ou desempenho de outro dispositivo."
+    },
+    "cases": [
+      {
+        "id": "garden",
+        "romId": "3bb2342c70b4d09c5a930fe416a74098d0af13cfdb93d49778cfa0653b86e770",
+        "checkpoint": {
+          "tCycles": 1825828,
+          "frameId": 23,
+          "digest": "9f7b5e8bf8c724d6480a3759c1d0be088dca6ad1c9cc12bf1022f4d9829703e9"
+        },
+        "finalDigest": "000f7a04877094be7419081f0c474a430dd2697157651fe366308e73862d8858",
+        "pcmDigest": "ed514de44875f8b46257e547bc351c2be79f57a1d72a30e512f676f713ad2b6f",
+        "repetitions": [
+          {
+            "elapsedMs": 444.8528000000001,
+            "tCycles": 8426880,
+            "speed": 4.51638104977506
+          },
+          {
+            "elapsedMs": 397.9393,
+            "tCycles": 8426880,
+            "speed": 5.048822159207133
+          },
+          {
+            "elapsedMs": 391.4408000000001,
+            "tCycles": 8426880,
+            "speed": 5.132640123000399
+          },
+          {
+            "elapsedMs": 393.0985999999998,
+            "tCycles": 8426880,
+            "speed": 5.110994432082373
+          },
+          {
+            "elapsedMs": 396.8251,
+            "tCycles": 8426880,
+            "speed": 5.062998171888257
+          }
+        ],
+        "medianSpeed": 5.062998171888257,
+        "worstSpeed": 4.51638104977506,
+        "knownBuffers": {
+          "bytes": {
+            "internalRomCopies": 65536,
+            "cartridgeRam": 0,
+            "cpuRegisters": 8,
+            "workRam": 8192,
+            "ioRegisters": 128,
+            "highRam": 127,
+            "videoRam": 8192,
+            "objectRam": 160,
+            "framebuffer": 23040,
+            "selectedObjects": 10,
+            "audioRegisters": 23,
+            "waveRam": 16,
+            "audioQueue": 131072,
+            "serialQueue": 4096
+          },
+          "totalBytes": 240600,
+          "scope": "Buffers tipados conhecidos por máquina. Exclui objetos JS, ROM de entrada, snapshots, UI, Worker e filas do navegador."
+        }
+      },
+      {
+        "id": "2048",
+        "romId": "3ea2376b15b34bd26b10e6b31d2753bf8b086098dbdb5ee84d9c0f03d66d3d7f",
+        "checkpoint": {
+          "tCycles": 25631788,
+          "frameId": 353,
+          "digest": "a381cb63ab0a5024ff07405dab97b3b37ad0fb22586e80c9669902f6bb853c76"
+        },
+        "finalDigest": "2a48f37ae5dd5b7687bfe0f76dc87da974ee86220256d4257d5ee7f08a486d6c",
+        "pcmDigest": "ed514de44875f8b46257e547bc351c2be79f57a1d72a30e512f676f713ad2b6f",
+        "repetitions": [
+          {
+            "elapsedMs": 400.2042999999994,
+            "tCycles": 8426880,
+            "speed": 5.020247798085573
+          },
+          {
+            "elapsedMs": 409.9404999999997,
+            "tCycles": 8426880,
+            "speed": 4.901015527520156
+          },
+          {
+            "elapsedMs": 398.84070000000065,
+            "tCycles": 8426880,
+            "speed": 5.037411567724587
+          },
+          {
+            "elapsedMs": 398.02370000000064,
+            "tCycles": 8426880,
+            "speed": 5.047751568209058
+          },
+          {
+            "elapsedMs": 398.2514000000001,
+            "tCycles": 8426880,
+            "speed": 5.044865519265907
+          }
+        ],
+        "medianSpeed": 5.037411567724587,
+        "worstSpeed": 4.901015527520156,
+        "knownBuffers": {
+          "bytes": {
+            "internalRomCopies": 65536,
+            "cartridgeRam": 2048,
+            "cpuRegisters": 8,
+            "workRam": 8192,
+            "ioRegisters": 128,
+            "highRam": 127,
+            "videoRam": 8192,
+            "objectRam": 160,
+            "framebuffer": 23040,
+            "selectedObjects": 10,
+            "audioRegisters": 23,
+            "waveRam": 16,
+            "audioQueue": 131072,
+            "serialQueue": 4096
+          },
+          "totalBytes": 242648,
+          "scope": "Buffers tipados conhecidos por máquina. Exclui objetos JS, ROM de entrada, snapshots, UI, Worker e filas do navegador."
+        }
+      },
+      {
+        "id": "tobu-tobu-girl",
+        "romId": "5d3871cae77db2287807e8914fd21f76203e73aa3fec20955489d45cb4571d8f",
+        "checkpoint": {
+          "tCycles": 87359784,
+          "frameId": 1087,
+          "digest": "750d6402f5fd55f771033af23522b95bfa3335d531a7ab31d1c7507b809de79a"
+        },
+        "finalDigest": "0576ef1c0394d83c3c19032b6786b3d45189edfafc9df3829ef34492289a6128",
+        "pcmDigest": "a770b99a0b1fd9f9c703450a382acd8598c524738546bf6caccdd438aa1825fd",
+        "repetitions": [
+          {
+            "elapsedMs": 384.1787000000004,
+            "tCycles": 8427384,
+            "speed": 5.229974797726267
+          },
+          {
+            "elapsedMs": 384.4896000000008,
+            "tCycles": 8427384,
+            "speed": 5.2257458168523625
+          },
+          {
+            "elapsedMs": 385.1229000000003,
+            "tCycles": 8427384,
+            "speed": 5.21715254746794
+          },
+          {
+            "elapsedMs": 384.58719999999994,
+            "tCycles": 8427384,
+            "speed": 5.22441963441124
+          },
+          {
+            "elapsedMs": 384.46060000000034,
+            "tCycles": 8427384,
+            "speed": 5.226139996720706
+          }
+        ],
+        "medianSpeed": 5.2257458168523625,
+        "worstSpeed": 5.21715254746794,
+        "knownBuffers": {
+          "bytes": {
+            "internalRomCopies": 524288,
+            "cartridgeRam": 8192,
+            "cpuRegisters": 8,
+            "workRam": 8192,
+            "ioRegisters": 128,
+            "highRam": 127,
+            "videoRam": 8192,
+            "objectRam": 160,
+            "framebuffer": 23040,
+            "selectedObjects": 10,
+            "audioRegisters": 23,
+            "waveRam": 16,
+            "audioQueue": 131072,
+            "serialQueue": 4096
+          },
+          "totalBytes": 707544,
+          "scope": "Buffers tipados conhecidos por máquina. Exclui objetos JS, ROM de entrada, snapshots, UI, Worker e filas do navegador."
+        }
+      }
+    ]
+  },
+  "optimized": {
+    "schemaVersion": 1,
+    "generatedAt": "2026-10-16T23:33:35.842Z",
+    "source": {
+      "baseRevision": null,
+      "worktreeDirty": null,
+      "worktreeCoreSourceSha256": "07b9c141b6197ddf183ace6395d9949b8ba0b7779fcf65e3cf30477c444a9615",
+      "coreSourceFiles": 30,
+      "executedBundle": "core.js",
+      "executedBundleSha256": "616d4967bcdd78339afe1df9ec893025fc2c3e35e08fa41a9c07b7287e0fc1c5",
+      "compiledCoreSha256": "e67ac8a50f0e200017d1b2749269fcdca6bd3aa0f17c70274de936a2537a496d",
+      "scope": "O hash worktree descreve os arquivos src/core presentes. O hash compiledCore identifica o código compilado executado, inclusive ao comparar um bundle original preservado com um worktree modificado."
+    },
+    "environment": {
+      "node": "v22.13.0",
+      "v8": "12.4.254.21-node.22",
+      "platform": "win32",
+      "release": "10.0.26300",
+      "architecture": "x64",
+      "cpu": "AMD Ryzen 7 5700U with Radeon Graphics         ",
+      "availableParallelism": 16,
+      "totalMemoryBytes": 19165339648
+    },
+    "protocol": {
+      "clockHz": 4194304,
+      "warmupRepetitions": 2,
+      "measuredRepetitions": 5,
+      "measuredFrames": 120,
+      "audioSampleRate": 48000,
+      "speedFormula": "T-cycles / 4194304 / segundos reais",
+      "measurement": "CPU, bus, PPU, DMA, timer e APU completos em Node. Checkpoint e hashes de estado/PCM ficam fora do intervalo medido. PCM é gerado e descartado a cada frame; uma passagem adicional sem cronometragem confere suas amostras.",
+      "limitation": "Medição desta máquina e deste runtime. Não representa hardware móvel, renderização, Web Audio ou desempenho de outro dispositivo."
+    },
+    "cases": [
+      {
+        "id": "garden",
+        "romId": "3bb2342c70b4d09c5a930fe416a74098d0af13cfdb93d49778cfa0653b86e770",
+        "checkpoint": {
+          "tCycles": 1825828,
+          "frameId": 23,
+          "digest": "9f7b5e8bf8c724d6480a3759c1d0be088dca6ad1c9cc12bf1022f4d9829703e9"
+        },
+        "finalDigest": "000f7a04877094be7419081f0c474a430dd2697157651fe366308e73862d8858",
+        "pcmDigest": "ed514de44875f8b46257e547bc351c2be79f57a1d72a30e512f676f713ad2b6f",
+        "repetitions": [
+          {
+            "elapsedMs": 244.96370000000002,
+            "tCycles": 8426880,
+            "speed": 8.201724401857806
+          },
+          {
+            "elapsedMs": 243.81989999999996,
+            "tCycles": 8426880,
+            "speed": 8.240200065127478
+          },
+          {
+            "elapsedMs": 285.79139999999984,
+            "tCycles": 8426880,
+            "speed": 7.030039237917502
+          },
+          {
+            "elapsedMs": 243.71899999999982,
+            "tCycles": 8426880,
+            "speed": 8.24361151924707
+          },
+          {
+            "elapsedMs": 247.90229999999997,
+            "tCycles": 8426880,
+            "speed": 8.104502281178412
+          }
+        ],
+        "medianSpeed": 8.201724401857806,
+        "worstSpeed": 7.030039237917502,
+        "knownBuffers": {
+          "bytes": {
+            "internalRomCopies": 65536,
+            "cartridgeRam": 0,
+            "cpuRegisters": 8,
+            "workRam": 8192,
+            "ioRegisters": 128,
+            "highRam": 127,
+            "videoRam": 8192,
+            "objectRam": 160,
+            "framebuffer": 23040,
+            "selectedObjects": 10,
+            "audioRegisters": 23,
+            "waveRam": 16,
+            "audioQueue": 131072,
+            "serialQueue": 4096
+          },
+          "totalBytes": 240600,
+          "scope": "Buffers tipados conhecidos por máquina. Exclui objetos JS, ROM de entrada, snapshots, UI, Worker e filas do navegador."
+        }
+      },
+      {
+        "id": "2048",
+        "romId": "3ea2376b15b34bd26b10e6b31d2753bf8b086098dbdb5ee84d9c0f03d66d3d7f",
+        "checkpoint": {
+          "tCycles": 25631788,
+          "frameId": 353,
+          "digest": "a381cb63ab0a5024ff07405dab97b3b37ad0fb22586e80c9669902f6bb853c76"
+        },
+        "finalDigest": "2a48f37ae5dd5b7687bfe0f76dc87da974ee86220256d4257d5ee7f08a486d6c",
+        "pcmDigest": "ed514de44875f8b46257e547bc351c2be79f57a1d72a30e512f676f713ad2b6f",
+        "repetitions": [
+          {
+            "elapsedMs": 247.90920000000006,
+            "tCycles": 8426880,
+            "speed": 8.1042767104221
+          },
+          {
+            "elapsedMs": 245.60599999999977,
+            "tCycles": 8426880,
+            "speed": 8.180275546441768
+          },
+          {
+            "elapsedMs": 245.95819999999958,
+            "tCycles": 8426880,
+            "speed": 8.16856179570097
+          },
+          {
+            "elapsedMs": 245.8685999999998,
+            "tCycles": 8426880,
+            "speed": 8.171538601754664
+          },
+          {
+            "elapsedMs": 246.5014000000001,
+            "tCycles": 8426880,
+            "speed": 8.150561237621265
+          }
+        ],
+        "medianSpeed": 8.16856179570097,
+        "worstSpeed": 8.1042767104221,
+        "knownBuffers": {
+          "bytes": {
+            "internalRomCopies": 65536,
+            "cartridgeRam": 2048,
+            "cpuRegisters": 8,
+            "workRam": 8192,
+            "ioRegisters": 128,
+            "highRam": 127,
+            "videoRam": 8192,
+            "objectRam": 160,
+            "framebuffer": 23040,
+            "selectedObjects": 10,
+            "audioRegisters": 23,
+            "waveRam": 16,
+            "audioQueue": 131072,
+            "serialQueue": 4096
+          },
+          "totalBytes": 242648,
+          "scope": "Buffers tipados conhecidos por máquina. Exclui objetos JS, ROM de entrada, snapshots, UI, Worker e filas do navegador."
+        }
+      },
+      {
+        "id": "tobu-tobu-girl",
+        "romId": "5d3871cae77db2287807e8914fd21f76203e73aa3fec20955489d45cb4571d8f",
+        "checkpoint": {
+          "tCycles": 87359784,
+          "frameId": 1087,
+          "digest": "750d6402f5fd55f771033af23522b95bfa3335d531a7ab31d1c7507b809de79a"
+        },
+        "finalDigest": "0576ef1c0394d83c3c19032b6786b3d45189edfafc9df3829ef34492289a6128",
+        "pcmDigest": "a770b99a0b1fd9f9c703450a382acd8598c524738546bf6caccdd438aa1825fd",
+        "repetitions": [
+          {
+            "elapsedMs": 356.02230000000054,
+            "tCycles": 8427384,
+            "speed": 5.643592883994174
+          },
+          {
+            "elapsedMs": 352.65539999999964,
+            "tCycles": 8427384,
+            "speed": 5.697473847907176
+          },
+          {
+            "elapsedMs": 351.7572,
+            "tCycles": 8427384,
+            "speed": 5.712022152846458
+          },
+          {
+            "elapsedMs": 355.251400000001,
+            "tCycles": 8427384,
+            "speed": 5.655839551436635
+          },
+          {
+            "elapsedMs": 355.77340000000004,
+            "tCycles": 8427384,
+            "speed": 5.647541156318157
+          }
+        ],
+        "medianSpeed": 5.655839551436635,
+        "worstSpeed": 5.643592883994174,
+        "knownBuffers": {
+          "bytes": {
+            "internalRomCopies": 524288,
+            "cartridgeRam": 8192,
+            "cpuRegisters": 8,
+            "workRam": 8192,
+            "ioRegisters": 128,
+            "highRam": 127,
+            "videoRam": 8192,
+            "objectRam": 160,
+            "framebuffer": 23040,
+            "selectedObjects": 10,
+            "audioRegisters": 23,
+            "waveRam": 16,
+            "audioQueue": 131072,
+            "serialQueue": 4096
+          },
+          "totalBytes": 707544,
+          "scope": "Buffers tipados conhecidos por máquina. Exclui objetos JS, ROM de entrada, snapshots, UI, Worker e filas do navegador."
+        }
+      }
+    ]
+  }
+}
