@@ -17,7 +17,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "pretest:hardware": "node scripts/test-roms/fetch.mjs",
-    "test:hardware": "node scripts/run-hardware.mjs M03",
+    "test:hardware": "node scripts/run-hardware.mjs M04",
     "test:e2e": "playwright test",
     "check:rules": "node scripts/check-rules.mjs",
     "check": "npm run check:rules && npm run format:check && npm run lint && npm run test && npm run build"

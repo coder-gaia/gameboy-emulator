@@ -1,0 +1,11 @@
+.holder {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+.holder canvas {
+  display: block;
+  image-rendering: pixelated;
+}

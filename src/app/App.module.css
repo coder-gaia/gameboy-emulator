@@ -227,6 +227,55 @@
   background-size: 3px 3px;
 }
 
+.screenActive::after {
+  display: none;
+}
+.transport {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+.transport button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 44px;
+  padding: 8px 13px;
+  border: 1px solid #c8c5bb;
+  border-radius: 5px;
+  background: #faf8f2;
+  font-size: 11px;
+}
+.transport button:hover:not(:disabled) {
+  color: var(--color-accent);
+  border-color: var(--color-accent);
+}
+.transport > span {
+  color: #626659;
+  font-size: 10px;
+  margin-left: auto;
+}
+.visualButton {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  align-items: center;
+  min-height: 44px;
+  width: 100%;
+  margin: 14px 0 0;
+  border: 1px solid #c9c1d3;
+  border-radius: 5px;
+  background: #eeebf1;
+  color: var(--color-accent);
+  font-size: 12px;
+}
+.visualButton:hover {
+  background: #e5dfee;
+}
+
 .screenContent {
   position: relative;
   z-index: 1;

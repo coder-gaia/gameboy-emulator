@@ -1,18 +1,64 @@
-import { useRef, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
-import { ArrowUpRight, CodeXml, Info, LockKeyhole, Upload, X } from 'lucide-react'
+import {
+  ArrowUpRight,
+  CodeXml,
+  Info,
+  LockKeyhole,
+  Pause,
+  Play,
+  RotateCcw,
+  Upload,
+  X,
+} from 'lucide-react'
 import { loadCartridgeFile } from '../platform/files/load-cartridge'
 import type { LoadedCartridge } from '../platform/files/load-cartridge'
 import { CartridgeDetails } from '../ui/cartridge/CartridgeDetails'
 import { CpuInspector } from '../ui/debug/CpuInspector'
 import { createDiagnosticRom } from '../core/diagnostics/cartridge'
 import { parseCartridgeHeader } from '../core/cartridge'
+import { createVisualDiagnosticRom } from '../core/diagnostics/visual-cartridge'
+import { GameBoy } from '../core/gameboy'
+import { GameScreen } from '../ui/screen/GameScreen'
 import styles from './App.module.css'
 
 const palettes = [
-  { id: 'dmg', name: 'DMG', note: 'DMG', background: '#c1ce91', ink: '#3c4933' },
-  { id: 'pocket', name: 'Pocket', note: 'GBP', background: '#d5d5c9', ink: '#42483e' },
-  { id: 'light', name: 'Light', note: 'GBL', background: '#a7cfc4', ink: '#24564e' },
+  {
+    id: 'dmg',
+    name: 'DMG',
+    background: '#c1ce91',
+    ink: '#3c4933',
+    colors: [
+      [193, 206, 145],
+      [149, 166, 99],
+      [96, 112, 64],
+      [60, 73, 51],
+    ],
+  },
+  {
+    id: 'pocket',
+    name: 'Pocket',
+    background: '#d5d5c9',
+    ink: '#42483e',
+    colors: [
+      [213, 213, 201],
+      [166, 170, 156],
+      [108, 115, 100],
+      [66, 72, 62],
+    ],
+  },
+  {
+    id: 'light',
+    name: 'Light',
+    background: '#a7cfc4',
+    ink: '#24564e',
+    colors: [
+      [167, 207, 196],
+      [111, 167, 153],
+      [66, 122, 108],
+      [36, 86, 78],
+    ],
+  },
 ] as const
 
 type PaletteId = (typeof palettes)[number]['id']
@@ -43,6 +89,9 @@ export function App() {
   const [paletteId, setPaletteId] = useState<PaletteId>('dmg')
   const [cartridge, setCartridge] = useState<LoadedCartridge | null>(null)
   const [cartridgeRevision, setCartridgeRevision] = useState(0)
+  const [device, setDevice] = useState<GameBoy | null>(null)
+  const [playing, setPlaying] = useState(false)
+  const [viewRevision, setViewRevision] = useState(0)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const fileInput = useRef<HTMLInputElement>(null)
@@ -53,6 +102,30 @@ export function App() {
     '--lcd-background': palette.background,
     '--lcd-ink': palette.ink,
   } as CSSProperties
+
+  const pausePlayback = useCallback(() => setPlaying(false), [])
+  const playbackError = useCallback((cause: Error) => {
+    setPlaying(false)
+    setError(cause.message)
+  }, [])
+  const refreshScreen = useCallback(() => setViewRevision((value) => value + 1), [])
+
+  function openCartridge(loaded: LoadedCartridge, autoplay = false) {
+    const machine = loaded.metadata.isSupported ? new GameBoy(loaded.rom) : null
+    setCartridge(loaded)
+    setDevice(machine)
+    setPlaying(Boolean(machine && autoplay))
+    setCartridgeRevision((value) => value + 1)
+    setError('')
+  }
+
+  function restart() {
+    if (!cartridge?.metadata.isSupported) return
+    setDevice(new GameBoy(cartridge.rom))
+    setCartridgeRevision((value) => value + 1)
+    setPlaying(false)
+    setError('')
+  }
 
   async function loadFiles(files: FileList | null) {
     const request = ++loadRequest.current
@@ -67,8 +140,7 @@ export function App() {
     try {
       const loaded = await loadCartridgeFile(files[0]!)
       if (request === loadRequest.current) {
-        setCartridge(loaded)
-        setCartridgeRevision(request)
+        openCartridge(loaded)
       }
     } catch (cause) {
       if (request === loadRequest.current)
@@ -79,11 +151,16 @@ export function App() {
   }
 
   function useDiagnosticCartridge() {
-    const request = ++loadRequest.current
+    ++loadRequest.current
     const rom = createDiagnosticRom()
-    setCartridge({ rom, metadata: parseCartridgeHeader(rom), fileName: 'pocket-test.gb' })
-    setCartridgeRevision(request)
-    setError('')
+    openCartridge({ rom, metadata: parseCartridgeHeader(rom), fileName: 'pocket-test.gb' })
+    setLoading(false)
+  }
+
+  function useVisualCartridge() {
+    ++loadRequest.current
+    const rom = createVisualDiagnosticRom()
+    openCartridge({ rom, metadata: parseCartridgeHeader(rom), fileName: 'pocket-garden.gb' }, true)
     setLoading(false)
   }
 
@@ -147,7 +224,13 @@ export function App() {
               <span className={styles.deviceLabel}>POCKET LAB</span>
               <span className={styles.powerLabel}>
                 <span className={styles.powerLight} />
-                {cartridge ? 'CARTUCHO LIDO' : 'EM ESPERA'}
+                {device
+                  ? playing
+                    ? 'EM EXECUÇÃO'
+                    : 'PAUSADO'
+                  : cartridge
+                    ? 'CARTUCHO LIDO'
+                    : 'EM ESPERA'}
               </span>
             </div>
 
@@ -157,27 +240,41 @@ export function App() {
                 MATRIZ DE PONTOS, UM POUCO DE MAGIA
                 <span />
               </div>
-              <div className={styles.screen} style={screenStyle}>
-                <div className={styles.screenContent}>
-                  <span className={styles.screenEyebrow}>
-                    {cartridge ? 'BOM TE VER POR AQUI.' : 'OLÁ, JOGADOR.'}
-                  </span>
-                  <CartridgeDrawing />
-                  <p>
-                    {cartridge ? (
-                      cartridge.metadata.title
-                    ) : (
-                      <>
-                        Seu próximo mundo
-                        <br />
-                        começa aqui.
-                      </>
-                    )}
-                  </p>
-                  <span className={styles.screenPrompt}>
-                    {cartridge ? 'REPRODUÇÃO EM PREPARAÇÃO' : 'AGUARDANDO CARTUCHO'}
-                  </span>
-                </div>
+              <div
+                className={`${styles.screen} ${device ? styles.screenActive : ''}`}
+                style={screenStyle}
+              >
+                {device ? (
+                  <GameScreen
+                    device={device}
+                    palette={palette.colors}
+                    playing={playing}
+                    revision={viewRevision}
+                    onError={playbackError}
+                    onVisibilityPause={pausePlayback}
+                  />
+                ) : (
+                  <div className={styles.screenContent}>
+                    <span className={styles.screenEyebrow}>
+                      {cartridge ? 'BOM TE VER POR AQUI.' : 'OLÁ, JOGADOR.'}
+                    </span>
+                    <CartridgeDrawing />
+                    <p>
+                      {cartridge ? (
+                        cartridge.metadata.title
+                      ) : (
+                        <>
+                          Seu próximo mundo
+                          <br />
+                          começa aqui.
+                        </>
+                      )}
+                    </p>
+                    <span className={styles.screenPrompt}>
+                      {cartridge ? 'REPRODUÇÃO EM PREPARAÇÃO' : 'AGUARDANDO CARTUCHO'}
+                    </span>
+                  </div>
+                )}
               </div>
               <div className={styles.screenBottomLabel} aria-hidden="true">
                 <span>160 × 144</span>
@@ -222,6 +319,28 @@ export function App() {
               </div>
             </div>
           </div>
+
+          {device && (
+            <div className={styles.transport} role="group" aria-label="Reprodução">
+              <button
+                type="button"
+                onClick={() => setPlaying((value) => !value)}
+                disabled={Boolean(error)}
+              >
+                {playing ? (
+                  <Pause size={15} aria-hidden="true" />
+                ) : (
+                  <Play size={15} aria-hidden="true" />
+                )}
+                {playing ? 'Pausar' : 'Iniciar'}
+              </button>
+              <button type="button" onClick={restart}>
+                <RotateCcw size={15} aria-hidden="true" />
+                Reiniciar
+              </button>
+              <span>Áudio em preparação</span>
+            </div>
+          )}
 
           <div className={styles.paletteBar}>
             <div className={styles.paletteLabel}>
@@ -309,6 +428,9 @@ export function App() {
                 {error}
               </p>
             )}
+            <button className={styles.visualButton} type="button" onClick={useVisualCartridge}>
+              Explorar jardim <Play size={14} aria-hidden="true" />
+            </button>
             <button
               className={styles.diagnosticButton}
               type="button"
@@ -317,8 +439,14 @@ export function App() {
               Experimentar cartucho de diagnóstico <ArrowUpRight size={13} aria-hidden="true" />
             </button>
             {cartridge && <CartridgeDetails cartridge={cartridge} />}
-            {cartridge?.metadata.isSupported && (
-              <CpuInspector key={cartridgeRevision} rom={cartridge.rom} />
+            {device && (
+              <CpuInspector
+                key={cartridgeRevision}
+                device={device}
+                playing={playing}
+                onAdvance={refreshScreen}
+                onReset={restart}
+              />
             )}
           </div>
 
@@ -370,8 +498,8 @@ export function App() {
         </p>
         <p>
           O projeto está em desenvolvimento. Você já pode ler cartuchos, consultar seus dados e
-          experimentar as paletas da tela e avançar a CPU manualmente. A reprodução de jogos chega
-          nas próximas etapas.
+          experimentar as paletas e explorar nosso jardim de teste. O áudio e a demonstração de jogo
+          completa chegam nas próximas etapas.
         </p>
         <p>Nenhum jogo comercial ou boot ROM original faz parte do projeto.</p>
         <a

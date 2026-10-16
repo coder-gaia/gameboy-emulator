@@ -1,46 +1,58 @@
-import { useState } from 'react'
-import { Cpu } from '../../core/cpu'
-import { RomOnlyCartridge } from '../../core/cartridge'
-import { MemoryBus } from '../../core/memory'
+import { useEffect, useState } from 'react'
+import type { GameBoy } from '../../core/gameboy'
 import styles from './CpuInspector.module.css'
-
-function createSession(rom: Uint8Array) {
-  const bus = new MemoryBus(new RomOnlyCartridge(rom))
-  return { bus, cpu: new Cpu(bus) }
-}
 
 function hex(value: number, length = 4) {
   return value.toString(16).padStart(length, '0').toUpperCase()
 }
 
 /** Execução manual limitada. A execução contínua em Worker chega com a APU. */
-export function CpuInspector({ rom }: { rom: Uint8Array }) {
-  const [session, setSession] = useState(() => createSession(rom))
-  const [state, setState] = useState(() => session.cpu.snapshot())
+export function CpuInspector({
+  device,
+  playing,
+  onAdvance,
+  onReset,
+}: {
+  device: GameBoy
+  playing: boolean
+  onAdvance: () => void
+  onReset: () => void
+}) {
+  const [state, setState] = useState(() => device.cpu.snapshot())
+  const [open, setOpen] = useState(false)
   const [serial, setSerial] = useState('')
   const [error, setError] = useState('')
+
+  useEffect(() => {
+    if (!open) return
+    const interval = window.setInterval(() => {
+      setState(device.cpu.snapshot())
+      if (device.bus.serial.pendingOutputBytes) {
+        const output = device.bus.serial.drainOutput()
+        setSerial((previous) => (previous + output.text).slice(-4096))
+      }
+    }, 150)
+    return () => window.clearInterval(interval)
+  }, [device, open])
 
   function advance(count: number) {
     try {
       for (let instruction = 0; instruction < count; instruction += 1) {
-        if (session.cpu.halted || session.cpu.stopped) break
-        session.cpu.step()
+        if (device.cpu.stopped) break
+        device.step()
       }
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'A execução da CPU foi interrompida.')
     } finally {
-      setState(session.cpu.snapshot())
-      const output = session.bus.serial.drainOutput()
+      setState(device.cpu.snapshot())
+      const output = device.bus.serial.drainOutput()
       setSerial((previous) => (previous + output.text).slice(-4096))
+      onAdvance()
     }
   }
 
   function reset() {
-    const next = createSession(rom)
-    setSession(next)
-    setState(next.cpu.snapshot())
-    setSerial('')
-    setError('')
+    onReset()
   }
 
   const registers = {
@@ -51,13 +63,14 @@ export function CpuInspector({ rom }: { rom: Uint8Array }) {
     SP: state.sp,
     PC: state.pc,
   }
-  const paused = state.halted || state.stopped || Boolean(error)
+  const paused = playing || state.stopped || Boolean(error)
 
   return (
-    <details className={styles.panel}>
+    <details className={styles.panel} onToggle={(event) => setOpen(event.currentTarget.open)}>
       <summary>Inspecionar CPU</summary>
       <p className={styles.explanation}>
-        Avance instruções e observe os registradores. Vídeo e áudio ainda estão em preparação.
+        Pause a execução para avançar instruções. Os registradores pertencem à máquina exibida na
+        tela.
       </p>
       <dl className={styles.registers}>
         {Object.entries(registers).map(([name, value]) => (
@@ -87,7 +100,7 @@ export function CpuInspector({ rom }: { rom: Uint8Array }) {
       </dl>
       <p className={styles.bytes}>
         Próximos bytes:{' '}
-        {[0, 1, 2].map((offset) => hex(session.bus.read8(state.pc + offset), 2)).join(' ')}
+        {[0, 1, 2].map((offset) => hex(device.bus.read8Direct(state.pc + offset), 2)).join(' ')}
       </p>
       <div className={styles.actions}>
         <button type="button" onClick={() => advance(1)} disabled={paused}>

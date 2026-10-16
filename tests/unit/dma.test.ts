@@ -40,7 +40,7 @@ describe('OAM DMA DMG', () => {
     }
   })
 
-  it('bloqueia o barramento de CPU fora de HRAM e IE sem bloquear DMA ou periféricos', () => {
+  it('bloqueia o barramento principal e OAM durante DMA de WRAM sem bloquear periféricos', () => {
     const bus = setup()
     bus.write8(0xff80, 0x12)
     bus.write8(0xffff, 4)
@@ -48,9 +48,11 @@ describe('OAM DMA DMG', () => {
     bus.write8(0xff07, 5)
     bus.write8(0xff46, 0xc0)
     bus.tick(8)
-    for (const address of [0x100, 0x8000, 0xc000, 0xfe00, 0xff00, 0xff04, 0xff0f]) {
+    for (const address of [0x100, 0xc000, 0xfe00, 0xff00, 0xff04, 0xff0f]) {
       expect(bus.read8(address)).toBe(0xff)
     }
+    bus.write8(0x8000, 0x37)
+    expect(bus.read8(0x8000)).toBe(0x37)
     bus.write8(0xc000, 0x44)
     bus.write8(0xff05, 0x44)
     expect(bus.read8Direct(0xc000)).toBe(0x5a)

@@ -42,7 +42,9 @@ export class TwoBankTestCartridge {
 
 export function createHardwareBus(rom: Uint8Array): MemoryBus {
   const metadata = parseCartridgeHeader(rom)
-  return new MemoryBus(
+  const bus = new MemoryBus(
     metadata.isSupported ? new RomOnlyCartridge(rom) : new TwoBankTestCartridge(rom),
   )
+  bus.ppu.reset(true)
+  return bus
 }

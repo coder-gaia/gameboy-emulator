@@ -129,3 +129,62 @@ test('interrompe opcode inválido e permite reiniciar a inspeção', async ({ pa
   await expect(page.getByRole('alert')).toHaveCount(0)
   await expect(page.getByLabel('Registrador PC', { exact: true })).toHaveText('0100')
 })
+
+test('desenha vídeo real, pausa sem avançar e retoma o jardim', async ({ page }) => {
+  await page.goto('/')
+  await page.getByRole('button', { name: 'Explorar jardim', exact: true }).click()
+  const canvas = page.getByLabel('Tela do emulador', { exact: true })
+  await expect(canvas).toBeVisible()
+  await expect
+    .poll(async () => Number(await canvas.getAttribute('data-frame-id')))
+    .toBeGreaterThan(2)
+  const shades = await canvas.evaluate((element) => {
+    const pixels = (element as HTMLCanvasElement)
+      .getContext('2d')!
+      .getImageData(0, 0, 160, 144).data
+    const colors = new Set<string>()
+    for (let index = 0; index < pixels.length; index += 4)
+      colors.add(`${pixels[index]},${pixels[index + 1]},${pixels[index + 2]}`)
+    return colors.size
+  })
+  expect(shades).toBe(4)
+  await page.getByRole('button', { name: 'Pausar', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Iniciar', exact: true })).toBeVisible()
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+      ),
+  )
+  const stopped = await canvas.getAttribute('data-frame-id')
+  await page.waitForTimeout(150)
+  expect(await canvas.getAttribute('data-frame-id')).toBe(stopped)
+  await page.getByRole('button', { name: 'Iniciar', exact: true }).click()
+  await expect
+    .poll(async () => Number(await canvas.getAttribute('data-frame-id')))
+    .toBeGreaterThan(Number(stopped))
+})
+
+test('troca a paleta do Canvas e reinicia a máquina', async ({ page }) => {
+  await page.goto('/')
+  await page.getByRole('button', { name: 'Explorar jardim', exact: true }).click()
+  const canvas = page.getByLabel('Tela do emulador', { exact: true })
+  await expect
+    .poll(async () => Number(await canvas.getAttribute('data-frame-id')))
+    .toBeGreaterThan(2)
+  await page.getByRole('button', { name: 'Pausar', exact: true }).click()
+  await page.getByRole('button', { name: 'Pocket', exact: true }).click()
+  await expect
+    .poll(() =>
+      canvas.evaluate((element) => {
+        const pixels = (element as HTMLCanvasElement)
+          .getContext('2d')!
+          .getImageData(0, 0, 1, 1).data
+        return Array.from(pixels).slice(0, 3)
+      }),
+    )
+    .toEqual([213, 213, 201])
+  await page.getByRole('button', { name: 'Reiniciar', exact: true }).click()
+  await expect(canvas).toHaveAttribute('data-frame-id', '0')
+  await expect(page.getByRole('button', { name: 'Iniciar', exact: true })).toBeVisible()
+})

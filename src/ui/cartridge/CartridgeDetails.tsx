@@ -43,7 +43,9 @@ export function CartridgeDetails({ cartridge }: { cartridge: LoadedCartridge }) 
         </ul>
       )}
       <p className={styles.note}>
-        Dados lidos do cartucho. A reprodução de jogos está em preparação.
+        {metadata.isSupported
+          ? 'Cartucho lido localmente. Use Iniciar para executar.'
+          : 'Dados lidos do cartucho. O suporte de execução está em preparação.'}
       </p>
     </section>
   )

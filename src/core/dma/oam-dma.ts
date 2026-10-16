@@ -31,6 +31,21 @@ export class OamDma {
     return this.index
   }
 
+  /**
+   * VRAM possui barramento separado do principal também no DMG. O bloqueio
+   * acompanha a origem ativa, preservada durante a espera de um reinício.
+   * A separação é observada nos testes de timing Mooneye verificados em hardware
+   * e modelada em is_addr_in_dma_use do SameBoy, Core/memory.c.
+   */
+  blocksCpuAddress(address: number): boolean {
+    const normalized = address & 0xffff
+    if (!this.transferring || normalized >= 0xff80 || normalized === 0xff46) return false
+    if (normalized >= 0xfe00) return true
+    const sourceUsesVramBus = this.source >= 0x8000 && this.source < 0xa000
+    const cpuUsesVramBus = normalized >= 0x8000 && normalized < 0xa000
+    return sourceUsesVramBus === cpuUsesVramBus
+  }
+
   readRegister(): number {
     return this.register
   }

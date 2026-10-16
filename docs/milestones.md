@@ -8,7 +8,7 @@ Stack aprovada: TypeScript estrito, React, Vite, CSS Modules, Canvas 2D, Worker,
 | M01   | Header, ROM Only, bus, serial e runner de ROMs      | Concluída |
 | M02   | CPU SM83, instruções, flags e ciclos                | Concluída |
 | M03   | Timers, interrupções, HALT, DMA e suítes de timing  | Concluída |
-| M04   | PPU, fundo, tiles e scroll                          | Pendente  |
+| M04   | PPU, fundo, tiles e scroll                          | Concluída |
 | M05   | Sprites, janela, joypad e dmg-acid2                 | Pendente  |
 | M06   | MBC1, bateria e demo autorizada                     | Pendente  |
 | M07   | APU, Worker e sincronização de áudio                | Pendente  |
