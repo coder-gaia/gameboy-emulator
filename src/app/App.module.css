@@ -709,6 +709,24 @@
   margin-top: 14px;
 }
 
+.soundControls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+}
+
+.volumeControl {
+  display: grid;
+  place-items: center;
+  min-height: 44px;
+}
+
+.volumeControl input {
+  width: 70px;
+  accent-color: var(--color-accent);
+}
+
 .privacyNote > svg {
   margin-top: 2px;
   flex-shrink: 0;

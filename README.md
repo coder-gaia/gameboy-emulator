@@ -2,7 +2,7 @@
 
 Um emulador de Game Boy DMG no navegador, com núcleo TypeScript independente da interface.
 
-Projeto em desenvolvimento, com M00 a M06 concluídas. CPU, timer, DMA, vídeo, sprites, janela, controles, MBC1 e saves de bateria já estão disponíveis. A biblioteca oferece Tobu Tobu Girl e 2048 para jogar sem fornecer arquivos. O jardim interativo continua disponível como ROM própria de diagnóstico. Áudio e save states entram na M07 e na M08.
+Projeto em desenvolvimento, com M00 a M07 concluídas. CPU, timer, DMA, vídeo, sprites, janela, controles, MBC1, saves de bateria e áudio já estão disponíveis. A biblioteca oferece Tobu Tobu Girl e 2048 para jogar sem fornecer arquivos. O jardim interativo continua disponível como ROM própria de diagnóstico. Save states versionados e slots pertencem à M08, ainda pendente.
 
 ## Desenvolvimento local
 
@@ -27,7 +27,9 @@ Os testes de navegador precisam do Chromium do Playwright: `npx.cmd playwright i
 
 Um repositório e um pacote npm, sem monorepo. React e Vite compõem a interface. O núcleo em `src/core` não conhece o navegador, trabalha em T-cycles e tem testes executados em Node.
 
-Canvas 2D apresenta o framebuffer de 160 por 144 pixels. A cadência sem áudio usa tempo monotônico e um orçamento de ciclos, independentemente da frequência do monitor. IndexedDB armazena a RAM de bateria localmente, identificada pelo SHA-256 da ROM. Web Worker e AudioWorklet pertencem à M07. O destino de publicação é Cloudflare Pages Free, como site estático.
+O Web Worker possui a máquina `GameBoy` e executa todas as instruções. A interface mantém cópias para apresentação no Canvas 2D de 160 por 144 pixels e para inspeção da CPU. Sem som, o Worker usa tempo monotônico e um orçamento de ciclos, independentemente da frequência do monitor. Com som, o AudioWorklet solicita PCM ao Worker por MessageChannel e controla a cadência. A implementação usa mensagens e buffers transferíveis, sem SharedArrayBuffer ou exigência de COOP/COEP.
+
+IndexedDB armazena a RAM de bateria localmente, identificada pelo SHA-256 da ROM. O destino de publicação é Cloudflare Pages Free, como site estático. Consulte a [arquitetura de áudio e execução](docs/audio-runtime.md).
 
 ## Cartuchos e testes atuais
 
@@ -37,9 +39,9 @@ A execução aceita cartuchos **ROM Only de 32 KiB** e **MBC1 de até 2 MiB** co
 
 Compilações **MBC1M** usam outra fiação e ficam fora do escopo atual. Não há autodetecção de MBC1M, cujo header também pode declarar MBC1. Arquivos `.gbc` precisam funcionar também no DMG. Jogos exclusivos de Game Boy Color e cartuchos MBC2, MBC3 ou MBC5 podem ter seus dados consultados, mas ainda não executam. O limite de leitura é 8 MiB. Não é necessário fornecer BIOS ou boot ROM.
 
-O bus implementa memória de trabalho, echo RAM, VRAM, OAM, HRAM, timer, DMA de OAM, interrupções, joypad e PPU. A transferência serial interna leva 4096 T-cycles por byte. A PPU implementa fundo, tiles, scroll, modos, LY/LYC, STAT, sprites e janela. A APU ainda está pendente.
+O bus implementa memória de trabalho, echo RAM, VRAM, OAM, HRAM, timer, DMA de OAM, interrupções, joypad, PPU e APU. A transferência serial interna leva 4096 T-cycles por byte. A PPU implementa fundo, tiles, scroll, modos, LY/LYC, STAT, sprites e janela. A APU implementa dois canais de pulso, wave e noise, com sweep, envelope, length, DACs, mixer estéreo e filtro passa-altas.
 
-`npm.cmd test` executa os testes de núcleo, entrada, reprodução e persistência. `npm.cmd run test:hardware` executa 75 testes externos: 62 ROMs de instruções e timing, dmg-acid2 e 12 ROMs de MBC1, com revisão e SHA-256 fixados. Consulte [procedência e protocolos](docs/test-roms.md).
+`npm.cmd test` executa os testes de núcleo, entrada, reprodução, áudio e persistência. `npm.cmd run test:hardware` executa 87 testes externos: os 75 da M06 e 12 ROMs `dmg_sound`, com revisão e SHA-256 fixados. Consulte [procedência e protocolos](docs/test-roms.md).
 
 | Suíte                                        | Resultado atual |
 | -------------------------------------------- | --------------- |
@@ -50,8 +52,17 @@ O bus implementa memória de trabalho, echo RAM, VRAM, OAM, HRAM, timer, DMA de 
 | Mooneye, acessos sincronizados ao LCD da M04 | 20 de 20        |
 | dmg-acid2, comparação gráfica DMG            | 1 de 1          |
 | Mooneye, MBC1 padrão da M06                  | 12 de 12        |
+| Blargg dmg_sound, perfil DMG da M07          | 12 de 12        |
 
 As ROMs Blargg são baixadas para uma pasta ignorada. O runner usa a mesma factory e os mesmos mappers da aplicação, preservando os binários originais. As 59 fixtures Mooneye preservam a licença MIT.
+
+## Som
+
+Escolha um jogo da biblioteca e clique em **Ativar som**. O navegador precisa dessa ação explícita para abrir a saída de áudio. Use **Volume** para ajustar o nível e **Silenciar** para mutar sem parar o jogo. Se a máquina estiver pausada, clique também em **Iniciar**. O jardim é um diagnóstico visual sem trilha sonora.
+
+Áudio exige um navegador com AudioWorklet em **HTTPS ou localhost**. Acesso por HTTP em um IP da rede local pode não oferecer AudioWorklet; nesse caso, a interface explica a indisponibilidade e o jogo continua sem som. O Worker usa a taxa real do AudioContext, e as filas são limpas ao pausar ou reiniciar para evitar reproduzir trechos antigos.
+
+Os 12 testes `dmg_sound` validam o comportamento que a CPU consegue observar, incluindo registradores, length, sweep e wave RAM. Eles não comprovam equivalência acústica completa com um console físico. Consulte [funcionamento e limites do áudio](docs/audio-runtime.md).
 
 ## Saves de bateria
 
@@ -77,7 +88,7 @@ Os registradores da CPU usam inicialização pós boot DMG, incluindo F dependen
 
 A M03 corrige `EI;HALT` com interrupção pendente e a resseleção de interrupção quando a pilha escreve sobre IE. Os testes externos não representam aprovação de todos os comportamentos de todas as revisões do hardware.
 
-Os grupos M00 a M02 e M03 a M05 foram aprovados pelo proprietário. O [roteiro de teste M03 a M05](docs/testing-m03-m05.md) permanece como referência. O grupo atual contém M06, M07 e M08, com M06 concluída e M07 e M08 pendentes. A próxima pausa para teste será antes da M09, com instruções e resultados esperados.
+Os grupos M00 a M02 e M03 a M05 foram aprovados pelo proprietário. O [roteiro de teste M03 a M05](docs/testing-m03-m05.md) permanece como referência. O grupo atual contém M06, M07 e M08, com M06 e M07 concluídas e M08 pendente. A próxima pausa para teste será antes da M09, com instruções e resultados esperados.
 
 ## Vídeo e reprodução
 
@@ -92,7 +103,7 @@ Clique em **Explorar jardim** para abrir POCKET GARDEN. O cenário de quatro ton
 
 Os botões do console funcionam por toque ou ponteiro. **Pausar** congela a máquina; **Iniciar** retoma; **Reiniciar** volta ao começo em pausa. Trocar a paleta altera a tela sem reiniciar o cartucho. Abrir a ajuda também pausa a reprodução.
 
-A execução pausa quando a aba fica oculta. O botão Iniciar retoma sem tentar recuperar todo o tempo acumulado. O painel de CPU observa a mesma máquina do Canvas; comandos manuais exigem pausa.
+A execução pausa quando a aba fica oculta. O botão Iniciar retoma sem tentar recuperar todo o tempo acumulado. O painel de CPU e o Canvas apresentam dados da mesma máquina no Worker; comandos manuais exigem pausa.
 
 A PPU usa renderização por scanline e não modela pixel FIFO, alterações de registradores dentro do modo 3 ou as peculiaridades de janela em WX 0 e 166. dmg-acid2 coincide com os 23.040 pixels oficiais, mas isso não comprova precisão completa do PPU. A escala considera pixels físicos e a densidade da tela, com suavização desabilitada.
 

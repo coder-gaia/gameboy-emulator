@@ -1,6 +1,6 @@
 # ROMs externas de teste
 
-O manifesto em `tests/roms/manifest.json` fixa a origem, a revisão, o SHA-256, o protocolo de resultado e as dependências dos testes de instruções e timing. `tests/roms/mbc1-manifest.json` registra os testes do mapper MBC1 e `tests/roms/acid2-manifest.json` registra a validação gráfica. A seleção representa o Game Boy DMG com revisão de CPU A, B ou C. Não inclui expectativas exclusivas de DMG 0, MGB, SGB ou CGB.
+O manifesto em `tests/roms/manifest.json` fixa a origem, a revisão, o SHA-256, o protocolo de resultado e as dependências dos testes de instruções e timing. `tests/roms/mbc1-manifest.json` registra os testes do mapper MBC1, `tests/roms/audio-manifest.json` registra `dmg_sound` e `tests/roms/acid2-manifest.json` registra a validação gráfica. A seleção representa o Game Boy DMG com revisão de CPU A, B ou C. Não inclui expectativas exclusivas de DMG 0, MGB, SGB ou CGB.
 
 Os binários de teste não entram no site e não são jogos disponíveis ao visitante. O projeto não inclui ROM comercial nem boot ROM original.
 
@@ -9,26 +9,26 @@ Os binários de teste não entram no site e não são jogos disponíveis ao visi
 Na raiz do projeto, com Node 22.12 ou superior:
 
 ```powershell
-node scripts/test-roms/fetch.mjs --acid2 --mbc1
+node scripts/test-roms/fetch.mjs --acid2 --mbc1 --audio
 ```
 
-O comando baixa somente os 15 arquivos Blargg necessários, de URLs fixadas por revisão, para `.work/roms/blargg/`. Essa pasta é ignorada pelo Git. As 59 fixtures Mooneye são distribuídas com a licença MIT original em `tests/roms/fixtures/mooneye/LICENSE.txt`: 47 de CPU, periféricos e timing, mais 12 de MBC1. A ROM e a referência dmg-acid2 também são fixtures versionadas, com licença MIT em `tests/roms/fixtures/acid2/LICENSE.txt`.
+O comando baixa somente os 27 arquivos Blargg necessários, de URLs fixadas por revisão, para `.work/roms/blargg/`: 15 de CPU e timing, mais 12 `dmg_sound`. Essa pasta é ignorada pelo Git. As 59 fixtures Mooneye são distribuídas com a licença MIT original em `tests/roms/fixtures/mooneye/LICENSE.txt`: 47 de CPU, periféricos e timing, mais 12 de MBC1. A ROM e a referência dmg-acid2 também são fixtures versionadas, com licença MIT em `tests/roms/fixtures/acid2/LICENSE.txt`.
 
 Todo arquivo existente e todo download precisa coincidir com o SHA-256 registrado. Um arquivo divergente causa falha e não é substituído silenciosamente. A opção `--verify` executa apenas a conferência, sem acesso à rede:
 
 ```powershell
-node scripts/test-roms/fetch.mjs --verify --acid2 --mbc1
+node scripts/test-roms/fetch.mjs --verify --acid2 --mbc1 --audio
 ```
 
 O CI pode executar os mesmos comandos antes do runner de hardware. Os testes devem falhar se um arquivo estiver ausente, corrompido ou se a execução atingir o limite de T-cycles.
 
-O comando completo da M06 verifica todos os manifestos e executa os 75 testes externos:
+O comando completo da M07 verifica todos os manifestos e executa os 87 testes externos:
 
 ```powershell
 npm.cmd run test:hardware
 ```
 
-O resultado atual é 62 ROMs de instruções e timing aprovadas, dmg-acid2 aprovado com zero pixels divergentes e 12 ROMs MBC1 aprovadas. Os testes locais de unidade e integração são executados separadamente por `npm.cmd test`.
+O resultado atual é 62 ROMs de instruções e timing aprovadas, dmg-acid2 aprovado com zero pixels divergentes, 12 ROMs MBC1 aprovadas e 12 ROMs `dmg_sound` aprovadas. Os testes locais de unidade e integração são executados separadamente por `npm.cmd test`.
 
 ## Licenças e procedência
 
@@ -51,6 +51,16 @@ Os readmes de [cpu_instrs](https://github.com/retrio/gb-test-roms/blob/c240dd7d7
 Esses 15 binários declaram MBC1, embora tenham somente dois bancos e nenhuma RAM. Desde a M06, `tests/helpers/test-cartridge.ts` cria o cartucho pela factory real do produto. Os testes usam o mesmo MBC1, bus e CPU da aplicação, sem alterar header ou hash. O adapter provisório de dois bancos foi removido.
 
 `instr_timing` verifica duração total de instruções, incluindo os dois caminhos dos saltos condicionais. `mem_timing` verifica quando ocorre o acesso à memória dentro da instrução. Aprovar somente a primeira suíte não comprova a segunda.
+
+### Blargg dmg_sound
+
+`tests/roms/audio-manifest.json` fixa os 12 arquivos individuais em `dmg_sound/rom_singles/`, na mesma revisão Blargg dos testes de CPU. Os downloads ficam somente em `.work/roms/blargg/dmg_sound/rom_singles/`, sem redistribuição no repositório, site ou artefatos do CI.
+
+O protocolo `blargg-memory` segue o [readme original](https://github.com/retrio/gb-test-roms/blob/c240dd7d700e5c0b00a7bbba52b53e4ee67b5f15/dmg_sound/readme.txt): assinatura `DE B0 61` em A001 a A003, status `80` em A000 durante execução, status `00` no sucesso e texto terminado em zero a partir de A004. Uma falha inclui esse texto no diagnóstico. O runner não interpreta ausência de áudio audível como falha de hardware.
+
+Os 12 casos verificam máscaras de registradores, length, efeitos de trigger, sweep, overflow, sincronização com DIV, preservação de length durante power cycle e acesso, escrita e corrupção de wave RAM no DMG. A execução usa a APU, o bus e a factory de cartucho do produto, sem modificar as ROMs ou injetar resultados.
+
+A suite comprova comportamentos observáveis pela CPU. Ela não compara gravações, resposta analógica, latência ou fidelidade acústica com um aparelho físico. A geração de PCM, o mixer e a fila do AudioWorklet têm testes próprios. Consulte [arquitetura de áudio e limites](audio-runtime.md).
 
 ### Mooneye
 

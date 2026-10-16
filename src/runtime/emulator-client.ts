@@ -1,0 +1,206 @@
+import type { JoypadButton } from '../core/joypad'
+import type { AudioOutput } from '../platform/audio'
+import type { EmulatorCommand, EmulatorMessage, EmulatorSnapshot } from './worker-protocol'
+
+const audioOwners = new WeakMap<AudioOutput, EmulatorClient>()
+
+interface PendingRequest {
+  resolve: () => void
+  reject: (error: Error) => void
+  timeout: ReturnType<typeof setTimeout>
+}
+
+/** A interface só mantém uma cópia de apresentação; toda instrução roda no Worker. */
+export class EmulatorClient {
+  private readonly worker: Worker
+  private readonly listeners = new Set<() => void>()
+  private readonly errorListeners = new Set<(error: Error) => void>()
+  private readonly pending = new Map<number, PendingRequest>()
+  private sequence = 0
+  private disposed = false
+  private current!: EmulatorSnapshot
+  private battery: Uint8Array | null = null
+  private output: AudioOutput | null = null
+
+  private constructor() {
+    if (typeof Worker === 'undefined')
+      throw new Error('Seu navegador não disponibilizou a execução do emulador.')
+    this.worker = new Worker(new URL('./emulator.worker.ts', import.meta.url), { type: 'module' })
+    this.worker.onmessage = ({ data }: MessageEvent<EmulatorMessage>) => {
+      if (data.type === 'error') {
+        this.reportError(new Error(data.error))
+        return
+      }
+      if (data.type === 'frame') {
+        this.update(data.snapshot)
+        return
+      }
+      const pending = this.pending.get(data.id)
+      if (!pending) return
+      this.pending.delete(data.id)
+      clearTimeout(pending.timeout)
+      if (data.error) pending.reject(new Error(data.error))
+      else {
+        if (data.snapshot) this.update(data.snapshot)
+        pending.resolve()
+      }
+    }
+    this.worker.onerror = () =>
+      this.reportError(
+        new Error('A execução do emulador foi interrompida. Tente reiniciar o cartucho.'),
+      )
+  }
+
+  static async create(rom: Uint8Array): Promise<EmulatorClient> {
+    const client = new EmulatorClient()
+    try {
+      const copy = rom.slice()
+      await client.request({ type: 'init', rom: copy }, [copy.buffer])
+      return client
+    } catch (cause) {
+      client.dispose()
+      throw cause
+    }
+  }
+
+  get framebuffer(): Uint8Array {
+    return this.current.framebuffer
+  }
+  get frameId(): number {
+    return this.current.frameId
+  }
+  get inspection(): EmulatorSnapshot {
+    return this.current
+  }
+  get batteryRevision(): number {
+    return this.current.batteryRevision
+  }
+
+  exportBatteryRam(): Uint8Array | null {
+    return this.battery?.slice() ?? null
+  }
+
+  async importBatteryRam(bytes: Uint8Array): Promise<void> {
+    const copy = bytes.slice()
+    await this.request({ type: 'import-battery', bytes: copy }, [copy.buffer])
+  }
+
+  setButton(button: JoypadButton, pressed: boolean): void {
+    this.post({ type: 'input', button, pressed })
+  }
+
+  releaseButtons(): void {
+    this.post({ type: 'release-input' })
+  }
+
+  subscribe(listener: () => void): () => void {
+    this.listeners.add(listener)
+    return () => this.listeners.delete(listener)
+  }
+
+  subscribeError(listener: (error: Error) => void): () => void {
+    this.errorListeners.add(listener)
+    return () => this.errorListeners.delete(listener)
+  }
+
+  async resume(): Promise<void> {
+    await this.request({ type: 'play', playing: true })
+    if (this.output && audioOwners.get(this.output) === this)
+      await this.output.resume(this.current.audioEpoch)
+  }
+
+  async pause(): Promise<void> {
+    if (this.disposed) return
+    await this.request({ type: 'play', playing: false })
+    if (this.output && audioOwners.get(this.output) === this)
+      await this.output.pause(this.current.audioEpoch)
+  }
+
+  async advance(count: number): Promise<void> {
+    await this.request({ type: 'step', count })
+  }
+
+  async attachAudio(output: AudioOutput): Promise<void> {
+    const sampleRate = await output.prepare()
+    const channel = new MessageChannel()
+    try {
+      const epoch = this.current.audioEpoch + 1
+      await this.request({ type: 'audio-port', port: channel.port1, sampleRate, epoch }, [
+        channel.port1,
+      ])
+      if (this.disposed) throw new Error('O cartucho foi fechado antes de ativar o som.')
+      audioOwners.set(output, this)
+      this.output = output
+      output.connect(channel.port2, epoch)
+      if (this.current.playing) await output.resume(epoch)
+      else await output.pause(epoch)
+    } catch (cause) {
+      channel.port2.close()
+      if (!this.disposed) await this.request({ type: 'audio-disable' })
+      throw cause
+    }
+  }
+
+  async disableAudio(): Promise<void> {
+    if (this.disposed) return
+    await this.request({ type: 'audio-disable' })
+    const output = this.output
+    this.output = null
+    if (output && audioOwners.get(output) === this) {
+      audioOwners.delete(output)
+      await output.pause(this.current.audioEpoch)
+    }
+  }
+
+  dispose(): void {
+    if (this.disposed) return
+    this.disposed = true
+    this.worker.terminate()
+    for (const pending of this.pending.values()) {
+      clearTimeout(pending.timeout)
+      pending.reject(new Error('O cartucho foi fechado.'))
+    }
+    this.pending.clear()
+    this.listeners.clear()
+    this.errorListeners.clear()
+    if (this.output && audioOwners.get(this.output) === this) audioOwners.delete(this.output)
+  }
+
+  private update(snapshot: EmulatorSnapshot): void {
+    this.current = snapshot
+    if (snapshot.batteryRam !== undefined) this.battery = snapshot.batteryRam
+    for (const listener of this.listeners) listener()
+  }
+
+  private reportError(error: Error): void {
+    for (const pending of this.pending.values()) {
+      clearTimeout(pending.timeout)
+      pending.reject(error)
+    }
+    this.pending.clear()
+    for (const listener of this.errorListeners) listener(error)
+  }
+
+  private post(command: EmulatorCommand): void {
+    if (!this.disposed) this.worker.postMessage({ id: 0, command })
+  }
+
+  private request(command: EmulatorCommand, transfer: Transferable[] = []): Promise<void> {
+    if (this.disposed) return Promise.reject(new Error('O cartucho foi fechado.'))
+    const id = ++this.sequence
+    return new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        this.pending.delete(id)
+        reject(new Error('O emulador não respondeu a tempo. Tente reiniciar o cartucho.'))
+      }, 10_000)
+      this.pending.set(id, { resolve, reject, timeout })
+      try {
+        this.worker.postMessage({ id, command }, transfer)
+      } catch (cause) {
+        clearTimeout(timeout)
+        this.pending.delete(id)
+        reject(cause instanceof Error ? cause : new Error(String(cause)))
+      }
+    })
+  }
+}

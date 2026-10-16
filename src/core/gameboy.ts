@@ -15,6 +15,8 @@ export class GameBoy {
     this.cartridge = createCartridge(rom)
     this.bus = new MemoryBus(this.cartridge)
     this.bus.ppu.reset(true)
+    this.bus.apu.reset(true)
+    this.bus.apu.setDividerCounter(this.bus.timer.systemCounter)
     this.cpu = new Cpu(this.bus)
   }
 

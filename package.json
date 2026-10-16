@@ -16,8 +16,8 @@
     "format:check": "prettier --check .",
     "test": "vitest run",
     "test:watch": "vitest",
-    "pretest:hardware": "node scripts/test-roms/fetch.mjs --acid2 --mbc1",
-    "test:hardware": "node scripts/run-hardware.mjs M06",
+    "pretest:hardware": "node scripts/test-roms/fetch.mjs --acid2 --mbc1 --audio",
+    "test:hardware": "node scripts/run-hardware.mjs M07",
     "test:e2e": "playwright test",
     "check:rules": "node scripts/check-rules.mjs",
     "check": "npm run check:rules && npm run format:check && npm run lint && npm run test && npm run build"

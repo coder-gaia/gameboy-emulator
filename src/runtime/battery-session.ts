@@ -1,7 +1,7 @@
 export interface BatteryMemory {
   readonly batteryRevision: number
   exportBatteryRam(): Uint8Array | null
-  importBatteryRam(bytes: Uint8Array): void
+  importBatteryRam(bytes: Uint8Array): void | Promise<void>
 }
 
 export interface BatteryStorage {
@@ -27,7 +27,7 @@ export class BatterySession {
     const ram = this.memory.exportBatteryRam()
     if (ram === null) return false
     const saved = await this.storage.loadBattery(this.romId, ram.length)
-    if (saved !== null) this.memory.importBatteryRam(saved)
+    if (saved !== null) await this.memory.importBatteryRam(saved)
     this.persistedRevision = this.memory.batteryRevision
     this.enabled = true
     return saved !== null

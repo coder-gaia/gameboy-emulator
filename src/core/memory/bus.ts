@@ -4,12 +4,14 @@ import { SerialPort } from '../serial'
 import { Timer } from '../timer'
 import { Ppu } from '../ppu'
 import { Joypad } from '../joypad'
+import { Apu } from '../apu'
 
 export class MemoryBus {
   readonly serial = new SerialPort()
   readonly timer = new Timer()
   readonly ppu = new Ppu((mask) => this.requestInterrupt(mask))
   readonly joypad = new Joypad((mask) => this.requestInterrupt(mask))
+  readonly apu = new Apu()
   readonly dma = new OamDma(
     (address) => this.read8Direct(address),
     (address, value) => this.write8Direct(address, value),
@@ -25,6 +27,7 @@ export class MemoryBus {
   ) {
     // O bus isolado começa sem LCD; GameBoy aplica o estado pós boot da máquina.
     this.ppu.reset(false)
+    this.apu.reset(false)
   }
 
   read8(address: number): number {
@@ -59,6 +62,7 @@ export class MemoryBus {
     if (normalized === 0xff01) return this.serial.readData()
     if (normalized === 0xff02) return this.serial.readControl()
     if (normalized >= 0xff04 && normalized <= 0xff07) return this.timer.read8(normalized)
+    if (normalized >= 0xff10 && normalized <= 0xff3f) return this.apu.readRegister(normalized)
     if (normalized === 0xff46) return this.dma.readRegister()
     if (normalized >= 0xff40 && normalized <= 0xff4b) return this.ppu.readRegister(normalized)
     if (normalized === 0xff0f) return this.io[0x0f]! | 0xe0
@@ -96,8 +100,12 @@ export class MemoryBus {
     else if (normalized === 0xff00) this.joypad.write(byte)
     else if (normalized === 0xff01) this.serial.writeData(byte)
     else if (normalized === 0xff02) this.serial.writeControl(byte)
-    else if (normalized >= 0xff04 && normalized <= 0xff07) this.timer.write8(normalized, byte)
-    else if (normalized === 0xff46) this.dma.start(byte)
+    else if (normalized === 0xff04) this.resetDivider()
+    else if (normalized >= 0xff05 && normalized <= 0xff07) this.timer.write8(normalized, byte)
+    else if (normalized >= 0xff10 && normalized <= 0xff3f) {
+      this.apu.setDividerCounter(this.timer.systemCounter)
+      this.apu.writeRegister(normalized, byte)
+    } else if (normalized === 0xff46) this.dma.start(byte)
     else if (normalized >= 0xff40 && normalized <= 0xff4b) this.ppu.writeRegister(normalized, byte)
     else if (normalized === 0xff0f) this.io[0x0f] = byte & 0x1f
     else this.io[normalized - 0xff00] = byte
@@ -116,7 +124,9 @@ export class MemoryBus {
   }
 
   resetDivider(): void {
+    const previous = this.timer.systemCounter
     this.timer.resetDivider()
+    if ((previous & 0x1000) !== 0) this.apu.clockFrameSequencer()
   }
 
   tick(tCycles: number): void {
@@ -126,7 +136,11 @@ export class MemoryBus {
     this.tCycles += tCycles
     // Periféricos compartilham a ordem de cada T-cycle, inclusive durante HALT.
     for (let elapsed = 0; elapsed < tCycles; elapsed += 1) {
+      const previousDivider = this.timer.systemCounter
       if (this.timer.tick(1)) this.requestInterrupt(0x04)
+      if ((previousDivider & 0x1000) !== 0 && (this.timer.systemCounter & 0x1000) === 0)
+        this.apu.clockFrameSequencer()
+      this.apu.tick(1)
       this.dma.tick(1)
       this.ppu.tick(1)
     }

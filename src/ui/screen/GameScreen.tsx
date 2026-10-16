@@ -1,12 +1,11 @@
 import { useEffect, useRef } from 'react'
-import type { GameBoy } from '../../core/gameboy'
+import type { EmulatorClient } from '../../runtime/emulator-client'
 import { CanvasRenderer } from '../../platform/rendering/canvas-renderer'
 import type { ScreenPalette } from '../../platform/rendering/canvas-renderer'
-import { BrowserPlayback } from '../../runtime/playback'
 import styles from './GameScreen.module.css'
 
 interface GameScreenProps {
-  device: GameBoy
+  device: EmulatorClient
   palette: ScreenPalette
   playing: boolean
   revision: number
@@ -40,7 +39,8 @@ export function GameScreen({
       return
     }
     const draw = () => renderer.draw(device.framebuffer, device.frameId)
-    const playback = new BrowserPlayback(device, draw, onError)
+    const unsubscribe = device.subscribe(draw)
+    const unsubscribeError = device.subscribeError(onError)
     const resize = () => {
       const ratio = window.devicePixelRatio || 1
       const scale = Math.max(
@@ -58,18 +58,28 @@ export function GameScreen({
     draw()
     const visibility = () => {
       if (document.hidden) {
-        playback.pause()
+        void device.pause().catch(onError)
         onVisibilityPause()
       }
     }
     document.addEventListener('visibilitychange', visibility)
-    if (playing && !document.hidden) playback.start()
     return () => {
-      playback.pause()
+      unsubscribe()
+      unsubscribeError()
       observer.disconnect()
       document.removeEventListener('visibilitychange', visibility)
     }
   }, [device, palette, playing, revision, onError, onVisibilityPause])
+
+  useEffect(() => {
+    let cancelled = false
+    void (playing && !document.hidden ? device.resume() : device.pause()).catch((cause: Error) => {
+      if (!cancelled) onError(cause)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [device, playing, onError])
 
   return (
     <div className={styles.holder} ref={holderRef}>

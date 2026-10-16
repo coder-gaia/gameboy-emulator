@@ -9,6 +9,8 @@ import {
   Play,
   RotateCcw,
   Upload,
+  Volume2,
+  VolumeX,
   X,
 } from 'lucide-react'
 import { loadCartridgeFile } from '../platform/files/load-cartridge'
@@ -18,7 +20,7 @@ import { CpuInspector } from '../ui/debug/CpuInspector'
 import { createDiagnosticRom } from '../core/diagnostics/cartridge'
 import { parseCartridgeHeader } from '../core/cartridge'
 import { createVisualDiagnosticRom } from '../core/diagnostics/visual-cartridge'
-import { GameBoy } from '../core/gameboy'
+import { EmulatorClient } from '../runtime/emulator-client'
 import { GameScreen } from '../ui/screen/GameScreen'
 import { InputController } from '../platform/input/controller'
 import { TouchControls } from '../ui/controls/TouchControls'
@@ -27,6 +29,7 @@ import type { DemoGame } from '../platform/games/catalog'
 import { loadDemo } from '../platform/games/load-demo'
 import { BatteryRepository, hashRom } from '../platform/storage'
 import { BatterySession } from '../runtime/battery-session'
+import { AudioOutput } from '../platform/audio'
 import styles from './App.module.css'
 
 const palettes = [
@@ -96,7 +99,7 @@ export function App() {
   const [paletteId, setPaletteId] = useState<PaletteId>('dmg')
   const [cartridge, setCartridge] = useState<LoadedCartridge | null>(null)
   const [cartridgeRevision, setCartridgeRevision] = useState(0)
-  const [device, setDevice] = useState<GameBoy | null>(null)
+  const [device, setDevice] = useState<EmulatorClient | null>(null)
   const [playing, setPlaying] = useState(false)
   const [viewRevision, setViewRevision] = useState(0)
   const [error, setError] = useState('')
@@ -104,6 +107,13 @@ export function App() {
   const [activeGameId, setActiveGameId] = useState<string | null>(null)
   const [batteryNotice, setBatteryNotice] = useState('')
   const [saveBlocked, setSaveBlocked] = useState(false)
+  const [audioReady, setAudioReady] = useState(false)
+  const [audioBusy, setAudioBusy] = useState(false)
+  const [muted, setMuted] = useState(false)
+  const [volume, setVolume] = useState(0.5)
+  const [audioNotice, setAudioNotice] = useState('')
+  const audioOutput = useRef<AudioOutput | null>(null)
+  const liveDevice = useRef<EmulatorClient | null>(null)
   const batterySession = useRef<BatterySession | null>(null)
   const batteryRepository = useMemo(() => new BatteryRepository(), [])
   const fileInput = useRef<HTMLInputElement>(null)
@@ -121,12 +131,98 @@ export function App() {
     '--lcd-ink': palette.ink,
   } as CSSProperties
 
-  const pausePlayback = useCallback(() => setPlaying(false), [])
+  const pausePlayback = useCallback(() => {
+    setPlaying(false)
+    const session = batterySession.current
+    void device
+      ?.pause()
+      .then(() => {
+        if (session === batterySession.current) return session?.flush()
+      })
+      .catch((cause: unknown) => {
+        if (session === batterySession.current)
+          setBatteryNotice(
+            cause instanceof Error ? cause.message : 'Não foi possível salvar o progresso.',
+          )
+      })
+  }, [device])
   const playbackError = useCallback((cause: Error) => {
     setPlaying(false)
     setError(cause.message)
   }, [])
   const refreshScreen = useCallback(() => setViewRevision((value) => value + 1), [])
+
+  useEffect(() => {
+    liveDevice.current = device
+    return () => device?.dispose()
+  }, [device])
+
+  useEffect(
+    () => () => {
+      void audioOutput.current?.dispose()
+      audioOutput.current = null
+    },
+    [],
+  )
+
+  useEffect(() => {
+    const output = audioOutput.current
+    if (!audioReady || !output) return
+    let cancelled = false
+    const attach = device
+      ? device.attachAudio(output)
+      : output.pause(output.getDiagnostics().epoch + 1)
+    void attach.catch((cause: unknown) => {
+      if (cancelled) return
+      setAudioNotice(
+        cause instanceof Error
+          ? cause.message
+          : 'O som ficou indisponível. O jogo continua sem som.',
+      )
+      setAudioReady(false)
+      if (audioOutput.current === output) audioOutput.current = null
+      void output.dispose()
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [device, audioReady])
+
+  async function toggleAudio() {
+    if (audioReady && audioOutput.current) {
+      audioOutput.current.setMuted(!muted)
+      setMuted(!muted)
+      return
+    }
+    setAudioBusy(true)
+    setAudioNotice('')
+    const output = new AudioOutput({
+      onError: (cause) => {
+        if (audioOutput.current !== output) return
+        setAudioNotice(`${cause.message} O jogo continua sem som.`)
+        setAudioReady(false)
+        audioOutput.current = null
+        void (liveDevice.current?.disableAudio() ?? Promise.resolve())
+          .catch(() => {})
+          .finally(() => output.dispose())
+      },
+    })
+    audioOutput.current = output
+    output.setVolume(volume)
+    try {
+      await output.prepare()
+      setMuted(false)
+      setAudioReady(true)
+    } catch (cause) {
+      setAudioNotice(
+        `${cause instanceof Error ? cause.message : 'O som não está disponível neste navegador.'} O jogo continua sem som.`,
+      )
+      if (audioOutput.current === output) audioOutput.current = null
+      await output.dispose()
+    } finally {
+      setAudioBusy(false)
+    }
+  }
 
   useEffect(() => {
     if (!controller) return
@@ -200,6 +296,7 @@ export function App() {
   ) {
     setPlaying(false)
     try {
+      await device?.pause().catch(() => {})
       await batterySession.current?.flush()
     } catch (cause) {
       if (request !== loadRequest.current) return
@@ -210,16 +307,12 @@ export function App() {
       )
     }
     if (request !== loadRequest.current) return
-    const machine = loaded.metadata.isSupported ? new GameBoy(loaded.rom) : null
+    const machine = loaded.metadata.isSupported ? await EmulatorClient.create(loaded.rom) : null
     let session: BatterySession | null = null
     let notice = ''
-    if (machine && machine.cartridge.exportBatteryRam() !== null) {
+    if (machine && machine.exportBatteryRam() !== null) {
       try {
-        session = new BatterySession(
-          batteryRepository,
-          await hashRom(loaded.rom),
-          machine.cartridge,
-        )
+        session = new BatterySession(batteryRepository, await hashRom(loaded.rom), machine)
         const restored = await session.restore()
         notice = restored
           ? 'Progresso recuperado. Ele continua sendo salvo neste navegador.'
@@ -229,12 +322,16 @@ export function App() {
         notice = `${cause instanceof Error ? cause.message : 'Não foi possível abrir o save.'} O progresso desta sessão não será salvo automaticamente.`
       }
     }
-    if (request !== loadRequest.current) return
+    if (request !== loadRequest.current) {
+      machine?.dispose()
+      return
+    }
     batterySession.current = session
     setSaveBlocked(false)
     setBatteryNotice(notice)
     setActiveGameId(gameId)
     setCartridge(loaded)
+    device?.dispose()
     setDevice(machine)
     setPlaying(Boolean(machine && autoplay))
     setCartridgeRevision((value) => value + 1)
@@ -448,7 +545,7 @@ export function App() {
             <div className={styles.transport} role="group" aria-label="Reprodução">
               <button
                 type="button"
-                onClick={() => setPlaying((value) => !value)}
+                onClick={() => (playing ? pausePlayback() : setPlaying(true))}
                 disabled={Boolean(error)}
               >
                 {playing ? (
@@ -462,8 +559,42 @@ export function App() {
                 <RotateCcw size={15} aria-hidden="true" />
                 Reiniciar
               </button>
-              <span>Áudio em preparação</span>
+              <div className={styles.soundControls}>
+                <button
+                  type="button"
+                  onClick={() => void toggleAudio()}
+                  disabled={audioBusy}
+                  aria-pressed={audioReady && !muted}
+                >
+                  {audioReady && !muted ? (
+                    <Volume2 size={15} aria-hidden="true" />
+                  ) : (
+                    <VolumeX size={15} aria-hidden="true" />
+                  )}
+                  {audioBusy ? 'Abrindo som...' : audioReady && !muted ? 'Silenciar' : 'Ativar som'}
+                </button>
+                <label className={styles.volumeControl}>
+                  <span className="sr-only">Volume</span>
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    value={volume * 100}
+                    onChange={(event) => {
+                      const next = Number(event.currentTarget.value) / 100
+                      setVolume(next)
+                      audioOutput.current?.setVolume(next)
+                    }}
+                  />
+                </label>
+              </div>
             </div>
+          )}
+
+          {audioNotice && (
+            <p className={styles.controlHint} role="status" aria-label="Estado do áudio">
+              {audioNotice}
+            </p>
           )}
 
           <div className={styles.paletteBar}>
@@ -585,7 +716,7 @@ export function App() {
             </button>
             {cartridge && <CartridgeDetails cartridge={cartridge} />}
             {batteryNotice && (
-              <p className={styles.controlHint} role="status">
+              <p className={styles.controlHint} role="status" aria-label="Estado do progresso">
                 {batteryNotice}
               </p>
             )}
@@ -658,8 +789,8 @@ export function App() {
         </p>
         <p>
           O projeto está em desenvolvimento. Você já pode ler cartuchos, consultar seus dados e
-          experimentar as paletas, jogar nossa seleção de homebrews e explorar o jardim de teste. O
-          áudio chega na próxima etapa.
+          experimentar as paletas, jogar nossa seleção de homebrews e explorar o jardim de teste.
+          Ative o som pelos controles do console e ajuste o volume como preferir.
         </p>
         <p>Nenhum jogo comercial ou boot ROM original faz parte do projeto.</p>
         <a
@@ -706,7 +837,7 @@ export function App() {
           Para experimentar sem arquivo, escolha <strong>Tobu Tobu Girl</strong> ou{' '}
           <strong>2048</strong>
           na seleção de jogos. Cartuchos com bateria salvam o progresso neste navegador. O jardim é
-          um teste interativo próprio; o áudio e os save states chegam depois.
+          um teste interativo próprio e não tem trilha sonora. Save states chegam na próxima etapa.
         </p>
       </dialog>
     </div>

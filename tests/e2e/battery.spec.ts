@@ -125,9 +125,9 @@ test('bateria sobrevive ao reload, ignora nome do arquivo e mantém cartuchos se
   const id = romId(rom)
   await page.goto('/')
   await loadRom(page, rom, 'primeiro-nome.gb')
-  await expect(page.getByRole('status', { name: '', exact: true })).toContainText(
-    'será salvo automaticamente',
-  )
+  await expect(
+    page.getByRole('status', { name: 'Estado do progresso', exact: true }),
+  ).toContainText('será salvo automaticamente')
   await runAndPause(page, '1')
   await expect
     .poll(async () => (await storedBatteries(page)).find((record) => record.romId === id)?.bytes[0])
@@ -135,9 +135,9 @@ test('bateria sobrevive ao reload, ignora nome do arquivo e mantém cartuchos se
 
   await page.reload()
   await loadRom(page, rom, 'outro-nome.gb')
-  await expect(page.getByRole('status', { name: '', exact: true })).toContainText(
-    'Progresso recuperado',
-  )
+  await expect(
+    page.getByRole('status', { name: 'Estado do progresso', exact: true }),
+  ).toContainText('Progresso recuperado')
   await runAndPause(page, '2')
   await expect
     .poll(async () => (await storedBatteries(page)).find((record) => record.romId === id)?.bytes[0])
@@ -162,12 +162,12 @@ test('IndexedDB indisponível avisa sobre a sessão e continua executando o jogo
   })
   await page.goto('/')
   await loadRom(page, batteryRom(), 'sem-armazenamento.gb')
-  await expect(page.getByRole('status', { name: '', exact: true })).toContainText(
-    'IndexedDB está indisponível',
-  )
-  await expect(page.getByRole('status', { name: '', exact: true })).toContainText(
-    'não será salvo automaticamente',
-  )
+  await expect(
+    page.getByRole('status', { name: 'Estado do progresso', exact: true }),
+  ).toContainText('IndexedDB está indisponível')
+  await expect(
+    page.getByRole('status', { name: 'Estado do progresso', exact: true }),
+  ).toContainText('não será salvo automaticamente')
   await runAndPause(page, '1')
   await expect(page.getByRole('alert')).toHaveCount(0)
 })
@@ -212,12 +212,12 @@ test('save incompatível recebe aviso e permanece intacto após jogar e pausar',
     },
   )
   await loadRom(page, rom, 'save-incompativel.gb')
-  await expect(page.getByRole('status', { name: '', exact: true })).toContainText(
-    'O save foi preservado',
-  )
-  await expect(page.getByRole('status', { name: '', exact: true })).toContainText(
-    'não será salvo automaticamente',
-  )
+  await expect(
+    page.getByRole('status', { name: 'Estado do progresso', exact: true }),
+  ).toContainText('O save foi preservado')
+  await expect(
+    page.getByRole('status', { name: 'Estado do progresso', exact: true }),
+  ).toContainText('não será salvo automaticamente')
   await runAndPause(page, '1')
   expect(await storedBatteries(page)).toEqual([
     {
@@ -247,9 +247,9 @@ test('quota preserva o cartucho até escolher continuar e permite abrir outro jo
   await loadRom(page, first, 'quota.gb')
   await page.evaluate(() => sessionStorage.setItem('test-battery-quota', 'full'))
   await runAndPause(page, '1')
-  await expect(page.getByRole('status', { name: '', exact: true })).toContainText(
-    'armazenamento local está cheio',
-  )
+  await expect(
+    page.getByRole('status', { name: 'Estado do progresso', exact: true }),
+  ).toContainText('armazenamento local está cheio')
 
   const other = batteryRom('AFTER QUOTA')
   await page.getByLabel('Arquivo do cartucho', { exact: true }).setInputFiles({

@@ -8,9 +8,9 @@ const manifest = JSON.parse(
   await readFile(resolve(projectRoot, 'tests/roms/manifest.json'), 'utf8'),
 )
 const verifyOnly = process.argv.includes('--verify')
-const knownOptions = new Set(['--verify', '--acid2', '--mbc1'])
+const knownOptions = new Set(['--verify', '--acid2', '--mbc1', '--audio'])
 if (process.argv.slice(2).some((argument) => !knownOptions.has(argument))) {
-  throw new Error('Opções aceitas: --verify, --acid2 e --mbc1.')
+  throw new Error('Opções aceitas: --verify, --acid2, --mbc1 e --audio.')
 }
 
 function projectPath(path) {
@@ -51,8 +51,7 @@ async function ensureFile(entry, url) {
   await writeFile(path, bytes, { flag: 'wx' })
 }
 
-for (const entry of manifest.tests) {
-  const suite = manifest.suites[entry.suite]
+async function ensureSuiteFile(entry, suite) {
   const url =
     entry.suite === 'blargg'
       ? `https://raw.githubusercontent.com/retrio/gb-test-roms/${suite.revision}/${entry.sourcePath.split('/').map(encodeURIComponent).join('/')}`
@@ -67,6 +66,10 @@ for (const entry of manifest.tests) {
     }
   }
   await ensureFile(entry, url)
+}
+
+for (const entry of manifest.tests) {
+  await ensureSuiteFile(entry, manifest.suites[entry.suite])
 }
 
 if (process.argv.includes('--acid2')) {
@@ -86,6 +89,15 @@ if (process.argv.includes('--mbc1')) {
   mbc1Count = mbc1.tests.length
 }
 
+let audioCount = 0
+if (process.argv.includes('--audio')) {
+  const audio = JSON.parse(
+    await readFile(resolve(projectRoot, 'tests/roms/audio-manifest.json'), 'utf8'),
+  )
+  for (const entry of audio.tests) await ensureSuiteFile(entry, audio)
+  audioCount = audio.tests.length
+}
+
 console.log(
-  `${manifest.tests.length + mbc1Count} ROMs verificadas por SHA-256${process.argv.includes('--acid2') ? ', com ROM e referência dmg-acid2' : ''}.`,
+  `${manifest.tests.length + mbc1Count + audioCount} ROMs verificadas por SHA-256${process.argv.includes('--acid2') ? ', com ROM e referência dmg-acid2' : ''}.`,
 )

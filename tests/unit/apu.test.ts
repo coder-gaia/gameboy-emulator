@@ -1,0 +1,387 @@
+import { describe, expect, it } from 'vitest'
+import { Apu } from '../../src/core/apu'
+import { DMG_CLOCK_HZ } from '../../src/core/model'
+
+function powered(rate = 48_000): Apu {
+  const apu = new Apu(rate)
+  apu.reset(false)
+  apu.writeRegister(0xff26, 0x80)
+  return apu
+}
+
+function sequence(apu: Apu, clocks: number): void {
+  for (let clock = 0; clock < clocks; clock += 1) apu.clockFrameSequencer()
+}
+
+function pulse(apu: Apu, channel = 1, frequency = 0x700, envelope = 0xf0, duty = 2): void {
+  const first = channel === 1 ? 0xff11 : 0xff16
+  apu.writeRegister(first, duty << 6)
+  apu.writeRegister(first + 1, envelope)
+  apu.writeRegister(first + 2, frequency & 0xff)
+  apu.writeRegister(first + 3, 0x80 | (frequency >>> 8))
+}
+
+describe('APU DMG: registradores e energia', () => {
+  it('aplica máscaras e estado pós boot, mantendo silêncio antes de um jogo configurar áudio', () => {
+    const apu = new Apu()
+    expect(apu.readRegister(0xff10)).toBe(0x80)
+    expect(apu.readRegister(0xff11)).toBe(0xbf)
+    expect(apu.readRegister(0xff12)).toBe(0xf3)
+    expect(apu.readRegister(0xff13)).toBe(0xff)
+    expect(apu.readRegister(0xff14)).toBe(0xbf)
+    expect(apu.readRegister(0xff24)).toBe(0x77)
+    expect(apu.readRegister(0xff25)).toBe(0xf3)
+    expect(apu.readRegister(0xff26)).toBe(0xf1)
+    expect(apu.readRegister(0xff27)).toBe(0xff)
+    expect(apu.readRegister(0xff76)).toBe(0xff)
+    apu.tick(100_000)
+    expect(apu.drainSamples().every((sample) => sample === 0)).toBe(true)
+  })
+
+  it('reseta sem boot com canais desligados e NR52 igual a 70', () => {
+    const apu = new Apu()
+    apu.reset(false)
+    expect(apu.readRegister(0xff26)).toBe(0x70)
+    expect(apu.readRegister(0xff12)).toBe(0)
+    expect(apu.readRegister(0xff11)).toBe(0x3f)
+    apu.writeRegister(0xff26, 0xff)
+    expect(apu.readRegister(0xff26)).toBe(0xf0)
+    apu.writeRegister(0xff26, 0x8f)
+    expect(apu.readRegister(0xff26)).toBe(0xf0)
+  })
+
+  it('preserva wave RAM e length durante power cycle, ignorando duty e envelope enquanto off', () => {
+    const apu = powered()
+    apu.writeRegister(0xff30, 0x42)
+    apu.writeRegister(0xff11, 0xfc)
+    apu.writeRegister(0xff1b, 0xfd)
+    apu.writeRegister(0xff26, 0)
+    apu.writeRegister(0xff11, 0xbf)
+    apu.writeRegister(0xff12, 0xf3)
+    sequence(apu, 1024)
+    apu.writeRegister(0xff26, 0x80)
+    expect(apu.readRegister(0xff11)).toBe(0x3f)
+    expect(apu.readRegister(0xff12)).toBe(0)
+    expect(apu.readRegister(0xff30)).toBe(0x42)
+    expect(apu.snapshot().pulse1.length).toBe(1)
+    expect(apu.snapshot().wave.length).toBe(3)
+  })
+
+  it('liga DAC sem iniciar canal e desliga o canal imediatamente ao desligar o DAC', () => {
+    const apu = powered()
+    apu.writeRegister(0xff12, 0x08)
+    expect(apu.readRegister(0xff26) & 1).toBe(0)
+    apu.writeRegister(0xff14, 0x80)
+    expect(apu.readRegister(0xff26) & 1).toBe(1)
+    apu.writeRegister(0xff12, 7)
+    expect(apu.readRegister(0xff26) & 1).toBe(0)
+    apu.writeRegister(0xff14, 0x80)
+    expect(apu.readRegister(0xff26) & 1).toBe(0)
+    apu.writeRegister(0xff12, 0xf0)
+    expect(apu.readRegister(0xff26) & 1).toBe(0)
+  })
+})
+
+describe('APU DMG: length, envelope e sweep', () => {
+  it('clocka length em 0, 2, 4 e 6, inclusive em canais inativos', () => {
+    const apu = powered()
+    apu.writeRegister(0xff11, 62)
+    apu.writeRegister(0xff12, 0xf0)
+    apu.writeRegister(0xff14, 0xc0)
+    apu.clockFrameSequencer()
+    expect(apu.snapshot().pulse1.length).toBe(1)
+    apu.clockFrameSequencer()
+    expect(apu.readRegister(0xff26) & 1).toBe(1)
+    apu.clockFrameSequencer()
+    expect(apu.readRegister(0xff26) & 1).toBe(0)
+    apu.writeRegister(0xff11, 63)
+    sequence(apu, 2)
+    expect(apu.snapshot().pulse1.length).toBe(0)
+  })
+
+  it('habilitar length na fase extra decrementa e trigger recarrega máximo menos um', () => {
+    const apu = powered()
+    apu.clockFrameSequencer()
+    apu.writeRegister(0xff11, 63)
+    apu.writeRegister(0xff12, 0xf0)
+    apu.writeRegister(0xff14, 0xc0)
+    expect(apu.snapshot().pulse1.length).toBe(63)
+    expect(apu.readRegister(0xff26) & 1).toBe(1)
+    apu.writeRegister(0xff14, 0xc0)
+    expect(apu.snapshot().pulse1.length).toBe(63)
+    apu.writeRegister(0xff14, 0)
+    apu.writeRegister(0xff11, 63)
+    apu.writeRegister(0xff14, 0x40)
+    expect(apu.snapshot().pulse1.length).toBe(0)
+    expect(apu.readRegister(0xff26) & 1).toBe(0)
+  })
+
+  it('trigger com DAC off ainda atualiza length e envelope', () => {
+    const apu = powered()
+    apu.clockFrameSequencer()
+    apu.writeRegister(0xff14, 0xc0)
+    expect(apu.snapshot().pulse1.length).toBe(63)
+    expect(apu.snapshot().pulse1.envelopeTimer).toBe(8)
+    expect(apu.readRegister(0xff26) & 1).toBe(0)
+  })
+
+  it('envelope altera volume a 64 Hz, chega a zero sem desligar o canal e pausa em limites', () => {
+    const apu = powered()
+    pulse(apu, 1, 0, 0x21)
+    sequence(apu, 8)
+    expect(apu.snapshot().pulse1.volume).toBe(1)
+    sequence(apu, 8)
+    expect(apu.snapshot().pulse1.volume).toBe(0)
+    expect(apu.readRegister(0xff26) & 1).toBe(1)
+    sequence(apu, 24)
+    expect(apu.snapshot().pulse1.volume).toBe(0)
+    pulse(apu, 2, 0, 0xe9)
+    sequence(apu, 16)
+    expect(apu.snapshot().pulse2.volume).toBe(15)
+  })
+
+  it('período zero impede envelope automático e permite o incremento manual DMG', () => {
+    const apu = powered()
+    pulse(apu, 1, 0, 0x58)
+    sequence(apu, 128)
+    expect(apu.snapshot().pulse1.volume).toBe(5)
+    apu.writeRegister(0xff12, 0x08)
+    expect(apu.snapshot().pulse1.volume).toBe(6)
+  })
+
+  it('trigger imediatamente antes do envelope adiciona um tick ao prazo', () => {
+    const apu = powered()
+    sequence(apu, 7)
+    pulse(apu, 1, 0, 0x21)
+    apu.clockFrameSequencer()
+    expect(apu.snapshot().pulse1.volume).toBe(2)
+    sequence(apu, 8)
+    expect(apu.snapshot().pulse1.volume).toBe(1)
+  })
+
+  it('sweep verifica overflow no trigger mesmo com pace zero e não altera frequência no cálculo inicial', () => {
+    const apu = powered()
+    apu.writeRegister(0xff10, 1)
+    pulse(apu, 1, 0x600)
+    expect(apu.readRegister(0xff26) & 1).toBe(0)
+    pulse(apu, 1, 0x400)
+    expect(apu.snapshot().pulse1.frequency).toBe(0x400)
+    expect(apu.readRegister(0xff26) & 1).toBe(1)
+  })
+
+  it('sweep utiliza shadow, atualiza em 128 Hz e executa segundo overflow sem aplicar o resultado', () => {
+    const apu = powered()
+    apu.writeRegister(0xff10, 0x11)
+    pulse(apu, 1, 0x400)
+    apu.writeRegister(0xff13, 0x01)
+    sequence(apu, 3)
+    expect(apu.snapshot().pulse1.frequency).toBe(0x600)
+    expect(apu.readRegister(0xff26) & 1).toBe(0)
+  })
+
+  it('clear de negate após cálculo desliga, inclusive cálculo com shift zero', () => {
+    const apu = powered()
+    apu.writeRegister(0xff10, 0x09)
+    pulse(apu, 1, 0x400)
+    apu.writeRegister(0xff10, 0x01)
+    expect(apu.readRegister(0xff26) & 1).toBe(0)
+    apu.writeRegister(0xff10, 0x18)
+    pulse(apu, 1, 0x400)
+    sequence(apu, 3)
+    apu.writeRegister(0xff10, 0x10)
+    expect(apu.readRegister(0xff26) & 1).toBe(0)
+  })
+
+  it('power-on com DIV alto pula o primeiro evento sem reiniciar DIV externo', () => {
+    const apu = new Apu()
+    apu.reset(false)
+    apu.setDividerCounter(0x1000)
+    apu.writeRegister(0xff26, 0x80)
+    apu.writeRegister(0xff11, 63)
+    apu.writeRegister(0xff12, 0xf0)
+    apu.writeRegister(0xff14, 0xc0)
+    apu.clockFrameSequencer()
+    expect(apu.snapshot().pulse1.length).toBe(1)
+    apu.clockFrameSequencer()
+    expect(apu.snapshot().pulse1.length).toBe(0)
+  })
+})
+
+describe('APU DMG: geradores por T-cycles', () => {
+  it.each([0, 1, 2, 3])('duty %i usa oito posições e não reinicia fase ao retrigger', (duty) => {
+    const apu = powered()
+    pulse(apu, 1, 2047, 0xf0, duty)
+    expect(apu.snapshot().pulse1.output).toBe(0)
+    let high = 0
+    for (let phase = 0; phase < 8; phase += 1) {
+      apu.tick(4)
+      if (apu.snapshot().pulse1.output === 15) high += 1
+    }
+    expect(high).toBe([1, 2, 4, 6][duty])
+    apu.tick(12)
+    const position = apu.snapshot().pulse1.dutyPosition
+    apu.writeRegister(0xff14, 0x87)
+    expect(apu.snapshot().pulse1.dutyPosition).toBe(position)
+  })
+
+  it('mudar frequência afeta o próximo reload do timer, sem encurtar o período atual', () => {
+    const apu = powered()
+    pulse(apu, 2, 2046)
+    apu.tick(3)
+    apu.writeRegister(0xff18, 0xff)
+    apu.tick(4)
+    expect(apu.snapshot().pulse2.dutyPosition).toBe(0)
+    apu.tick(1)
+    expect(apu.snapshot().pulse2.dutyPosition).toBe(1)
+    apu.tick(4)
+    expect(apu.snapshot().pulse2.dutyPosition).toBe(2)
+  })
+
+  it('wave começa pelo nibble um após atraso e aplica volume por shift digital', () => {
+    const apu = powered()
+    apu.writeRegister(0xff30, 0x8e)
+    apu.writeRegister(0xff31, 0x46)
+    apu.writeRegister(0xff1a, 0x80)
+    apu.writeRegister(0xff1c, 0x20)
+    apu.writeRegister(0xff1d, 0xff)
+    apu.writeRegister(0xff1e, 0x87)
+    apu.tick(7)
+    expect(apu.snapshot().wave.output).toBe(0)
+    apu.tick(1)
+    expect(apu.snapshot().wave.output).toBe(14)
+    apu.writeRegister(0xff1c, 0x40)
+    expect(apu.snapshot().wave.output).toBe(7)
+    apu.writeRegister(0xff1c, 0x60)
+    expect(apu.snapshot().wave.output).toBe(3)
+    apu.writeRegister(0xff1c, 0)
+    expect(apu.snapshot().wave.output).toBe(0)
+    expect(apu.readRegister(0xff26) & 4).toBe(4)
+  })
+
+  it('wave RAM ativa permite acesso somente na janela de leitura e remapeia qualquer endereço', () => {
+    const apu = powered()
+    apu.writeRegister(0xff30, 0x8e)
+    apu.writeRegister(0xff1a, 0x80)
+    apu.writeRegister(0xff1d, 0xfe)
+    apu.writeRegister(0xff1e, 0x87)
+    expect(apu.readRegister(0xff30)).toBe(0xff)
+    apu.writeRegister(0xff30, 0x99)
+    apu.tick(10)
+    expect(apu.readRegister(0xff3f)).toBe(0x8e)
+    apu.writeRegister(0xff3f, 0x12)
+    expect(apu.readRegister(0xff30)).toBe(0x12)
+    apu.tick(2)
+    expect(apu.readRegister(0xff30)).toBe(0xff)
+    apu.writeRegister(0xff1a, 0)
+    expect(apu.readRegister(0xff30)).toBe(0x12)
+  })
+
+  it('retrigger wave antes do fetch corrompe somente os bytes previstos pelo DMG', () => {
+    const apu = powered()
+    for (let index = 0; index < 16; index += 1) apu.writeRegister(0xff30 + index, index * 17)
+    apu.writeRegister(0xff1a, 0x80)
+    apu.writeRegister(0xff1d, 0xfe)
+    apu.writeRegister(0xff1e, 0x87)
+    apu.tick(10 + 4 * 15 + 2)
+    expect(apu.snapshot().wave.position).toBe(16)
+    apu.writeRegister(0xff1e, 0x87)
+    apu.writeRegister(0xff1a, 0)
+    expect(Array.from(apu.snapshot().waveRam.subarray(0, 4))).toEqual([0x88, 0x99, 0xaa, 0xbb])
+  })
+
+  it('noise produz sequência determinística em 15 e 7 bits com divisores corretos', () => {
+    const apu = powered()
+    apu.writeRegister(0xff21, 0xf0)
+    apu.writeRegister(0xff22, 0)
+    apu.writeRegister(0xff23, 0x80)
+    apu.tick(7)
+    expect(apu.snapshot().noise.lfsr).toBe(0x7fff)
+    apu.tick(1)
+    expect(apu.snapshot().noise.lfsr).toBe(0x3fff)
+    apu.writeRegister(0xff22, 0x18)
+    apu.writeRegister(0xff23, 0x80)
+    apu.tick(16)
+    expect(apu.snapshot().noise.lfsr).toBe(0x3fbf)
+    apu.writeRegister(0xff22, 0xe0)
+    apu.tick(100_000)
+    expect(apu.snapshot().noise.lfsr).toBe(0x3fbf)
+  })
+})
+
+describe('APU DMG: amostras estéreo', () => {
+  it('gera quantidade exata por clock, intercala L/R e respeita NR51', () => {
+    const apu = powered(8_000)
+    pulse(apu, 1)
+    apu.writeRegister(0xff24, 0x77)
+    apu.writeRegister(0xff25, 0x10)
+    apu.tick(DMG_CLOCK_HZ)
+    expect(apu.pendingSampleFrames).toBe(8_000)
+    const samples = apu.drainSamples()
+    expect(samples.length).toBe(16_000)
+    expect(samples.some((sample, index) => index % 2 === 0 && sample !== 0)).toBe(true)
+    expect(samples.every((sample, index) => index % 2 === 0 || sample === 0)).toBe(true)
+    expect(samples.every((sample) => Number.isFinite(sample) && Math.abs(sample) <= 1)).toBe(true)
+    expect(apu.pendingSampleFrames).toBe(0)
+  })
+
+  it('NR50 zero mantém ganho de um oitavo e VIN sem fonte externa não altera a mixagem', () => {
+    const first = powered(8_000)
+    const second = powered(8_000)
+    pulse(first)
+    pulse(second)
+    first.writeRegister(0xff25, 0x11)
+    second.writeRegister(0xff25, 0x11)
+    first.writeRegister(0xff24, 0)
+    second.writeRegister(0xff24, 0xff)
+    first.tick(100_000)
+    second.tick(100_000)
+    const quiet = first.drainSamples()
+    const loud = second.drainSamples()
+    for (let index = 0; index < quiet.length; index += 1)
+      expect(loud[index]).toBeCloseTo(quiet[index]! * 8, 6)
+  })
+
+  it('tick em lotes e por T-cycle gera as mesmas amostras e estado', () => {
+    const first = powered()
+    const second = powered()
+    pulse(first)
+    pulse(second)
+    first.writeRegister(0xff25, 0x11)
+    second.writeRegister(0xff25, 0x11)
+    first.tick(100_000)
+    for (let cycle = 0; cycle < 100_000; cycle += 1) second.tick(1)
+    expect(first.drainSamples()).toEqual(second.drainSamples())
+    expect(first.snapshot()).toEqual(second.snapshot())
+  })
+
+  it('limita a fila, descarta as amostras mais antigas e limpa sem modificar os geradores', () => {
+    const apu = powered()
+    pulse(apu)
+    apu.tick(DMG_CLOCK_HZ)
+    expect(apu.pendingSampleFrames).toBe(16_384)
+    expect(apu.droppedSampleFrames).toBe(48_000 - 16_384)
+    expect(apu.drainSamples().length).toBe(32_768)
+    const before = apu.snapshot()
+    apu.clearSamples()
+    expect(apu.pendingSampleFrames).toBe(0)
+    expect(apu.snapshot()).toEqual(before)
+    apu.setSampleRate(44_100)
+    expect(apu.sampleRate).toBe(44_100)
+    expect(apu.snapshot()).toEqual(before)
+  })
+
+  it('snapshot não expõe buffers internos e valida ciclos e taxa de áudio', () => {
+    const apu = powered()
+    const snapshot = apu.snapshot()
+    snapshot.waveRam[0] = 0x99
+    snapshot.registers[2] = 0xff
+    snapshot.pulse1.volume = 15
+    expect(apu.readRegister(0xff30)).toBe(0)
+    expect(apu.readRegister(0xff12)).toBe(0)
+    expect(apu.snapshot().pulse1.volume).toBe(0)
+    for (const invalid of [-1, 0.5, NaN, Infinity])
+      expect(() => apu.tick(invalid)).toThrow(/T-cycles/)
+    for (const invalid of [0, 1.5, 7999, 192001, NaN])
+      expect(() => apu.setSampleRate(invalid)).toThrow(/taxa/)
+  })
+})

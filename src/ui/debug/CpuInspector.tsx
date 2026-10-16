@@ -1,52 +1,48 @@
 import { useEffect, useState } from 'react'
-import type { GameBoy } from '../../core/gameboy'
+import type { EmulatorClient } from '../../runtime/emulator-client'
 import styles from './CpuInspector.module.css'
 
 function hex(value: number, length = 4) {
   return value.toString(16).padStart(length, '0').toUpperCase()
 }
 
-/** Execução manual limitada. A execução contínua em Worker chega com a APU. */
+/** Inspeção da mesma máquina que executa fora da interface. */
 export function CpuInspector({
   device,
   playing,
   onAdvance,
   onReset,
 }: {
-  device: GameBoy
+  device: EmulatorClient
   playing: boolean
   onAdvance: () => void
   onReset: () => void
 }) {
-  const [state, setState] = useState(() => device.cpu.snapshot())
+  const [state, setState] = useState(() => device.inspection.cpu)
   const [open, setOpen] = useState(false)
-  const [serial, setSerial] = useState('')
+  const [serial, setSerial] = useState(device.inspection.serial)
   const [error, setError] = useState('')
+  const [busy, setBusy] = useState(false)
 
   useEffect(() => {
     if (!open) return
     const interval = window.setInterval(() => {
-      setState(device.cpu.snapshot())
-      if (device.bus.serial.pendingOutputBytes) {
-        const output = device.bus.serial.drainOutput()
-        setSerial((previous) => (previous + output.text).slice(-4096))
-      }
+      setState(device.inspection.cpu)
+      setSerial(device.inspection.serial)
     }, 150)
     return () => window.clearInterval(interval)
   }, [device, open])
 
-  function advance(count: number) {
+  async function advance(count: number) {
+    setBusy(true)
     try {
-      for (let instruction = 0; instruction < count; instruction += 1) {
-        if (device.cpu.stopped) break
-        device.step()
-      }
+      await device.advance(count)
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'A execução da CPU foi interrompida.')
     } finally {
-      setState(device.cpu.snapshot())
-      const output = device.bus.serial.drainOutput()
-      setSerial((previous) => (previous + output.text).slice(-4096))
+      setState(device.inspection.cpu)
+      setSerial(device.inspection.serial)
+      setBusy(false)
       onAdvance()
     }
   }
@@ -63,7 +59,7 @@ export function CpuInspector({
     SP: state.sp,
     PC: state.pc,
   }
-  const paused = playing || state.stopped || Boolean(error)
+  const paused = playing || busy || state.stopped || Boolean(error)
 
   return (
     <details className={styles.panel} onToggle={(event) => setOpen(event.currentTarget.open)}>
@@ -99,14 +95,13 @@ export function CpuInspector({
         </div>
       </dl>
       <p className={styles.bytes}>
-        Próximos bytes:{' '}
-        {[0, 1, 2].map((offset) => hex(device.bus.read8Direct(state.pc + offset), 2)).join(' ')}
+        Próximos bytes: {device.inspection.nextBytes.map((value) => hex(value, 2)).join(' ')}
       </p>
       <div className={styles.actions}>
-        <button type="button" onClick={() => advance(1)} disabled={paused}>
+        <button type="button" onClick={() => void advance(1)} disabled={paused}>
           Uma instrução
         </button>
-        <button type="button" onClick={() => advance(1000)} disabled={paused}>
+        <button type="button" onClick={() => void advance(1000)} disabled={paused}>
           Até 1000 instruções
         </button>
         <button type="button" onClick={reset}>
