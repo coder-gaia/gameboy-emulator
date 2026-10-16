@@ -14,3 +14,4 @@ test-results/
 *.sav
 !tests/fixtures/*.gb
 !tests/roms/fixtures/**/*.gb
+!public/games/**/*.gb

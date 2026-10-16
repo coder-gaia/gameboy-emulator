@@ -1,4 +1,4 @@
-import type { RomOnlyCartridge } from '../cartridge'
+import type { Cartridge } from '../cartridge'
 import { OamDma } from '../dma'
 import { SerialPort } from '../serial'
 import { Timer } from '../timer'
@@ -21,7 +21,7 @@ export class MemoryBus {
   private interruptEnable = 0
 
   constructor(
-    readonly cartridge: Pick<RomOnlyCartridge, 'readRom' | 'writeRom' | 'readRam' | 'writeRam'>,
+    readonly cartridge: Pick<Cartridge, 'readRom' | 'writeRom' | 'readRam' | 'writeRam'>,
   ) {
     // O bus isolado começa sem LCD; GameBoy aplica o estado pós boot da máquina.
     this.ppu.reset(false)

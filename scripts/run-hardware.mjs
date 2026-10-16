@@ -1,6 +1,8 @@
 import { spawnSync } from 'node:child_process'
 const milestone = process.argv.at(-1)
-if (!['M03', 'M04', 'M05'].includes(milestone)) throw new Error('Escolha M03, M04 ou M05.')
+if (!['M03', 'M04', 'M05', 'M06'].includes(milestone)) {
+  throw new Error('Escolha M03, M04, M05 ou M06.')
+}
 const result = spawnSync(
   process.execPath,
   ['node_modules/vitest/vitest.mjs', 'run', '--config', 'vitest.hardware.config.ts'],

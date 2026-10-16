@@ -3,6 +3,8 @@ import {
   computeHeaderChecksum,
   parseCartridgeHeader,
   RomOnlyCartridge,
+  createCartridge,
+  Mbc1Cartridge,
 } from '../../src/core/cartridge'
 import { buildTestRom, updateTestHeaderChecksum } from '../fixtures/rom'
 
@@ -48,14 +50,45 @@ describe('cabeçalho do cartucho', () => {
     [0x19, 'MBC5', false],
     [0x1e, 'MBC5', true],
     [0x7f, 'UNKNOWN', false],
-  ])('identifica tipo %i sem executar mapper prematuramente', (cartridgeType, mapper, battery) => {
-    const rom = buildTestRom({ cartridgeType })
-    expect(parseCartridgeHeader(rom)).toMatchObject({
-      mapper,
-      hasBattery: battery,
-      isSupported: false,
-    })
-    expect(() => new RomOnlyCartridge(rom)).toThrow(/não suportado/)
+  ])(
+    'identifica tipo %i e reserva cada controlador à classe correspondente',
+    (cartridgeType, mapper, battery) => {
+      const rom = buildTestRom({ cartridgeType })
+      expect(parseCartridgeHeader(rom)).toMatchObject({
+        mapper,
+        hasBattery: battery,
+        isSupported: mapper === 'MBC1',
+      })
+      expect(() => new RomOnlyCartridge(rom)).toThrow(/não suportado/)
+      if (mapper === 'MBC1') expect(createCartridge(rom)).toBeInstanceOf(Mbc1Cartridge)
+      else expect(() => createCartridge(rom)).toThrow(/não suportado/)
+    },
+  )
+
+  it('aceita as variantes normais de MBC1 e rejeita configurações fisicamente incompatíveis', () => {
+    expect(
+      parseCartridgeHeader(buildTestRom({ cartridgeType: 1, romSizeCode: 6 })).isSupported,
+    ).toBe(true)
+    expect(
+      parseCartridgeHeader(buildTestRom({ cartridgeType: 2, romSizeCode: 4, ramSizeCode: 3 }))
+        .isSupported,
+    ).toBe(true)
+    expect(
+      parseCartridgeHeader(buildTestRom({ cartridgeType: 3, romSizeCode: 6, ramSizeCode: 2 }))
+        .isSupported,
+    ).toBe(true)
+    for (const options of [
+      { cartridgeType: 1, ramSizeCode: 2 },
+      { cartridgeType: 1, romSizeCode: 7 },
+      { cartridgeType: 1, romSizeCode: 0x52 },
+      { cartridgeType: 3, ramSizeCode: 4 },
+      { cartridgeType: 3, romSizeCode: 5, ramSizeCode: 3 },
+      { cartridgeType: 3, cgbFlag: 0xc0 },
+    ]) {
+      const rom = buildTestRom(options)
+      expect(parseCartridgeHeader(rom).isSupported).toBe(false)
+      expect(() => createCartridge(rom)).toThrow(/não suportado/)
+    }
   })
 
   it('limita o título CGB a 11 caracteres e recusa uma ROM exclusiva de Color', () => {

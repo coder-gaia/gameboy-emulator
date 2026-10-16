@@ -10,7 +10,7 @@ Stack aprovada: TypeScript estrito, React, Vite, CSS Modules, Canvas 2D, Worker,
 | M03   | Timers, interrupções, HALT, DMA e suítes de timing  | Concluída |
 | M04   | PPU, fundo, tiles e scroll                          | Concluída |
 | M05   | Sprites, janela, joypad e dmg-acid2                 | Concluída |
-| M06   | MBC1, bateria e demo autorizada                     | Pendente  |
+| M06   | MBC1, bateria e biblioteca de demos autorizadas     | Concluída |
 | M07   | APU, Worker e sincronização de áudio                | Pendente  |
 | M08   | Save states versionados e slots                     | Pendente  |
 | M09   | Interface completa, controles e acessibilidade      | Pendente  |
@@ -22,15 +22,17 @@ Stack aprovada: TypeScript estrito, React, Vite, CSS Modules, Canvas 2D, Worker,
 
 ## Pontos de revisão
 
-O primeiro grupo, M00 a M02, foi aprovado pelo proprietário. O segundo grupo, M03 a M05, está concluído. M03 e M04 foram validadas e enviadas ao GitHub antes de iniciar a milestone seguinte. A M05 encerra o grupo com seu próprio commit e push após os checks.
+Os grupos M00 a M02 e M03 a M05 foram aprovados pelo proprietário. O [roteiro de teste M03 a M05](testing-m03-m05.md) permanece como referência das entregas anteriores.
 
-**Pausar antes da M06 e aguardar o ok do proprietário.** O [roteiro de teste M03 a M05](testing-m03-m05.md) registra preparação, ações, resultados esperados e limitações atuais.
+O grupo atual contém M06, M07 e M08. M06 está concluída; M07 e M08 permanecem pendentes. **Pausar antes da M09 e aguardar o ok do proprietário**, entregando o roteiro de teste do grupo com resultados esperados. Cada milestone deve ter seu commit validado, push imediato e confirmação no GitHub antes da seguinte.
 
 O cartucho sintético POCKET TEST permite testar CPU, memória e serial sem obter jogos. O [README](../README.md#testar-o-primeiro-grupo-de-milestones) explica o roteiro inicial. M03 adiciona timers, DMA, correção de EI seguido de HALT e prioridades de interrupção durante escrita na pilha, com 42 ROMs externas aprovadas.
 
 M04 adiciona modos do LCD, fundo, tiles, scroll e o cartucho próprio POCKET GARDEN, com 62 ROMs externas de timing aprovadas. A validação também corrigiu a separação dos barramentos de VRAM e memória principal durante DMA.
 
 M05 adiciona sprites de 8 por 8 e 8 por 16 pixels, janela com contador interno, joypad, teclado, toque e ajuda para carregar cartuchos. O jardim mantém o cenário parado, permite mover e trocar o personagem e apresenta uma legenda fixa. dmg-acid2 compara todos os 23.040 pixels com a referência oficial, somando 63 ROMs externas aprovadas no grupo.
+
+M06 adiciona MBC1 padrão, bancos de ROM e RAM, modos de banking e saves de bateria em IndexedDB, separados pelo SHA-256 da ROM. A biblioteca oferece Tobu Tobu Girl e 2048 com binários originais, controles e créditos documentados em [jogos demonstrativos](demo-games.md). A validação usa o mapper real do produto nos Blargg e acrescenta 12 ROMs Mooneye MBC1, totalizando 75 testes externos aprovados e 59 fixtures Mooneye reproduzíveis.
 
 Cada milestone recebe um commit, com título Conventional Commits em inglês e corpo em pt-br. Sem autoria ou coautoria de ferramentas de IA e sem caracteres de travessão.
 
@@ -43,13 +45,15 @@ Cada commit validado deve receber push imediatamente e ser confirmado no GitHub.
 - Testes determinísticos de instruções, memória e serial quando disponíveis.
 - Testes de navegador para os fluxos implementados, incluindo viewport móvel.
 - Informar resultados reais. Blargg, Mooneye e dmg-acid2 têm revisão, hash, licença e protocolo registrados em [ROMs externas de teste](test-roms.md).
-- A demo pública só entra após MBC1, bateria e seus créditos estarem prontos.
+- A biblioteca distribui somente demos com procedência, licença e créditos registrados. Os saves locais são validados por versão, hash da ROM e tamanho da RAM.
 
 ## Escopo e metas
 
 A beta da M10 terá demo, áudio, toque, teclado, gamepad, paletas, bateria e save states. O lançamento completo adiciona rewind, cartuchos ampliados e debugger.
 
-A aplicação atual executa ROM Only de 32 KiB. MBC1, bateria e Tobu Tobu Girl pertencem à M06; áudio à M07; save states à M08. O jardim é uma fixture interativa própria, sem áudio ou saves. A PPU por scanline ainda não cobre pixel FIFO, escritas dentro do modo 3 ou peculiaridades de WX 0 e 166.
+A aplicação atual executa ROM Only de 32 KiB e MBC1 padrão com ROM de até 2 MiB em potência de dois. ROMs de até 512 KiB admitem até 32 KiB de RAM; ROMs de 1 MiB ou 2 MiB admitem até 8 KiB, conforme a fiação física. A convenção homebrew de RAM de 2 KiB é aceita com aviso. MBC1M usa outra fiação, não é implementado e não possui autodetecção.
+
+MBC1, bateria e a biblioteca fazem parte da M06 concluída. Áudio, APU, Worker e sincronização pertencem à M07; save states versionados e slots à M08. O jardim é uma fixture interativa própria, sem áudio ou saves. A PPU por scanline ainda não cobre pixel FIFO, escritas dentro do modo 3 ou peculiaridades de WX 0 e 166.
 
 Meta de demo pronta em três segundos em perfil de teste documentado. Medir velocidade real da emulação, áudio e memória em celular. Cloudflare Pages elimina cold start de servidor, mantendo os custos normais de rede e inicialização no navegador.
 

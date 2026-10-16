@@ -1,0 +1,68 @@
+{
+  "schemaVersion": 1,
+  "retrievedOn": "2026-10-16",
+  "games": [
+    {
+      "id": "tobu-tobu-girl",
+      "title": "Tobu Tobu Girl",
+      "author": "Tangram Games",
+      "sourceRepository": "https://github.com/SimonLarsen/tobutobugirl",
+      "sourceRevision": "048a22c2d7ebbe25811322e8692803fa86bb643a",
+      "binarySourceUrl": "https://tangramgames.itch.io/tobutobugirl",
+      "binaryUploadId": "678889",
+      "binaryArchiveSha256": "c5ec138071079b9cad227d6fb875ad4e58a77f173ed3cd8758c04c0ab166d6e7",
+      "archiveRomPath": "tobutobugirl/tobu.gb",
+      "path": "public/games/tobu-tobu-girl/tobu.gb",
+      "sizeBytes": 262144,
+      "sha256": "5d3871cae77db2287807e8914fd21f76203e73aa3fec20955489d45cb4571d8f",
+      "mapper": "MBC1",
+      "cartridgeType": 3,
+      "ramSizeBytes": 8192,
+      "battery": true,
+      "target": "DMG",
+      "headerVersion": 1,
+      "codeLicense": "MIT",
+      "assetsLicense": "CC-BY-4.0",
+      "dependencies": [
+        {
+          "id": "mmlgb",
+          "author": "Simon Larsen",
+          "repository": "https://github.com/SimonLarsen/mmlgb",
+          "sourceRevision": "eb42b8964d53df061e21c9c4fbf223f257a67b2a",
+          "licenseRevision": "aa0864d4391490057760a2a84dd4ab117f0b04e8",
+          "license": "MIT",
+          "licensePath": "public/games/tobu-tobu-girl/LICENSE-MMLGB-MIT.txt"
+        }
+      ],
+      "licensePaths": [
+        "public/games/tobu-tobu-girl/LICENSE-MIT.txt",
+        "public/games/tobu-tobu-girl/LICENSE-MMLGB-MIT.txt",
+        "public/games/tobu-tobu-girl/ASSETS-LICENSE.txt"
+      ],
+      "attributionPath": "public/games/tobu-tobu-girl/ATTRIBUTION.txt",
+      "modified": false
+    },
+    {
+      "id": "2048",
+      "title": "2048",
+      "author": "Sanqui",
+      "sourceRepository": "https://github.com/Sanqui/2048-gb",
+      "sourceRevision": "e44f94f898c1e0de7caa1160c82c0da36ff5eb05",
+      "binarySourceUrl": "https://sanqui.rustedlogic.net/etc/2048.gb",
+      "path": "public/games/2048/2048.gb",
+      "sizeBytes": 32768,
+      "sha256": "3ea2376b15b34bd26b10e6b31d2753bf8b086098dbdb5ee84d9c0f03d66d3d7f",
+      "mapper": "MBC1",
+      "cartridgeType": 3,
+      "ramSizeBytes": 2048,
+      "battery": true,
+      "target": "DMG",
+      "headerVersion": 255,
+      "codeLicense": "Zlib",
+      "assetsLicense": "Zlib",
+      "licensePaths": ["public/games/2048/LICENSE-ZLIB.txt"],
+      "attributionPath": "public/games/2048/ATTRIBUTION.txt",
+      "modified": false
+    }
+  ]
+}

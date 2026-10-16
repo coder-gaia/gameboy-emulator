@@ -2,7 +2,7 @@
 
 Um emulador de Game Boy DMG no navegador, com núcleo TypeScript independente da interface.
 
-Projeto em desenvolvimento, com M00 a M05 concluídas. CPU, timer, DMA, vídeo, sprites, janela e controles já estão disponíveis. O jardim interativo é uma ROM própria executada pela máquina, sem precisar obter um jogo. Áudio, saves e a demo Tobu Tobu Girl entram nas próximas etapas.
+Projeto em desenvolvimento, com M00 a M06 concluídas. CPU, timer, DMA, vídeo, sprites, janela, controles, MBC1 e saves de bateria já estão disponíveis. A biblioteca oferece Tobu Tobu Girl e 2048 para jogar sem fornecer arquivos. O jardim interativo continua disponível como ROM própria de diagnóstico. Áudio e save states entram na M07 e na M08.
 
 ## Desenvolvimento local
 
@@ -27,17 +27,19 @@ Os testes de navegador precisam do Chromium do Playwright: `npx.cmd playwright i
 
 Um repositório e um pacote npm, sem monorepo. React e Vite compõem a interface. O núcleo em `src/core` não conhece o navegador, trabalha em T-cycles e tem testes executados em Node.
 
-Canvas 2D apresenta o framebuffer de 160 por 144 pixels. A cadência sem áudio usa tempo monotônico e um orçamento de ciclos, independentemente da frequência do monitor. Web Worker, AudioWorklet e IndexedDB serão introduzidos nas milestones correspondentes. O destino de publicação é Cloudflare Pages Free, como site estático.
+Canvas 2D apresenta o framebuffer de 160 por 144 pixels. A cadência sem áudio usa tempo monotônico e um orçamento de ciclos, independentemente da frequência do monitor. IndexedDB armazena a RAM de bateria localmente, identificada pelo SHA-256 da ROM. Web Worker e AudioWorklet pertencem à M07. O destino de publicação é Cloudflare Pages Free, como site estático.
 
 ## Cartuchos e testes atuais
 
-Use **Explorar jardim** para testar sem arquivo. Para carregar um jogo próprio, selecione um arquivo `.gb` ou `.gbc`, ou arraste-o para a página. Os bytes são lidos localmente e não são enviados. A ajuda **Quais arquivos posso usar?** explica formatos, extração de `.zip` e compatibilidade.
+Escolha **Tobu Tobu Girl** ou **2048** na biblioteca para começar sem arquivo. **Controles e créditos dos jogos** explica as ações e apresenta os autores e as licenças. Use **Explorar jardim** para abrir o diagnóstico visual. Para carregar um jogo próprio, selecione um arquivo `.gb` ou `.gbc`, ou arraste-o para a página. Os bytes são lidos localmente e não são enviados. A ajuda **Quais arquivos posso usar?** explica formatos, extração de `.zip` e compatibilidade.
 
-A execução aceita cartuchos **ROM Only de 32 KiB** compatíveis com o Game Boy original. Arquivos `.gbc` precisam funcionar também no DMG. Jogos exclusivos de Game Boy Color e cartuchos MBC1, MBC2, MBC3 ou MBC5 podem ter seus dados consultados, mas ainda não executam. O limite de leitura é 8 MiB. Não é necessário fornecer BIOS ou boot ROM.
+A execução aceita cartuchos **ROM Only de 32 KiB** e **MBC1 de até 2 MiB** compatíveis com o Game Boy original. MBC1 inclui bancos de ROM e RAM, ambos os modos de banking e habilitação de RAM. ROMs de até 512 KiB admitem até 32 KiB de RAM; ROMs de 1 MiB ou 2 MiB admitem até 8 KiB, conforme a fiação padrão. O tamanho de ROM precisa ser uma potência de dois. A convenção homebrew de RAM de 2 KiB é aceita com aviso, incluindo o 2048 da biblioteca.
 
-O bus implementa memória de trabalho, echo RAM, VRAM, OAM, HRAM, timer, DMA de OAM, interrupções, joypad e PPU. A transferência serial interna leva 4096 T-cycles por byte. A PPU implementa fundo, tiles, scroll, modos, LY/LYC, STAT, sprites e janela. APU e persistência ainda estão pendentes.
+Compilações **MBC1M** usam outra fiação e ficam fora do escopo atual. Não há autodetecção de MBC1M, cujo header também pode declarar MBC1. Arquivos `.gbc` precisam funcionar também no DMG. Jogos exclusivos de Game Boy Color e cartuchos MBC2, MBC3 ou MBC5 podem ter seus dados consultados, mas ainda não executam. O limite de leitura é 8 MiB. Não é necessário fornecer BIOS ou boot ROM.
 
-`npm.cmd test` executa fixtures próprias de núcleo, entrada e reprodução. `npm.cmd run test:hardware` executa 62 ROMs de instruções e timing, mais dmg-acid2, com revisão e SHA-256 fixados. Consulte [procedência e protocolos](docs/test-roms.md).
+O bus implementa memória de trabalho, echo RAM, VRAM, OAM, HRAM, timer, DMA de OAM, interrupções, joypad e PPU. A transferência serial interna leva 4096 T-cycles por byte. A PPU implementa fundo, tiles, scroll, modos, LY/LYC, STAT, sprites e janela. A APU ainda está pendente.
+
+`npm.cmd test` executa os testes de núcleo, entrada, reprodução e persistência. `npm.cmd run test:hardware` executa 75 testes externos: 62 ROMs de instruções e timing, dmg-acid2 e 12 ROMs de MBC1, com revisão e SHA-256 fixados. Consulte [procedência e protocolos](docs/test-roms.md).
 
 | Suíte                                        | Resultado atual |
 | -------------------------------------------- | --------------- |
@@ -47,8 +49,17 @@ O bus implementa memória de trabalho, echo RAM, VRAM, OAM, HRAM, timer, DMA de 
 | Mooneye, seleção DMG da M03                  | 27 de 27        |
 | Mooneye, acessos sincronizados ao LCD da M04 | 20 de 20        |
 | dmg-acid2, comparação gráfica DMG            | 1 de 1          |
+| Mooneye, MBC1 padrão da M06                  | 12 de 12        |
 
-As ROMs Blargg são baixadas para uma pasta ignorada. O runner usa um adapter de cartucho de teste MBC1 limitado a 32 KiB, preservando os binários originais. Isso não habilita MBC1 na aplicação. As fixtures Mooneye preservam a licença MIT.
+As ROMs Blargg são baixadas para uma pasta ignorada. O runner usa a mesma factory e os mesmos mappers da aplicação, preservando os binários originais. As 59 fixtures Mooneye preservam a licença MIT.
+
+## Saves de bateria
+
+O progresso que o próprio jogo grava na RAM de bateria é salvo automaticamente em IndexedDB. A chave usa o SHA-256 dos bytes da ROM, portanto renomear o mesmo arquivo não cria outro save. Jogos diferentes mantêm dados separados. A interface informa quando recupera o progresso ou quando o armazenamento está indisponível.
+
+As gravações ocorrem em lotes periódicos quando a RAM muda e nos checkpoints de pausa, troca de cartucho e saída da aba. Reiniciar a máquina preserva a bateria. Os dados pertencem ao navegador e à origem do site; limpar os dados do site ou mudar de origem não mantém esses saves. Não há conta nem sincronização em nuvem.
+
+Esse recurso preserva apenas os dados de progresso que cada jogo decide gravar. Salvar e restaurar a máquina inteira em qualquer momento pertence aos save states da M08.
 
 ## Testar o primeiro grupo de milestones
 
@@ -66,11 +77,11 @@ Os registradores da CPU usam inicialização pós boot DMG, incluindo F dependen
 
 A M03 corrige `EI;HALT` com interrupção pendente e a resseleção de interrupção quando a pilha escreve sobre IE. Os testes externos não representam aprovação de todos os comportamentos de todas as revisões do hardware.
 
-O primeiro grupo foi aprovado. O segundo grupo, M03, M04 e M05, está concluído e aguarda o teste do proprietário antes da M06. Siga o [roteiro de teste com resultados esperados](docs/testing-m03-m05.md).
+Os grupos M00 a M02 e M03 a M05 foram aprovados pelo proprietário. O [roteiro de teste M03 a M05](docs/testing-m03-m05.md) permanece como referência. O grupo atual contém M06, M07 e M08, com M06 concluída e M07 e M08 pendentes. A próxima pausa para teste será antes da M09, com instruções e resultados esperados.
 
 ## Vídeo e reprodução
 
-Clique em **Explorar jardim** para abrir POCKET GARDEN. O cenário de quatro tons permanece parado na M05. Um personagem original de 8 por 16 pixels pode passear pelo jardim; a legenda inferior usa a janela do Game Boy. Tudo é produzido por instruções SM83, tiles, mapas e OAM reais.
+Clique em **Explorar jardim** para abrir POCKET GARDEN. O cenário de quatro tons permanece parado. Um personagem original de 8 por 16 pixels pode passear pelo jardim; a legenda inferior usa a janela do Game Boy. Tudo é produzido por instruções SM83, tiles, mapas e OAM reais.
 
 | Entrada                        | Efeito no jardim                                         |
 | ------------------------------ | -------------------------------------------------------- |
@@ -91,4 +102,6 @@ O [plano original](plano-emulador-gameboy.md) preserva a proposta inicial. O [ro
 
 ## Conteúdo de terceiros
 
-Não há jogo comercial ou boot ROM distribuídos. POCKET TEST e POCKET GARDEN, incluindo cenário, personagem e letras, são criações próprias. As ROMs externas ficam restritas aos testes. As fontes DM Sans e Space Mono são fornecidas localmente pelos pacotes Fontsource. Consulte [créditos e licenças](docs/third-party.md).
+Não há jogo comercial ou boot ROM distribuídos. Tobu Tobu Girl e 2048 são homebrews com redistribuição autorizada; os binários originais e seus créditos acompanham o site. Consulte [origem, controles e licenças dos jogos](docs/demo-games.md).
+
+POCKET TEST e POCKET GARDEN, incluindo cenário, personagem e letras, são criações próprias. As ROMs externas ficam restritas aos testes. As fontes DM Sans e Space Mono são fornecidas localmente pelos pacotes Fontsource. Consulte [créditos e licenças](docs/third-party.md).

@@ -1,6 +1,6 @@
 # ROMs externas de teste
 
-O manifesto em `tests/roms/manifest.json` fixa a origem, a revisão, o SHA-256, o protocolo de resultado e as dependências de cada teste. A seleção representa o Game Boy DMG com revisão de CPU A, B ou C. Não inclui expectativas exclusivas de DMG 0, MGB, SGB ou CGB.
+O manifesto em `tests/roms/manifest.json` fixa a origem, a revisão, o SHA-256, o protocolo de resultado e as dependências dos testes de instruções e timing. `tests/roms/mbc1-manifest.json` registra os testes do mapper MBC1 e `tests/roms/acid2-manifest.json` registra a validação gráfica. A seleção representa o Game Boy DMG com revisão de CPU A, B ou C. Não inclui expectativas exclusivas de DMG 0, MGB, SGB ou CGB.
 
 Os binários de teste não entram no site e não são jogos disponíveis ao visitante. O projeto não inclui ROM comercial nem boot ROM original.
 
@@ -9,26 +9,26 @@ Os binários de teste não entram no site e não são jogos disponíveis ao visi
 Na raiz do projeto, com Node 22.12 ou superior:
 
 ```powershell
-node scripts/test-roms/fetch.mjs
+node scripts/test-roms/fetch.mjs --acid2 --mbc1
 ```
 
-O comando baixa somente os 15 arquivos Blargg necessários, de URLs fixadas por revisão, para `.work/roms/blargg/`. Essa pasta é ignorada pelo Git. As 47 fixtures Mooneye são distribuídas com a licença MIT original em `tests/roms/fixtures/mooneye/LICENSE.txt`. A ROM e a referência dmg-acid2 também são fixtures versionadas, com licença MIT em `tests/roms/fixtures/acid2/LICENSE.txt`.
+O comando baixa somente os 15 arquivos Blargg necessários, de URLs fixadas por revisão, para `.work/roms/blargg/`. Essa pasta é ignorada pelo Git. As 59 fixtures Mooneye são distribuídas com a licença MIT original em `tests/roms/fixtures/mooneye/LICENSE.txt`: 47 de CPU, periféricos e timing, mais 12 de MBC1. A ROM e a referência dmg-acid2 também são fixtures versionadas, com licença MIT em `tests/roms/fixtures/acid2/LICENSE.txt`.
 
 Todo arquivo existente e todo download precisa coincidir com o SHA-256 registrado. Um arquivo divergente causa falha e não é substituído silenciosamente. A opção `--verify` executa apenas a conferência, sem acesso à rede:
 
 ```powershell
-node scripts/test-roms/fetch.mjs --verify
+node scripts/test-roms/fetch.mjs --verify --acid2 --mbc1
 ```
 
 O CI pode executar os mesmos comandos antes do runner de hardware. Os testes devem falhar se um arquivo estiver ausente, corrompido ou se a execução atingir o limite de T-cycles.
 
-O comando completo da M05 verifica as fixtures gráficas e executa os 63 testes externos:
+O comando completo da M06 verifica todos os manifestos e executa os 75 testes externos:
 
 ```powershell
 npm.cmd run test:hardware
 ```
 
-O resultado atual é 62 ROMs de instruções e timing aprovadas e dmg-acid2 aprovado com zero pixels divergentes. Os testes locais de unidade e integração são executados separadamente por `npm.cmd test`.
+O resultado atual é 62 ROMs de instruções e timing aprovadas, dmg-acid2 aprovado com zero pixels divergentes e 12 ROMs MBC1 aprovadas. Os testes locais de unidade e integração são executados separadamente por `npm.cmd test`.
 
 ## Licenças e procedência
 
@@ -48,7 +48,7 @@ As 11 ROMs individuais de `cpu_instrs`, `instr_timing` e as três individuais de
 
 Os readmes de [cpu_instrs](https://github.com/retrio/gb-test-roms/blob/c240dd7d700e5c0b00a7bbba52b53e4ee67b5f15/cpu_instrs/readme.txt), [instr_timing](https://github.com/retrio/gb-test-roms/blob/c240dd7d700e5c0b00a7bbba52b53e4ee67b5f15/instr_timing/readme.txt) e [mem_timing](https://github.com/retrio/gb-test-roms/blob/c240dd7d700e5c0b00a7bbba52b53e4ee67b5f15/mem_timing/readme.txt) documentam a saída serial e o timeout das esperas pelo LCD. Não é necessário falsificar LY para esses testes. O runner mantém o mesmo bus usado pelo núcleo.
 
-Esses 15 binários declaram MBC1, embora tenham somente dois bancos e nenhuma RAM. `tests/helpers/test-cartridge.ts` fornece um adapter físico limitado a essa configuração, sem alterar header ou hash. O bus e a CPU são os de produção. O suporte geral a jogos MBC1 continua previsto para M06.
+Esses 15 binários declaram MBC1, embora tenham somente dois bancos e nenhuma RAM. Desde a M06, `tests/helpers/test-cartridge.ts` cria o cartucho pela factory real do produto. Os testes usam o mesmo MBC1, bus e CPU da aplicação, sem alterar header ou hash. O adapter provisório de dois bancos foi removido.
 
 `instr_timing` verifica duração total de instruções, incluindo os dois caminhos dos saltos condicionais. `mem_timing` verifica quando ocorre o acesso à memória dentro da instrução. Aprovar somente a primeira suíte não comprova a segunda.
 
@@ -68,6 +68,16 @@ As outras 20 entradas ficam na M04 porque esperam LY/VBlank real durante o teste
 Os casos de instruções que atravessam WRAM e OAM durante DMA também verificam a separação dos barramentos do DMG. Uma cópia de VRAM ocupa seu próprio barramento e permite acesso à memória principal; uma cópia da memória principal permite acesso à VRAM quando a PPU a libera. O bloqueio acompanha a origem ativa durante reinícios do DMA. Essa modelagem foi conferida com os testes Mooneye verificados em hardware e a seleção de barramento em `is_addr_in_dma_use` do [SameBoy](https://github.com/LIJI32/SameBoy/blob/master/Core/memory.c).
 
 O teste `oam_dma/sources-GS` não integra este grupo: seu cartucho é MBC5 com RAM e bateria. Ele pode ser incluído na M12, quando o mapper correspondente existir. Os testes de boot ficam fora da seleção porque o projeto inicializa após o boot e não distribui boot ROM.
+
+### Mooneye MBC1
+
+O manifesto `tests/roms/mbc1-manifest.json` usa a mesma revisão Mooneye e o mesmo compilador das outras fixtures. As 12 ROMs em `tests/roms/fixtures/mooneye/emulator-only/mbc1/` exercitam os registros `bits_bank1`, `bits_bank2`, `bits_mode` e `bits_ramg`, os tamanhos RAM `ram_64kb` e `ram_256kb` e os tamanhos ROM `rom_512kb`, `rom_1Mb`, `rom_2Mb`, `rom_4Mb`, `rom_8Mb` e `rom_16Mb`. Os nomes upstream usam bits: 16 Mbit equivalem a 2 MiB de ROM.
+
+O runner `tests/hardware/mbc1.test.ts` verifica cada hash e executa as ROMs com `createCartridge`, usando o protocolo de registradores Mooneye. Os resultados esperados foram [verificados pelo autor em cartucho com chip MBC1B1](https://github.com/Gekkio/mooneye-test-suite/tree/31510e12eea6286d36eea060a6adde755e1067aa/emulator-only/mbc1). Todos os 12 casos selecionados foram aprovados no núcleo do projeto.
+
+O mapper implementa MBC1 padrão: ROM em potência de dois até 2 MiB, RAM até 32 KiB para ROM até 512 KiB e RAM até 8 KiB para ROM de 1 MiB ou 2 MiB. Os bits de banco sem linhas físicas são mascarados depois da tradução do registro primário zero para um. A convenção homebrew de RAM de 2 KiB usa espelhamento e gera aviso no header.
+
+`multicart_rom_8Mb` exige MBC1M, com outra ligação dos bits de banco. Esse perfil fica fora do escopo atual e não é implementado nem autodetectado. A ROM não integra o manifesto de MBC1 padrão. Configurações incompatíveis com a fiação padrão, como ROM de 1 MiB com 32 KiB de RAM, são rejeitadas pela factory.
 
 ### dmg-acid2
 
@@ -122,4 +132,4 @@ cmake --build .work/roms/wla-build --target wla-gb wlalink --parallel 2
 node scripts/test-roms/build-mooneye.mjs .work/roms/mooneye-source .work/roms/wla-build/binaries/wla-gb .work/roms/wla-build/binaries/wlalink
 ```
 
-A reconstrução no Linux está documentada a partir do processo upstream. A conferência efetivamente executada na preparação inicial foi Windows, reconstruindo todas as 47 fixtures selecionadas com igualdade de SHA-256. O runner do projeto registra separadamente o resultado de cada ROM no emulador.
+A reconstrução no Linux está documentada a partir do processo upstream. A conferência efetivamente executada foi Windows, reconstruindo todas as 59 fixtures selecionadas com igualdade de SHA-256. O script inclui os dois manifestos Mooneye, e o runner do projeto registra separadamente o resultado de cada ROM no emulador.

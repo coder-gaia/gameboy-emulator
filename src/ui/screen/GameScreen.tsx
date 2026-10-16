@@ -26,6 +26,10 @@ export function GameScreen({
   const holderRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
+    if (playing) canvasRef.current?.focus({ preventScroll: true })
+  }, [device, playing])
+
+  useEffect(() => {
     const canvas = canvasRef.current!
     const holder = holderRef.current!
     let renderer: CanvasRenderer
@@ -69,7 +73,7 @@ export function GameScreen({
 
   return (
     <div className={styles.holder} ref={holderRef}>
-      <canvas ref={canvasRef} width={160} height={144} aria-label="Tela do emulador">
+      <canvas ref={canvasRef} width={160} height={144} aria-label="Tela do emulador" tabIndex={0}>
         Tela do Game Boy. Use os comandos de reprodução para iniciar ou pausar.
       </canvas>
     </div>

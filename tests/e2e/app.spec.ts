@@ -67,13 +67,13 @@ test('recusa um arquivo truncado com uma mensagem útil', async ({ page }) => {
 test('inspeciona mapper futuro sem prometer execução', async ({ page }) => {
   await page.goto('/')
   await page.getByLabel('Arquivo do cartucho', { exact: true }).setInputFiles({
-    name: 'mbc1.gb',
+    name: 'mbc3.gb',
     mimeType: 'application/octet-stream',
-    buffer: Buffer.from(buildTestRom({ title: 'MBC1 TEST', cartridgeType: 1, romSizeCode: 1 })),
+    buffer: Buffer.from(buildTestRom({ title: 'MBC3 TEST', cartridgeType: 0x11, romSizeCode: 1 })),
   })
-  await expect(page.getByRole('heading', { name: 'MBC1 TEST', exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'MBC3 TEST', exact: true })).toBeVisible()
   await expect(
-    page.getByText('O controlador MBC1 ainda não é executado.', { exact: true }),
+    page.getByText('O controlador MBC3 ainda não é executado.', { exact: true }),
   ).toBeVisible()
   await expect(page.getByText('Inspecionar CPU', { exact: true })).toHaveCount(0)
 })

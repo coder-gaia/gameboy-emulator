@@ -122,7 +122,7 @@ export function parseCartridgeHeader(rom: Uint8Array): CartridgeMetadata {
   if (romSizeCode >= 0x52) {
     warnings.push('O tamanho de ROM declarado utiliza um código histórico sem cartucho confirmado.')
   }
-  if (mapper !== 'ROM_ONLY') {
+  if (mapper !== 'ROM_ONLY' && mapper !== 'MBC1') {
     warnings.push(
       `O controlador ${mapper === 'UNKNOWN' ? hex(cartridgeType) : mapper} ainda não é executado.`,
     )
@@ -135,6 +135,18 @@ export function parseCartridgeHeader(rom: Uint8Array): CartridgeMetadata {
   }
   if (cartridgeType === 0x00 && ramSize > 0) {
     warnings.push('O tipo ROM ONLY não declara hardware de RAM externa.')
+  }
+  if (mapper === 'MBC1' && (romSize > 0x200000 || (romSize & (romSize - 1)) !== 0)) {
+    warnings.push('MBC1 exige ROM em potência de dois, com no máximo 2 MiB.')
+  }
+  if (mapper === 'MBC1' && ramSize > 0x8000) {
+    warnings.push('MBC1 pode endereçar no máximo 32 KiB de RAM.')
+  }
+  if (mapper === 'MBC1' && romSize >= 0x100000 && ramSize > 0x2000) {
+    warnings.push('MBC1 com ROM de 1 MiB ou mais admite no máximo 8 KiB de RAM.')
+  }
+  if (cartridgeType === 0x01 && ramSize > 0) {
+    warnings.push('O tipo MBC1 sem RAM não declara hardware de RAM externa.')
   }
   if (cgbMode === 'required') warnings.push('Esta ROM exige Game Boy Color. O perfil atual é DMG.')
 
@@ -153,10 +165,16 @@ export function parseCartridgeHeader(rom: Uint8Array): CartridgeMetadata {
     checksumValid,
     warnings,
     isSupported:
-      mapper === 'ROM_ONLY' &&
-      romSize === MIN_ROM_SIZE &&
-      ramSize <= 0x2000 &&
-      (cartridgeType !== 0x00 || ramSize === 0) &&
-      cgbMode !== 'required',
+      cgbMode !== 'required' &&
+      ((mapper === 'ROM_ONLY' &&
+        romSize === MIN_ROM_SIZE &&
+        ramSize <= 0x2000 &&
+        (cartridgeType !== 0x00 || ramSize === 0)) ||
+        (mapper === 'MBC1' &&
+          romSize <= 0x200000 &&
+          (romSize & (romSize - 1)) === 0 &&
+          ramSize <= 0x8000 &&
+          (romSize < 0x100000 || ramSize <= 0x2000) &&
+          (cartridgeType !== 0x01 || ramSize === 0))),
   }
 }

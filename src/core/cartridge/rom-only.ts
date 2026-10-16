@@ -1,18 +1,24 @@
 import { parseCartridgeHeader } from './header'
 import type { CartridgeMetadata } from './header'
+import type { Cartridge } from './cartridge'
+import { CartridgeRam } from './ram'
 
-export class RomOnlyCartridge {
+export class RomOnlyCartridge implements Cartridge {
   readonly metadata: CartridgeMetadata
   private readonly rom: Uint8Array
-  private readonly ram: Uint8Array
+  private readonly ram: CartridgeRam
 
   constructor(rom: Uint8Array) {
     this.metadata = parseCartridgeHeader(rom)
-    if (!this.metadata.isSupported) {
+    if (this.metadata.mapper !== 'ROM_ONLY' || !this.metadata.isSupported) {
       throw new Error(`Cartucho não suportado nesta etapa. ${this.metadata.warnings.join(' ')}`)
     }
     this.rom = rom.slice()
-    this.ram = new Uint8Array(this.metadata.ramSize)
+    this.ram = new CartridgeRam(this.metadata.ramSize, this.metadata.hasBattery)
+  }
+
+  get batteryRevision(): number {
+    return this.ram.batteryRevision
   }
 
   readRom(address: number): number {
@@ -27,11 +33,18 @@ export class RomOnlyCartridge {
   }
 
   readRam(address: number): number {
-    return this.ram[address & 0x1fff] ?? 0xff
+    return this.ram.read(address & 0x1fff)
   }
 
   writeRam(address: number, value: number): void {
-    const offset = address & 0x1fff
-    if (offset < this.ram.length) this.ram[offset] = value & 0xff
+    this.ram.write(address & 0x1fff, value)
+  }
+
+  exportBatteryRam(): Uint8Array | null {
+    return this.ram.exportBatteryRam()
+  }
+
+  importBatteryRam(bytes: Uint8Array): void {
+    this.ram.importBatteryRam(bytes)
   }
 }

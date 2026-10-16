@@ -1,0 +1,23 @@
+2048 para Game Boy
+
+Versão para Game Boy por Sanqui (Sanky).
+Gráficos de tiles creditados a beware no README original.
+Inspirado no jogo 2048 de Gabriele Cirulli.
+Copyright (c) 2014 "Sanqui".
+
+Fonte: https://github.com/Sanqui/2048-gb/tree/e44f94f898c1e0de7caa1160c82c0da36ff5eb05
+Download oficial indicado pelo autor: https://sanqui.rustedlogic.net/etc/2048.gb
+Jogo original: https://gabrielecirulli.github.io/2048/
+
+Licença Zlib. O aviso original acompanha este arquivo em LICENSE-ZLIB.txt.
+Os créditos e o endereço de download originais constam em UPSTREAM-README.md.
+
+Tamanho: 32768 bytes. Header de versão: 255.
+SHA-256: 3ea2376b15b34bd26b10e6b31d2753bf8b086098dbdb5ee84d9c0f03d66d3d7f
+
+O site do autor publica a ROM sem uma release numerada. O arquivo incluído é
+fixado pelo SHA-256 acima. A revisão do código e da licença está registrada
+separadamente; o projeto não afirma que recompilou o binário a partir dela.
+
+A ROM permanece inalterada. Pocket Lab oferece a execução no navegador e não
+reivindica autoria do jogo ou de seus gráficos.

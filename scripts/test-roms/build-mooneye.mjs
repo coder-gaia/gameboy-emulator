@@ -8,6 +8,12 @@ const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
 const manifest = JSON.parse(
   await readFile(resolve(projectRoot, 'tests/roms/manifest.json'), 'utf8'),
 )
+const mbc1Manifest = JSON.parse(
+  await readFile(resolve(projectRoot, 'tests/roms/mbc1-manifest.json'), 'utf8'),
+)
+if (mbc1Manifest.revision !== manifest.suites.mooneye.revision) {
+  throw new Error('Os manifestos Mooneye precisam usar a mesma revisão de fonte.')
+}
 const [sourceArgument, assemblerArgument, linkerArgument] = process.argv.slice(2)
 if (!sourceArgument || !assemblerArgument || !linkerArgument || process.argv.length !== 5) {
   throw new Error(
@@ -46,7 +52,11 @@ if (outputWithin.startsWith('..') || isAbsolute(outputWithin)) {
 }
 
 let count = 0
-for (const entry of manifest.tests.filter((test) => test.suite === 'mooneye')) {
+const entries = [
+  ...manifest.tests.filter((test) => test.suite === 'mooneye'),
+  ...mbc1Manifest.tests,
+]
+for (const entry of entries) {
   const relativePath = entry.sourcePath.replace(/\.s$/, '')
   const object = resolve(outputRoot, `${relativePath}.o`)
   const linkFile = resolve(outputRoot, `${relativePath}.link`)

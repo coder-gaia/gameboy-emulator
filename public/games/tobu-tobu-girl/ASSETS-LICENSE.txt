@@ -1,0 +1,14 @@
+Licença dos assets de Tobu Tobu Girl
+
+Os autores licenciam todas as imagens, textos, sons e músicas sob a licença
+Creative Commons Attribution 4.0 International (CC BY 4.0).
+
+Declaração original, em revisão fixa:
+https://github.com/SimonLarsen/tobutobugirl/blob/048a22c2d7ebbe25811322e8692803fa86bb643a/README.md#license
+
+Licença: https://creativecommons.org/licenses/by/4.0/
+Texto legal completo: https://creativecommons.org/licenses/by/4.0/legalcode
+
+Atribuição: Tangram Games, com trilha sonora de potato-tan.
+Consulte ATTRIBUTION.txt para os links dos autores e a procedência da ROM.
+Os assets e a ROM distribuídos pelo Pocket Lab não foram modificados.

@@ -1,0 +1,26 @@
+Tobu Tobu Girl
+
+Jogo por Tangram Games.
+Trilha sonora por potato-tan.
+Copyright (c) 2017 Tangram Games.
+
+Página oficial: https://tangramgames.dk/tobutobugirl/
+Download oficial: https://tangramgames.itch.io/tobutobugirl
+Fonte: https://github.com/SimonLarsen/tobutobugirl/tree/048a22c2d7ebbe25811322e8692803fa86bb643a
+Trilha sonora: https://potatotan.bandcamp.com/album/tobu-tobu-girl-ost
+
+Código sob licença MIT. O aviso original acompanha este arquivo em LICENSE-MIT.txt.
+O driver musical mmlgb é de Simon Larsen, copyright 2017, sob MIT.
+Seu aviso acompanha este arquivo em LICENSE-MMLGB-MIT.txt.
+Fonte do driver: https://github.com/SimonLarsen/mmlgb
+Imagens, texto, som e música sob Creative Commons Attribution 4.0 International:
+https://creativecommons.org/licenses/by/4.0/
+Texto legal: https://creativecommons.org/licenses/by/4.0/legalcode
+A declaração original dos autores acompanha este arquivo em UPSTREAM-README.md.
+
+A ROM tobu.gb foi extraída do download gratuito oficial, upload itch.io 678889.
+Tamanho: 262144 bytes. Header de versão: 1.
+SHA-256: 5d3871cae77db2287807e8914fd21f76203e73aa3fec20955489d45cb4571d8f
+
+A ROM e seus assets permanecem inalterados. Pocket Lab oferece a execução no
+navegador e não reivindica autoria do jogo, de sua arte ou de sua música.

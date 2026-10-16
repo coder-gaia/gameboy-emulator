@@ -8,9 +8,9 @@ const manifest = JSON.parse(
   await readFile(resolve(projectRoot, 'tests/roms/manifest.json'), 'utf8'),
 )
 const verifyOnly = process.argv.includes('--verify')
-const knownOptions = new Set(['--verify', '--acid2'])
+const knownOptions = new Set(['--verify', '--acid2', '--mbc1'])
 if (process.argv.slice(2).some((argument) => !knownOptions.has(argument))) {
-  throw new Error('Opções aceitas: --verify e --acid2.')
+  throw new Error('Opções aceitas: --verify, --acid2 e --mbc1.')
 }
 
 function projectPath(path) {
@@ -77,6 +77,15 @@ if (process.argv.includes('--acid2')) {
   await ensureFile(acid2.reference)
 }
 
+let mbc1Count = 0
+if (process.argv.includes('--mbc1')) {
+  const mbc1 = JSON.parse(
+    await readFile(resolve(projectRoot, 'tests/roms/mbc1-manifest.json'), 'utf8'),
+  )
+  for (const entry of mbc1.tests) await ensureFile(entry)
+  mbc1Count = mbc1.tests.length
+}
+
 console.log(
-  `${manifest.tests.length} ROMs verificadas por SHA-256${process.argv.includes('--acid2') ? ', com ROM e referência dmg-acid2' : ''}.`,
+  `${manifest.tests.length + mbc1Count} ROMs verificadas por SHA-256${process.argv.includes('--acid2') ? ', com ROM e referência dmg-acid2' : ''}.`,
 )

@@ -7,3 +7,6 @@ export {
 } from './header'
 export type { CartridgeMapper, CartridgeMetadata, CgbMode } from './header'
 export { RomOnlyCartridge } from './rom-only'
+export { Mbc1Cartridge } from './mbc1'
+export { createCartridge } from './factory'
+export type { Cartridge } from './cartridge'

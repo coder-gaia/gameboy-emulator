@@ -1,0 +1,5 @@
+export { BatteryRepository } from './battery-repository'
+export type { BatteryRepositoryOptions } from './battery-repository'
+export { BatteryStorageError } from './errors'
+export type { BatteryStorageErrorCode } from './errors'
+export { hashRom } from './hash-rom'

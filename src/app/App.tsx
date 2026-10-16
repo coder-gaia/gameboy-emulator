@@ -22,6 +22,11 @@ import { GameBoy } from '../core/gameboy'
 import { GameScreen } from '../ui/screen/GameScreen'
 import { InputController } from '../platform/input/controller'
 import { TouchControls } from '../ui/controls/TouchControls'
+import { GameLibrary } from '../ui/library/GameLibrary'
+import type { DemoGame } from '../platform/games/catalog'
+import { loadDemo } from '../platform/games/load-demo'
+import { BatteryRepository, hashRom } from '../platform/storage'
+import { BatterySession } from '../runtime/battery-session'
 import styles from './App.module.css'
 
 const palettes = [
@@ -96,6 +101,11 @@ export function App() {
   const [viewRevision, setViewRevision] = useState(0)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [activeGameId, setActiveGameId] = useState<string | null>(null)
+  const [batteryNotice, setBatteryNotice] = useState('')
+  const [saveBlocked, setSaveBlocked] = useState(false)
+  const batterySession = useRef<BatterySession | null>(null)
+  const batteryRepository = useMemo(() => new BatteryRepository(), [])
   const fileInput = useRef<HTMLInputElement>(null)
   const loadRequest = useRef(0)
   const aboutDialog = useRef<HTMLDialogElement>(null)
@@ -126,6 +136,53 @@ export function App() {
     )
   }, [controller, playing, loading])
 
+  useEffect(() => {
+    const session = batterySession.current
+    if (!session || !device) return
+    const flush = () => {
+      if (batterySession.current !== session) return
+      void session.flush().catch((cause: unknown) => {
+        if (batterySession.current === session)
+          setBatteryNotice(
+            cause instanceof Error ? cause.message : 'Não foi possível salvar o progresso.',
+          )
+      })
+    }
+    const visibility = () => {
+      if (document.hidden) flush()
+    }
+    const interval = window.setInterval(flush, 2000)
+    window.addEventListener('pagehide', flush)
+    document.addEventListener('visibilitychange', visibility)
+    return () => {
+      window.clearInterval(interval)
+      window.removeEventListener('pagehide', flush)
+      document.removeEventListener('visibilitychange', visibility)
+      flush()
+    }
+  }, [device])
+
+  useEffect(() => {
+    const session = batterySession.current
+    if (!playing)
+      void session?.flush().catch((cause: unknown) => {
+        if (batterySession.current === session)
+          setBatteryNotice(
+            cause instanceof Error ? cause.message : 'Não foi possível salvar o progresso.',
+          )
+      })
+  }, [playing])
+
+  useEffect(() => {
+    if (device && activeGameId)
+      document.querySelector('canvas')?.scrollIntoView({
+        block: 'center',
+        behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches
+          ? 'instant'
+          : 'smooth',
+      })
+  }, [device, activeGameId])
+
   function showCartridgeHelp() {
     pausePlayback()
     cartridgeHelp.current?.showModal()
@@ -135,8 +192,48 @@ export function App() {
     aboutDialog.current?.showModal()
   }
 
-  function openCartridge(loaded: LoadedCartridge, autoplay = false) {
+  async function openCartridge(
+    loaded: LoadedCartridge,
+    autoplay = false,
+    request = loadRequest.current,
+    gameId: string | null = null,
+  ) {
+    setPlaying(false)
+    try {
+      await batterySession.current?.flush()
+    } catch (cause) {
+      if (request !== loadRequest.current) return
+      setSaveBlocked(true)
+      throw new Error(
+        `${cause instanceof Error ? cause.message : 'Não foi possível salvar o progresso.'} Seu cartucho foi mantido. Tente novamente ou escolha Continuar sem salvar antes de trocar.`,
+        { cause },
+      )
+    }
+    if (request !== loadRequest.current) return
     const machine = loaded.metadata.isSupported ? new GameBoy(loaded.rom) : null
+    let session: BatterySession | null = null
+    let notice = ''
+    if (machine && machine.cartridge.exportBatteryRam() !== null) {
+      try {
+        session = new BatterySession(
+          batteryRepository,
+          await hashRom(loaded.rom),
+          machine.cartridge,
+        )
+        const restored = await session.restore()
+        notice = restored
+          ? 'Progresso recuperado. Ele continua sendo salvo neste navegador.'
+          : 'O progresso será salvo automaticamente neste navegador.'
+      } catch (cause) {
+        session = null
+        notice = `${cause instanceof Error ? cause.message : 'Não foi possível abrir o save.'} O progresso desta sessão não será salvo automaticamente.`
+      }
+    }
+    if (request !== loadRequest.current) return
+    batterySession.current = session
+    setSaveBlocked(false)
+    setBatteryNotice(notice)
+    setActiveGameId(gameId)
     setCartridge(loaded)
     setDevice(machine)
     setPlaying(Boolean(machine && autoplay))
@@ -144,12 +241,19 @@ export function App() {
     setError('')
   }
 
-  function restart() {
+  async function restart() {
     if (!cartridge?.metadata.isSupported) return
-    setDevice(new GameBoy(cartridge.rom))
-    setCartridgeRevision((value) => value + 1)
+    const request = ++loadRequest.current
     setPlaying(false)
-    setError('')
+    setLoading(true)
+    try {
+      await openCartridge(cartridge, false, request, activeGameId)
+    } catch (cause) {
+      if (request === loadRequest.current)
+        setError(cause instanceof Error ? cause.message : 'Não foi possível reiniciar o cartucho.')
+    } finally {
+      if (request === loadRequest.current) setLoading(false)
+    }
   }
 
   async function loadFiles(files: FileList | null) {
@@ -162,10 +266,11 @@ export function App() {
       return
     }
     setLoading(true)
+    setPlaying(false)
     try {
       const loaded = await loadCartridgeFile(files[0]!)
       if (request === loadRequest.current) {
-        openCartridge(loaded)
+        await openCartridge(loaded, false, request)
       }
     } catch (cause) {
       if (request === loadRequest.current)
@@ -175,18 +280,40 @@ export function App() {
     }
   }
 
-  function useDiagnosticCartridge() {
-    ++loadRequest.current
-    const rom = createDiagnosticRom()
-    openCartridge({ rom, metadata: parseCartridgeHeader(rom), fileName: 'pocket-test.gb' })
-    setLoading(false)
+  async function openFixture(rom: Uint8Array, fileName: string, autoplay: boolean) {
+    const request = ++loadRequest.current
+    setPlaying(false)
+    setLoading(true)
+    try {
+      await openCartridge({ rom, metadata: parseCartridgeHeader(rom), fileName }, autoplay, request)
+    } catch (cause) {
+      if (request === loadRequest.current)
+        setError(cause instanceof Error ? cause.message : 'Não foi possível abrir o cartucho.')
+    } finally {
+      if (request === loadRequest.current) setLoading(false)
+    }
   }
 
-  function useVisualCartridge() {
-    ++loadRequest.current
-    const rom = createVisualDiagnosticRom()
-    openCartridge({ rom, metadata: parseCartridgeHeader(rom), fileName: 'pocket-garden.gb' }, true)
-    setLoading(false)
+  function openDiagnosticCartridge() {
+    void openFixture(createDiagnosticRom(), 'pocket-test.gb', false)
+  }
+  function openVisualCartridge() {
+    void openFixture(createVisualDiagnosticRom(), 'pocket-garden.gb', true)
+  }
+
+  async function openDemo(game: DemoGame) {
+    const request = ++loadRequest.current
+    setPlaying(false)
+    setLoading(true)
+    setError('')
+    try {
+      await openCartridge(await loadDemo(game), true, request, game.id)
+    } catch (cause) {
+      if (request === loadRequest.current)
+        setError(cause instanceof Error ? cause.message : 'Não foi possível abrir o jogo.')
+    } finally {
+      if (request === loadRequest.current) setLoading(false)
+    }
   }
 
   return (
@@ -331,7 +458,7 @@ export function App() {
                 )}
                 {playing ? 'Pausar' : 'Iniciar'}
               </button>
-              <button type="button" onClick={restart}>
+              <button type="button" onClick={() => void restart()} disabled={loading}>
                 <RotateCcw size={15} aria-hidden="true" />
                 Reiniciar
               </button>
@@ -385,9 +512,14 @@ export function App() {
             siga a sua curiosidade.
           </p>
 
+          <GameLibrary
+            loading={loading}
+            activeGameId={activeGameId}
+            onSelect={(game) => void openDemo(game)}
+          />
           <div className={styles.cartridgePanel}>
             <div className={styles.panelHeading}>
-              <span className={styles.stepNumber}>01</span>
+              <span className={styles.stepNumber}>02</span>
               <div>
                 <h2>Todo mundo começa com um cartucho.</h2>
                 <p>Seu arquivo. Sua próxima aventura.</p>
@@ -425,17 +557,38 @@ export function App() {
                 {error}
               </p>
             )}
-            <button className={styles.visualButton} type="button" onClick={useVisualCartridge}>
+            {saveBlocked && (
+              <button
+                className={styles.diagnosticButton}
+                type="button"
+                onClick={() => {
+                  batterySession.current = null
+                  setSaveBlocked(false)
+                  setError('')
+                  setBatteryNotice(
+                    'Salvamento desativado nesta sessão. O progresso atual será perdido ao trocar ou fechar o cartucho.',
+                  )
+                }}
+              >
+                Continuar sem salvar
+              </button>
+            )}
+            <button className={styles.visualButton} type="button" onClick={openVisualCartridge}>
               Explorar jardim <Play size={14} aria-hidden="true" />
             </button>
             <button
               className={styles.diagnosticButton}
               type="button"
-              onClick={useDiagnosticCartridge}
+              onClick={openDiagnosticCartridge}
             >
               Experimentar cartucho de diagnóstico <ArrowUpRight size={13} aria-hidden="true" />
             </button>
             {cartridge && <CartridgeDetails cartridge={cartridge} />}
+            {batteryNotice && (
+              <p className={styles.controlHint} role="status">
+                {batteryNotice}
+              </p>
+            )}
             <button className={styles.diagnosticButton} type="button" onClick={showCartridgeHelp}>
               Quais arquivos posso usar?
             </button>
@@ -445,7 +598,7 @@ export function App() {
                 device={device}
                 playing={playing}
                 onAdvance={refreshScreen}
-                onReset={restart}
+                onReset={() => void restart()}
               />
             )}
           </div>
@@ -505,8 +658,8 @@ export function App() {
         </p>
         <p>
           O projeto está em desenvolvimento. Você já pode ler cartuchos, consultar seus dados e
-          experimentar as paletas e explorar nosso jardim de teste. O áudio e a demonstração de jogo
-          completa chegam nas próximas etapas.
+          experimentar as paletas, jogar nossa seleção de homebrews e explorar o jardim de teste. O
+          áudio chega na próxima etapa.
         </p>
         <p>Nenhum jogo comercial ou boot ROM original faz parte do projeto.</p>
         <a
@@ -540,17 +693,20 @@ export function App() {
           arquivo não o transforma em um jogo.
         </p>
         <p>
-          Nesta etapa, a reprodução aceita cartuchos <strong>ROM Only de 32 KiB</strong>. Jogos que
-          precisam de MBC1, MBC2, MBC3 ou MBC5 ainda podem ter seus dados consultados, mas o suporte
-          de execução chega depois. O limite de leitura é 8 MiB.
+          A reprodução aceita <strong>ROM Only de 32 KiB</strong> e{' '}
+          <strong>MBC1 de até 2 MiB</strong>, com até 32 KiB de RAM conforme a configuração do
+          cartucho. MBC2, MBC3 e MBC5 ainda podem ter seus dados consultados, mas o suporte de
+          execução chega depois. O limite de leitura é 8 MiB.
         </p>
         <p>
           O arquivo fica no seu dispositivo e não é enviado para um servidor. Você não precisa
           fornecer BIOS nem boot ROM.
         </p>
         <p>
-          Para experimentar sem arquivo, feche a ajuda e use <strong>Explorar jardim</strong>. Nosso
-          jardim é um teste interativo próprio, ainda sem áudio ou saves.
+          Para experimentar sem arquivo, escolha <strong>Tobu Tobu Girl</strong> ou{' '}
+          <strong>2048</strong>
+          na seleção de jogos. Cartuchos com bateria salvam o progresso neste navegador. O jardim é
+          um teste interativo próprio; o áudio e os save states chegam depois.
         </p>
       </dialog>
     </div>

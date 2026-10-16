@@ -1,6 +1,7 @@
 import { Cpu } from './cpu'
 import { MemoryBus } from './memory'
-import { RomOnlyCartridge } from './cartridge'
+import { createCartridge } from './cartridge'
+import type { Cartridge } from './cartridge'
 import { DMG_FRAME_T_CYCLES } from './model'
 import type { JoypadButton } from './joypad'
 
@@ -8,9 +9,11 @@ import type { JoypadButton } from './joypad'
 export class GameBoy {
   readonly bus: MemoryBus
   readonly cpu: Cpu
+  readonly cartridge: Cartridge
 
   constructor(rom: Uint8Array) {
-    this.bus = new MemoryBus(new RomOnlyCartridge(rom))
+    this.cartridge = createCartridge(rom)
+    this.bus = new MemoryBus(this.cartridge)
     this.bus.ppu.reset(true)
     this.cpu = new Cpu(this.bus)
   }
