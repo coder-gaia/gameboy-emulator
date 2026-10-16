@@ -28,6 +28,8 @@ O cartucho sintético POCKET TEST permite testar CPU, memória e serial sem obte
 
 Cada milestone recebe um commit, com título Conventional Commits em inglês e corpo em pt-br. Sem autoria ou coautoria de ferramentas de IA e sem caracteres de travessão.
 
+Cada commit validado deve receber push imediatamente e ter seu link informado ao proprietário. A pausa a cada três milestones não adia o envio dos commits ao GitHub.
+
 ## Critérios de qualidade
 
 - Tipos, lint, formatação, regras de escrita e build aprovados.

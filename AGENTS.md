@@ -8,6 +8,8 @@
 - Criar um commit por milestone concluída, seguindo Conventional Commits.
 - Escrever o título do commit em inglês e o corpo em pt-br.
 - Conferir mensagem, autor e committer antes de enviar cada commit.
+- Fazer push imediatamente após cada commit validado, sem acumular commits para o final do grupo.
+- Confirmar o commit no GitHub e informar seu link antes de avançar para a próxima milestone.
 - Pausar ao concluir cada grupo de três milestones para o proprietário testar.
 - O primeiro grupo contém M00, M01 e M02. Não iniciar M03 antes do retorno.
 
