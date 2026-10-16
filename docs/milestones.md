@@ -6,7 +6,7 @@ Stack aprovada: TypeScript estrito, React, Vite, CSS Modules, Canvas 2D, Worker,
 | ----- | --------------------------------------------------- | --------- |
 | M00   | Fundação, regras, CI e direção visual               | Concluída |
 | M01   | Header, ROM Only, bus, serial e runner de ROMs      | Concluída |
-| M02   | CPU SM83, instruções, flags e ciclos                | Pendente  |
+| M02   | CPU SM83, instruções, flags e ciclos                | Concluída |
 | M03   | Timers, interrupções, HALT, DMA e suítes de timing  | Pendente  |
 | M04   | PPU, fundo, tiles e scroll                          | Pendente  |
 | M05   | Sprites, janela, joypad e dmg-acid2                 | Pendente  |
@@ -23,6 +23,8 @@ Stack aprovada: TypeScript estrito, React, Vite, CSS Modules, Canvas 2D, Worker,
 ## Primeiro ponto de revisão
 
 Pausar após M02, sem iniciar M03. O proprietário testa a interface, o carregamento de cartuchos e a CPU. Jogos ainda não terão vídeo ou áudio nesse ponto.
+
+O cartucho sintético POCKET TEST permite testar CPU, memória e serial sem obter jogos. O [README](../README.md#testar-o-primeiro-grupo-de-milestones) explica o roteiro de teste. Interrupções avançadas, incluindo retorno de EI seguido de HALT com interrupção pendente, e STOP completo continuam previstos para M03.
 
 Cada milestone recebe um commit, com título Conventional Commits em inglês e corpo em pt-br. Sem autoria ou coautoria de ferramentas de IA e sem caracteres de travessão.
 

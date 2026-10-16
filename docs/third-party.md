@@ -9,7 +9,7 @@
 
 ## ROMs
 
-Nenhuma ROM comercial ou boot ROM original é distribuída. Fixtures sintéticas próprias poderão ser criadas pelos testes.
+Nenhuma ROM comercial ou boot ROM original é distribuída. As fixtures e o cartucho POCKET TEST são programas sintéticos próprios, sem logos ou assets de terceiros.
 
 Tobu Tobu Girl está planejado para M06. Antes da inclusão, registrar versão, SHA-256, aviso MIT do código e atribuição CC BY 4.0 dos assets. Origem: https://github.com/SimonLarsen/tobutobugirl.
 

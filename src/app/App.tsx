@@ -4,6 +4,9 @@ import { ArrowUpRight, CodeXml, Info, LockKeyhole, Upload, X } from 'lucide-reac
 import { loadCartridgeFile } from '../platform/files/load-cartridge'
 import type { LoadedCartridge } from '../platform/files/load-cartridge'
 import { CartridgeDetails } from '../ui/cartridge/CartridgeDetails'
+import { CpuInspector } from '../ui/debug/CpuInspector'
+import { createDiagnosticRom } from '../core/diagnostics/cartridge'
+import { parseCartridgeHeader } from '../core/cartridge'
 import styles from './App.module.css'
 
 const palettes = [
@@ -39,6 +42,7 @@ function CartridgeDrawing() {
 export function App() {
   const [paletteId, setPaletteId] = useState<PaletteId>('dmg')
   const [cartridge, setCartridge] = useState<LoadedCartridge | null>(null)
+  const [cartridgeRevision, setCartridgeRevision] = useState(0)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const fileInput = useRef<HTMLInputElement>(null)
@@ -62,13 +66,25 @@ export function App() {
     setLoading(true)
     try {
       const loaded = await loadCartridgeFile(files[0]!)
-      if (request === loadRequest.current) setCartridge(loaded)
+      if (request === loadRequest.current) {
+        setCartridge(loaded)
+        setCartridgeRevision(request)
+      }
     } catch (cause) {
       if (request === loadRequest.current)
         setError(cause instanceof Error ? cause.message : 'Não foi possível ler o cartucho.')
     } finally {
       if (request === loadRequest.current) setLoading(false)
     }
+  }
+
+  function useDiagnosticCartridge() {
+    const request = ++loadRequest.current
+    const rom = createDiagnosticRom()
+    setCartridge({ rom, metadata: parseCartridgeHeader(rom), fileName: 'pocket-test.gb' })
+    setCartridgeRevision(request)
+    setError('')
+    setLoading(false)
   }
 
   return (
@@ -293,7 +309,17 @@ export function App() {
                 {error}
               </p>
             )}
+            <button
+              className={styles.diagnosticButton}
+              type="button"
+              onClick={useDiagnosticCartridge}
+            >
+              Experimentar cartucho de diagnóstico <ArrowUpRight size={13} aria-hidden="true" />
+            </button>
             {cartridge && <CartridgeDetails cartridge={cartridge} />}
+            {cartridge?.metadata.isSupported && (
+              <CpuInspector key={cartridgeRevision} rom={cartridge.rom} />
+            )}
           </div>
 
           <p className={styles.privacyNote}>
@@ -344,7 +370,8 @@ export function App() {
         </p>
         <p>
           O projeto está em desenvolvimento. Você já pode ler cartuchos, consultar seus dados e
-          experimentar as paletas da tela. A reprodução de jogos chega nas próximas etapas.
+          experimentar as paletas da tela e avançar a CPU manualmente. A reprodução de jogos chega
+          nas próximas etapas.
         </p>
         <p>Nenhum jogo comercial ou boot ROM original faz parte do projeto.</p>
         <a

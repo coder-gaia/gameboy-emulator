@@ -75,6 +75,7 @@ test('inspeciona mapper futuro sem prometer execução', async ({ page }) => {
   await expect(
     page.getByText('O controlador MBC1 ainda não é executado.', { exact: true }),
   ).toBeVisible()
+  await expect(page.getByText('Inspecionar CPU', { exact: true })).toHaveCount(0)
 })
 
 test('aceita um cartucho arrastado para a página', async ({ page }) => {
@@ -92,4 +93,39 @@ test('aceita um cartucho arrastado para a página', async ({ page }) => {
   await page.locator('main').dispatchEvent('drop', { dataTransfer: transfer })
   await expect(page.getByRole('heading', { name: 'DROP TEST', exact: true })).toBeVisible()
   await transfer.dispose()
+})
+
+test('executa e reinicia o diagnóstico da CPU sem arquivo externo', async ({ page }) => {
+  await page.goto('/')
+  await page
+    .getByRole('button', { name: 'Experimentar cartucho de diagnóstico', exact: true })
+    .click()
+  await page.getByText('Inspecionar CPU', { exact: true }).click()
+  await expect(page.getByLabel('Registrador PC', { exact: true })).toHaveText('0100')
+  await page.getByRole('button', { name: 'Uma instrução', exact: true }).click()
+  await expect(page.getByLabel('Registrador PC', { exact: true })).toHaveText('0150')
+  await page.getByRole('button', { name: 'Até 1000 instruções', exact: true }).click()
+  await expect(page.getByLabel('Estado da CPU', { exact: true })).toHaveText('HALT')
+  await expect(page.getByLabel('Saída serial', { exact: true })).toHaveText('OK')
+  await expect(page.getByLabel('Registrador PC', { exact: true })).toHaveText('017D')
+  await page.getByRole('button', { name: 'Reiniciar CPU', exact: true }).click()
+  await expect(page.getByLabel('Registrador PC', { exact: true })).toHaveText('0100')
+  await expect(page.getByLabel('T-cycles executados', { exact: true })).toHaveText('0')
+  await expect(page.getByLabel('Saída serial', { exact: true })).toHaveText('Aguardando saída...')
+})
+
+test('interrompe opcode inválido e permite reiniciar a inspeção', async ({ page }) => {
+  await page.goto('/')
+  await page.getByLabel('Arquivo do cartucho', { exact: true }).setInputFiles({
+    name: 'invalid-opcode.gb',
+    mimeType: 'application/octet-stream',
+    buffer: Buffer.from(buildTestRom({ program: [0xd3] })),
+  })
+  await page.getByText('Inspecionar CPU', { exact: true }).click()
+  await page.getByRole('button', { name: 'Até 1000 instruções', exact: true }).click()
+  await expect(page.getByRole('alert')).toContainText('0xD3')
+  await expect(page.getByLabel('Estado da CPU', { exact: true })).toHaveText('Interrompida')
+  await page.getByRole('button', { name: 'Reiniciar CPU', exact: true }).click()
+  await expect(page.getByRole('alert')).toHaveCount(0)
+  await expect(page.getByLabel('Registrador PC', { exact: true })).toHaveText('0100')
 })

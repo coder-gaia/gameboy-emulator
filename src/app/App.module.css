@@ -104,6 +104,9 @@
 .consoleSection {
   min-width: 0;
   max-width: 560px;
+  align-self: start;
+  position: sticky;
+  top: 24px;
 }
 
 .benchLabel {
@@ -598,6 +601,22 @@
   margin-bottom: 0;
 }
 
+.diagnosticButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  min-height: 44px;
+  margin-top: 6px;
+  border: 0;
+  background: transparent;
+  color: var(--color-accent);
+  font-size: 10px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
 .buttonFileType {
   font-family: var(--font-mono);
   font-size: 9px;
@@ -861,6 +880,7 @@
 
   .consoleSection {
     width: 100%;
+    position: static;
   }
 
   .console {
