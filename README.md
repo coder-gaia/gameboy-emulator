@@ -2,7 +2,7 @@
 
 Um emulador de Game Boy DMG no navegador, com núcleo TypeScript independente da interface.
 
-Projeto em desenvolvimento, com M00 a M08 concluídas. CPU, timer, DMA, vídeo, sprites, janela, controles, MBC1, saves de bateria, áudio e save states versionados já estão disponíveis. A biblioteca oferece Tobu Tobu Girl e 2048 para jogar sem fornecer arquivos. O jardim interativo continua disponível como ROM própria de diagnóstico. O grupo M06, M07 e M08 está em revisão pelo proprietário, com pausa antes da M09.
+Projeto em desenvolvimento, com M00 a M09 concluídas. CPU, timer, DMA, vídeo, sprites, janela, controles, MBC1, saves de bateria, áudio e save states versionados já estão disponíveis. A biblioteca oferece Tobu Tobu Girl e 2048 para jogar sem fornecer arquivos. O jardim interativo continua disponível como ROM própria de diagnóstico. O grupo M06, M07 e M08 foi aprovado pelo proprietário. O grupo autorizado atual é M09 a M11, com nova pausa ao concluir a M11.
 
 ## Desenvolvimento local
 
@@ -29,7 +29,7 @@ Um repositório e um pacote npm, sem monorepo. React e Vite compõem a interface
 
 O Web Worker possui a máquina `GameBoy` e executa todas as instruções. A interface mantém cópias para apresentação no Canvas 2D de 160 por 144 pixels e para inspeção da CPU. Sem som, o Worker usa tempo monotônico e um orçamento de ciclos, independentemente da frequência do monitor. Com som, o AudioWorklet solicita PCM ao Worker por MessageChannel e controla a cadência. A implementação usa mensagens e buffers transferíveis, sem SharedArrayBuffer ou exigência de COOP/COEP.
 
-IndexedDB armazena a RAM de bateria e três slots de estado por cartucho, identificados pelo SHA-256 da ROM. O destino de publicação é Cloudflare Pages Free, como site estático. Consulte a [arquitetura de áudio e execução](docs/audio-runtime.md) e o [formato dos estados salvos](docs/save-states.md).
+IndexedDB armazena a RAM de bateria e três slots de estado por cartucho, identificados pelo SHA-256 da ROM. Paleta, volume, mute e teclas usam preferências versionadas em localStorage, separadas desses saves. O destino de publicação é Cloudflare Pages Free, como site estático. Consulte a [arquitetura de áudio e execução](docs/audio-runtime.md), o [formato dos estados salvos](docs/save-states.md) e os [controles e preferências](docs/controls-and-preferences.md).
 
 ## Cartuchos e testes atuais
 
@@ -58,7 +58,7 @@ As ROMs Blargg são baixadas para uma pasta ignorada. O runner usa a mesma facto
 
 ## Som
 
-Escolha um jogo da biblioteca e clique em **Ativar som**. O navegador precisa dessa ação explícita para abrir a saída de áudio. Use **Volume** para ajustar o nível e **Silenciar** para mutar sem parar o jogo. Se a máquina estiver pausada, clique também em **Iniciar**. O jardim é um diagnóstico visual sem trilha sonora.
+Escolha um jogo da biblioteca e clique em **Ativar som**. O navegador precisa dessa ação explícita para abrir a saída de áudio. Use **Volume** para ajustar o nível e **Silenciar** para mutar sem parar o jogo. Se a máquina estiver pausada, clique também em **Iniciar**. O jardim é um diagnóstico visual sem trilha sonora. O volume fica guardado neste navegador, mas abrir ou recarregar a página continua exigindo a ativação do som por gesto.
 
 Áudio exige um navegador com AudioWorklet em **HTTPS ou localhost**. Acesso por HTTP em um IP da rede local pode não oferecer AudioWorklet; nesse caso, a interface explica a indisponibilidade e o jogo continua sem som. O Worker usa a taxa real do AudioContext, e as filas são limpas ao pausar ou reiniciar para evitar reproduzir trechos antigos.
 
@@ -80,9 +80,19 @@ O painel **Um ponto para voltar.** oferece três slots por cartucho. Selecione u
 
 O formato tem limite de 1 MiB, versão, modelo DMG-CPU-B, hash da ROM e checksum SHA-256. Arquivos corrompidos ou incompatíveis são rejeitados sem substituir o estado da máquina. A migração para IndexedDB v2 preserva os saves de bateria anteriores. Consulte [conteúdo, validação e limites dos estados](docs/save-states.md).
 
-## Testar M06, M07 e M08
+## Controles e preferências
 
-Siga o [roteiro do grupo atual](docs/testing-m06-m08.md) para conferir a biblioteca, a bateria, o áudio, os três slots, a exportação e a importação. Ele inclui resultados esperados e opções de teste no celular. O desenvolvimento permanece pausado antes da M09, aguardando o ok do proprietário.
+Abra **Controles e preferências** para remapear o teclado. Clique no campo de uma ação e pressione a substituta. Tab navega entre campos; Esc sai do campo. Conflitos entre ações e teclas reservadas geram uma mensagem e preservam o mapa anterior. **Restaurar teclado padrão** recupera as setas, Z, X, Enter e Shift. Abrir o painel pausa a partida; use **Iniciar** para retomar.
+
+Paleta, volume, mute e teclado são guardados em localStorage. Se o navegador bloquear esse armazenamento, os ajustes continuam funcionando na sessão e a interface informa a limitação. Isso não altera os slots ou a RAM de bateria em IndexedDB.
+
+Controles USB ou Bluetooth reconhecidos com `mapping="standard"` usam direcional ou analógico esquerdo, botões A/B e Select/Start. Pressione um botão do controle para o navegador reconhecer a conexão. Teclado, toque e múltiplos controles mantêm fontes independentes. A integração foi verificada com entradas simuladas; o teste de um controle físico ainda depende do proprietário.
+
+**Tela cheia** usa o recurso nativo do navegador. Se estiver indisponível ou for recusado, a interface informa o motivo e mantém a página utilizável. O primeiro link ao navegar por Tab, **Ir para o console**, permite saltar o cabeçalho. Consulte [configuração, suporte e roteiro de conferência](docs/controls-and-preferences.md).
+
+## Testar as milestones
+
+O [roteiro M06 a M08](docs/testing-m06-m08.md) registra os testes de biblioteca, bateria, áudio, slots e arquivos do grupo aprovado. Para a M09 em entrega, confira [controles e preferências](docs/controls-and-preferences.md#conferir-a-m09). A próxima pausa de revisão será após a M11, com o roteiro completo do grupo M09 a M11.
 
 ## Testar o primeiro grupo de milestones
 
@@ -100,7 +110,7 @@ Os registradores da CPU usam inicialização pós boot DMG, incluindo F dependen
 
 A M03 corrige `EI;HALT` com interrupção pendente e a resseleção de interrupção quando a pilha escreve sobre IE. Os testes externos não representam aprovação de todos os comportamentos de todas as revisões do hardware.
 
-Os grupos M00 a M02 e M03 a M05 foram aprovados pelo proprietário. O [roteiro de teste M03 a M05](docs/testing-m03-m05.md) permanece como referência histórica. M06, M07 e M08 estão concluídas; o [roteiro atual](docs/testing-m06-m08.md) orienta a revisão antes da M09.
+Os grupos M00 a M02, M03 a M05 e M06 a M08 foram aprovados pelo proprietário. Os roteiros de teste [M03 a M05](docs/testing-m03-m05.md) e [M06 a M08](docs/testing-m06-m08.md) permanecem como referências das entregas anteriores. M09 está em entrega; o desenvolvimento autorizado segue até a pausa após a M11.
 
 ## Vídeo e reprodução
 
@@ -112,6 +122,8 @@ Clique em **Explorar jardim** para abrir POCKET GARDEN. O cenário de quatro ton
 | Z ou botão A                   | Alterna a aparência uma vez por pressionamento           |
 | X ou botão B                   | Volta à posição inicial                                  |
 | Enter e Shift                  | Enviam Start e Select; o jardim não atribui ações a eles |
+
+As teclas da tabela são o mapa padrão e podem ser alteradas em **Controles e preferências**. O direcional e o analógico esquerdo de um controle padrão enviam as mesmas ações.
 
 Os botões do console funcionam por toque ou ponteiro. **Pausar** congela a máquina; **Iniciar** retoma; **Reiniciar** volta ao começo em pausa. Trocar a paleta altera a tela sem reiniciar o cartucho. Abrir a ajuda também pausa a reprodução.
 

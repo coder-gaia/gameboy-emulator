@@ -74,4 +74,4 @@ As filas PCM do núcleo e do navegador são dados de apresentação e não entra
 
 O estado registra a taxa de amostragem usada na captura. Com saída de áudio conectada, se o AudioContext atual usar outra taxa, o Worker adapta o amostrador para essa taxa real após restaurar a máquina. A continuidade de CPU, canais e memória é preservada, mas não se promete PCM idêntico entre taxas diferentes. Consulte [formato e limites dos estados](save-states.md).
 
-M06, M07 e M08 estão concluídas. O desenvolvimento permanece pausado antes da M09 até a revisão do proprietário, orientada pelo [roteiro do grupo](testing-m06-m08.md).
+M06, M07 e M08 foram aprovadas pelo proprietário. O [roteiro do grupo](testing-m06-m08.md) permanece como referência. A M09 acrescenta [preferências e controles](controls-and-preferences.md), preservando a ativação explícita do áudio.

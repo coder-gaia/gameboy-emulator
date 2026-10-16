@@ -1,0 +1,67 @@
+.panel {
+  margin-top: 18px;
+  padding: 0 18px 14px;
+  border: 1px solid #d7d5cc;
+  border-radius: 10px;
+  background: #f8f6f0;
+  font-size: 11px;
+}
+
+.panel summary {
+  min-height: 48px;
+  padding: 15px 0;
+  font-weight: 600;
+}
+
+.panel p {
+  line-height: 1.8;
+  overflow-wrap: anywhere;
+}
+
+.explanation {
+  color: #626659;
+  margin: 8px 0 14px;
+}
+
+.bindings {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.bindings label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+  color: #54594c;
+}
+
+.bindings input {
+  width: 100%;
+  min-height: 44px;
+  padding: 8px;
+  background: #f0eee6;
+  border: 1px solid #a8ac9b;
+  border-radius: 4px;
+  color: var(--color-ink);
+  font-family: var(--font-mono);
+  font-size: 10px;
+}
+
+.panel button {
+  min-height: 44px;
+  margin-top: 12px;
+  padding: 10px;
+  border: 1px solid #a99bbb;
+  border-radius: 4px;
+  color: var(--color-accent);
+  background: #eeebf1;
+  font-size: 11px;
+}
+
+.gamepad {
+  margin-top: 18px;
+  font-weight: 600;
+  color: #514565;
+}

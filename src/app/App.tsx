@@ -4,6 +4,8 @@ import {
   ArrowUpRight,
   CodeXml,
   Info,
+  Maximize,
+  Minimize,
   LockKeyhole,
   Pause,
   Play,
@@ -23,6 +25,11 @@ import { createVisualDiagnosticRom } from '../core/diagnostics/visual-cartridge'
 import { EmulatorClient } from '../runtime/emulator-client'
 import { GameScreen } from '../ui/screen/GameScreen'
 import { InputController } from '../platform/input/controller'
+import type { KeyboardBindings } from '../platform/input/controller'
+import { bindGamepads } from '../platform/input/gamepad'
+import type { GamepadStatus } from '../platform/input/gamepad'
+import { loadPreferences, savePreferences } from '../platform/settings/preferences'
+import type { PaletteId, Preferences } from '../platform/settings/preferences'
 import { TouchControls } from '../ui/controls/TouchControls'
 import { GameLibrary } from '../ui/library/GameLibrary'
 import type { DemoGame } from '../platform/games/catalog'
@@ -31,6 +38,8 @@ import { BatteryRepository, hashRom } from '../platform/storage'
 import { BatterySession } from '../runtime/battery-session'
 import { AudioOutput } from '../platform/audio'
 import { SaveStates } from '../ui/states/SaveStates'
+import { PreferencesPanel } from '../ui/settings/PreferencesPanel'
+import { keyLabel } from '../platform/input/key-label'
 import styles from './App.module.css'
 
 const palettes = [
@@ -72,8 +81,6 @@ const palettes = [
   },
 ] as const
 
-type PaletteId = (typeof palettes)[number]['id']
-
 function CartridgeDrawing() {
   return (
     <svg
@@ -97,7 +104,26 @@ function CartridgeDrawing() {
 }
 
 export function App() {
-  const [paletteId, setPaletteId] = useState<PaletteId>('dmg')
+  const [initialPreferences] = useState(() => loadPreferences())
+  const [paletteId, setPaletteId] = useState<PaletteId>(initialPreferences.preferences.paletteId)
+  const [keyboardBindings, setKeyboardBindings] = useState<KeyboardBindings>(
+    initialPreferences.preferences.keyboardBindings,
+  )
+  const [preferencesNotice, setPreferencesNotice] = useState(initialPreferences.notice)
+  const preferencesRef = useRef(initialPreferences.preferences)
+  const updatePreferences = useCallback((update: Partial<Preferences>) => {
+    const preferences = { ...preferencesRef.current, ...update }
+    preferencesRef.current = preferences
+    setPreferencesNotice(savePreferences(preferences))
+  }, [])
+  const [gamepadStatus, setGamepadStatus] = useState<GamepadStatus>({
+    supported: typeof navigator.getGamepads === 'function',
+    connectedCount: 0,
+    message: 'Conecte um controle padrão e pressione um botão para jogar.',
+  })
+  const [fullscreen, setFullscreen] = useState(false)
+  const [fullscreenNotice, setFullscreenNotice] = useState('')
+  const consoleSection = useRef<HTMLElement>(null)
   const [cartridge, setCartridge] = useState<LoadedCartridge | null>(null)
   const [cartridgeRevision, setCartridgeRevision] = useState(0)
   const [device, setDevice] = useState<EmulatorClient | null>(null)
@@ -111,8 +137,8 @@ export function App() {
   const [saveBlocked, setSaveBlocked] = useState(false)
   const [audioReady, setAudioReady] = useState(false)
   const [audioBusy, setAudioBusy] = useState(false)
-  const [muted, setMuted] = useState(false)
-  const [volume, setVolume] = useState(0.5)
+  const [muted, setMuted] = useState(initialPreferences.preferences.muted)
+  const [volume, setVolume] = useState(initialPreferences.preferences.volume)
   const [audioNotice, setAudioNotice] = useState('')
   const audioOutput = useRef<AudioOutput | null>(null)
   const liveDevice = useRef<EmulatorClient | null>(null)
@@ -132,6 +158,29 @@ export function App() {
     '--lcd-background': palette.background,
     '--lcd-ink': palette.ink,
   } as CSSProperties
+
+  useEffect(() => {
+    const changed = () => setFullscreen(document.fullscreenElement === consoleSection.current)
+    document.addEventListener('fullscreenchange', changed)
+    return () => document.removeEventListener('fullscreenchange', changed)
+  }, [])
+
+  async function toggleFullscreen() {
+    setFullscreenNotice('')
+    try {
+      if (document.fullscreenElement === consoleSection.current) await document.exitFullscreen()
+      else if (document.fullscreenEnabled && consoleSection.current?.requestFullscreen)
+        await consoleSection.current.requestFullscreen()
+      else
+        setFullscreenNotice(
+          'Tela cheia não está disponível neste navegador. Você pode continuar jogando nesta página.',
+        )
+    } catch {
+      setFullscreenNotice(
+        'O navegador não permitiu abrir a tela cheia. Você pode continuar jogando nesta página.',
+      )
+    }
+  }
 
   const pausePlayback = useCallback(() => {
     setPlaying(false)
@@ -202,6 +251,7 @@ export function App() {
     if (audioReady && audioOutput.current) {
       audioOutput.current.setMuted(!muted)
       setMuted(!muted)
+      updatePreferences({ muted: !muted })
       return
     }
     setAudioBusy(true)
@@ -222,6 +272,7 @@ export function App() {
     try {
       await output.prepare()
       setMuted(false)
+      updatePreferences({ muted: false })
       setAudioReady(true)
     } catch (cause) {
       setAudioNotice(
@@ -244,6 +295,22 @@ export function App() {
         !stateBusy &&
         !aboutDialog.current?.open &&
         !cartridgeHelp.current?.open,
+      () => keyboardBindings,
+    )
+  }, [controller, playing, loading, stateBusy, keyboardBindings])
+
+  useEffect(() => {
+    if (!controller) return
+    return bindGamepads(
+      controller,
+      window,
+      () =>
+        playing &&
+        !loading &&
+        !stateBusy &&
+        !aboutDialog.current?.open &&
+        !cartridgeHelp.current?.open,
+      setGamepadStatus,
     )
   }, [controller, playing, loading, stateBusy])
 
@@ -443,8 +510,15 @@ export function App() {
         void loadFiles(event.dataTransfer.files)
       }}
     >
+      <a className={styles.skipLink} href="#jogar">
+        Ir para o console
+      </a>
       <header className={styles.header}>
-        <a className={styles.brand} href="#inicio" aria-label="Pocket Lab, início">
+        <a
+          className={styles.brand}
+          href="#inicio"
+          aria-label="pocketlab, um projeto de bolso, início"
+        >
           <span className={styles.brandMark} aria-hidden="true">
             <span />
             <span />
@@ -453,7 +527,7 @@ export function App() {
           </span>
           <span>
             pocket<span className={styles.brandLight}>lab</span>
-          </span>
+          </span>{' '}
           <span className={styles.brandBadge}>um projeto de bolso</span>
         </a>
         <nav className={styles.navigation} aria-label="Navegação principal">
@@ -476,7 +550,13 @@ export function App() {
       </header>
 
       <main className={styles.main} id="inicio">
-        <section className={styles.consoleSection} aria-label="Seu console">
+        <section
+          className={styles.consoleSection}
+          aria-label="Seu console"
+          id="jogar"
+          ref={consoleSection}
+          tabIndex={-1}
+        >
           <div className={styles.benchLabel}>
             <span>POCKET LAB / 001</span>
             <span className={styles.benchLine} />
@@ -578,6 +658,18 @@ export function App() {
                 <RotateCcw size={15} aria-hidden="true" />
                 Reiniciar
               </button>
+              <button
+                type="button"
+                onClick={() => void toggleFullscreen()}
+                disabled={loading || stateBusy}
+              >
+                {fullscreen ? (
+                  <Minimize size={15} aria-hidden="true" />
+                ) : (
+                  <Maximize size={15} aria-hidden="true" />
+                )}
+                {fullscreen ? 'Sair da tela cheia' : 'Tela cheia'}
+              </button>
               <div className={styles.soundControls}>
                 <button
                   type="button"
@@ -602,6 +694,7 @@ export function App() {
                     onChange={(event) => {
                       const next = Number(event.currentTarget.value) / 100
                       setVolume(next)
+                      updatePreferences({ volume: next })
                       audioOutput.current?.setVolume(next)
                     }}
                   />
@@ -613,6 +706,11 @@ export function App() {
           {audioNotice && (
             <p className={styles.controlHint} role="status" aria-label="Estado do áudio">
               {audioNotice}
+            </p>
+          )}
+          {fullscreenNotice && (
+            <p className={styles.controlHint} role="status" aria-label="Estado da tela cheia">
+              {fullscreenNotice}
             </p>
           )}
 
@@ -628,7 +726,10 @@ export function App() {
                   className={`${styles.paletteButton} ${item.id === paletteId ? styles.paletteSelected : ''}`}
                   type="button"
                   aria-pressed={item.id === paletteId}
-                  onClick={() => setPaletteId(item.id)}
+                  onClick={() => {
+                    setPaletteId(item.id)
+                    updatePreferences({ paletteId: item.id })
+                  }}
                 >
                   <span
                     className={styles.paletteSwatch}
@@ -790,10 +891,29 @@ export function App() {
             />
           )}
 
+          <PreferencesPanel
+            bindings={keyboardBindings}
+            onBindingsChange={(bindings) => {
+              controller?.releaseAll()
+              setKeyboardBindings(bindings)
+              updatePreferences({ keyboardBindings: bindings })
+            }}
+            onOpen={pausePlayback}
+            gamepad={gamepadStatus}
+            notice={preferencesNotice}
+          />
+
           {device && (
             <p className={styles.controlHint}>
-              Setas para mover · Z: botão A · X: botão B<br />
-              Enter: Start · Shift: Select · ou use os botões do console
+              {keyboardBindings.up.map(keyLabel).join('/')}{' '}
+              {keyboardBindings.down.map(keyLabel).join('/')}{' '}
+              {keyboardBindings.left.map(keyLabel).join('/')}{' '}
+              {keyboardBindings.right.map(keyLabel).join('/')}: mover ·{' '}
+              {keyboardBindings.a.map(keyLabel).join('/')}: botão A ·{' '}
+              {keyboardBindings.b.map(keyLabel).join('/')}: botão B<br />
+              {keyboardBindings.start.map(keyLabel).join('/')}: Start ·{' '}
+              {keyboardBindings.select.map(keyLabel).join('/')}: Select · ou use os botões do
+              console
             </p>
           )}
 

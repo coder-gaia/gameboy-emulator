@@ -12,8 +12,9 @@
 - Confirmar o commit no GitHub antes de avançar para a próxima milestone. Não enviar links individuais de commits, salvo pedido.
 - Pausar ao concluir cada grupo de três milestones para o proprietário testar.
 - Na pausa, entregar instruções concretas de teste e os resultados esperados. Aguardar o ok antes de continuar.
-- Os grupos M00 a M02 e M03 a M05 foram aprovados. M06, M07 e M08 estão concluídas. Entregar docs/testing-m06-m08.md e pausar antes da M09, aguardando novo ok do proprietário.
-- A conclusão da M08 autoriza os checks, seu commit e push. Não iniciar M09 durante essa revisão.
+- Os grupos M00 a M02, M03 a M05 e M06 a M08 foram aprovados pelo proprietário.
+- M09, M10 e M11 estão autorizadas. Pausar ao concluir M11 e entregar roteiro de testes antes de iniciar M12.
+- Como último passo deste grupo, ajustar o fundo para pastel/off-white confortável, preservando contraste e aparência do console, sem aplicar opacidade ou sobreposição ao Game Boy.
 
 ## Escrita
 

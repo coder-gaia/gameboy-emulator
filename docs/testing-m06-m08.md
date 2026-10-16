@@ -1,6 +1,6 @@
 # Testar M06, M07 e M08
 
-Este grupo entrega MBC1, biblioteca de jogos autorizados, bateria, áudio e estados salvos. O desenvolvimento está pausado antes da M09, aguardando a revisão do proprietário. O roteiro usa somente o conteúdo incluído na aplicação e não exige serviço pago.
+Este grupo entrega MBC1, biblioteca de jogos autorizados, bateria, áudio e estados salvos. M06, M07 e M08 foram aprovadas pelo proprietário. O roteiro permanece como referência, usa somente o conteúdo incluído na aplicação e não exige serviço pago.
 
 ## Abrir o projeto
 
@@ -113,4 +113,4 @@ O resultado externo esperado continua sendo **87 testes aprovados**: instruçõe
 
 A PPU continua por scanline, sem pixel FIFO ou alterações durante o modo 3. A inicialização pós boot é limitada ao modelo documentado. Os testes de áudio observáveis pela CPU não equivalem a uma comparação acústica completa. MBC1M e cartuchos MBC2, MBC3 e MBC5 permanecem fora da execução atual.
 
-Registre problemas com o passo executado, o resultado observado e o navegador ou dispositivo. M06, M07 e M08 estão concluídas; M09 só começa após o ok do proprietário.
+Registre problemas com o passo executado, o resultado observado e o navegador ou dispositivo. M06, M07 e M08 foram aprovadas; o desenvolvimento segue com o grupo M09 a M11 autorizado.

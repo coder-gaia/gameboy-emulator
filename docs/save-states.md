@@ -72,4 +72,4 @@ O arquivo registra a taxa de amostragem usada na captura. Se houver um AudioCont
 
 ## Conferir a entrega
 
-O [roteiro M06 a M08](testing-m06-m08.md) mostra como testar slots, retorno à posição do jardim, persistência, exportação do ponto atual, importação e rejeição de arquivos inválidos. O grupo está concluído e aguarda revisão antes da M09.
+O [roteiro M06 a M08](testing-m06-m08.md) mostra como testar slots, retorno à posição do jardim, persistência, exportação do ponto atual, importação e rejeição de arquivos inválidos. O grupo foi aprovado pelo proprietário.

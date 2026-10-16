@@ -13,7 +13,7 @@ Stack aprovada: TypeScript estrito, React, Vite, CSS Modules, Canvas 2D, Worker,
 | M06   | MBC1, bateria e biblioteca de demos autorizadas     | Concluída |
 | M07   | APU, Worker e sincronização de áudio                | Concluída |
 | M08   | Save states versionados e slots                     | Concluída |
-| M09   | Interface completa, controles e acessibilidade      | Pendente  |
+| M09   | Interface completa, controles e acessibilidade      | Concluída |
 | M10   | Desempenho móvel e beta pública                     | Pendente  |
 | M11   | Rewind com memória limitada                         | Pendente  |
 | M12   | MBC2, MBC3 com RTC e MBC5                           | Pendente  |
@@ -24,7 +24,9 @@ Stack aprovada: TypeScript estrito, React, Vite, CSS Modules, Canvas 2D, Worker,
 
 Os grupos M00 a M02 e M03 a M05 foram aprovados pelo proprietário. O [roteiro de teste M03 a M05](testing-m03-m05.md) permanece como referência das entregas anteriores.
 
-O grupo M06, M07 e M08 está concluído e em revisão pelo proprietário. **Pausar antes da M09 e aguardar o ok do proprietário.** O [roteiro de teste M06 a M08](testing-m06-m08.md) apresenta os passos e resultados esperados. Cada milestone deve ter seu commit validado, push imediato e confirmação no GitHub antes da seguinte. Os commits e resultados da validação ficam disponíveis no histórico e nas execuções de CI do GitHub.
+O grupo M06, M07 e M08 foi aprovado pelo proprietário. O [roteiro de teste M06 a M08](testing-m06-m08.md) permanece como referência. M09, M10 e M11 estão autorizadas, com nova pausa ao concluir a M11. Cada milestone deve ter seu commit validado, push imediato e confirmação no GitHub antes da seguinte. Os commits e resultados da validação ficam disponíveis no histórico e nas execuções de CI do GitHub.
+
+M09 completa preferências, remapeamento de teclado, gamepad padrão, tela cheia e acessibilidade. M10 mede desempenho de produção e prepara a beta estática no Cloudflare Pages Free, com publicação dependente da conexão da conta do proprietário. M11 acrescenta rewind com memória limitada. Como último passo do grupo, o fundo recebe um tom pastel/off-white mais confortável, preservando contraste e aparência do console sem opacidade ou sobreposição.
 
 O cartucho sintético POCKET TEST permite testar CPU, memória e serial sem obter jogos. O [README](../README.md#testar-o-primeiro-grupo-de-milestones) explica o roteiro inicial. M03 adiciona timers, DMA, correção de EI seguido de HALT e prioridades de interrupção durante escrita na pilha, com 42 ROMs externas aprovadas.
 
@@ -37,6 +39,8 @@ M06 adiciona MBC1 padrão, bancos de ROM e RAM, modos de banking e saves de bate
 M07 implementa os quatro canais da APU DMG, mixer estéreo, filtro passa-altas e PCM com filas limitadas. A máquina executa em Web Worker; a interface mantém uma cópia para apresentação. Sem áudio, o Worker usa relógio monotônico. Com áudio, AudioWorklet solicita PCM por MessageChannel e controla a cadência na taxa real do dispositivo. O visitante ativa o som explicitamente e pode ajustar volume ou silenciar. Falta de AudioWorklet mantém o jogo sem som. Os 12 testes `dmg_sound` aprovados elevam o total externo a 87. Consulte [arquitetura e limites](audio-runtime.md).
 
 M08 adiciona estados completos e versionados, três slots por SHA-256 da ROM e importação ou exportação de arquivos `.pocketstate`. CPU, memória, mapper, PPU, timer, DMA, serial, joypad e APU são capturados, incluindo fases pendentes necessárias à continuação. A restauração valida uma máquina candidata antes de alterar a atual. As filas PCM de apresentação são descartadas; a fase de amostragem e o filtro da APU são preservados na mesma taxa de áudio. IndexedDB v2 acrescenta os slots e preserva a bateria existente. O formato limita arquivos a 1 MiB e confere versões, modelo DMG-CPU-B, ROM e checksum SHA-256. Consulte [estados salvos](save-states.md).
+
+M09 acrescenta remapeamento das oito ações do teclado, preferências versionadas em localStorage, gamepads com mapeamento padrão e tela cheia nativa com fallback. Entradas simultâneas mantêm fontes independentes e são liberadas ao perder foco, pausar ou desconectar. A revisão corrige contraste e nomes acessíveis, amplia foco visível, preserva a ativação nativa de painéis e evita anúncios contínuos dos registradores. Os testes incluem axe, larguras de 320, 390 e 1440 pixels e jogo em tela cheia em retrato e paisagem. Controle físico e leitores de tela reais continuam dependendo da revisão manual. Consulte [controles e preferências](controls-and-preferences.md).
 
 Cada milestone recebe um commit, com título Conventional Commits em inglês e corpo em pt-br. Sem autoria ou coautoria de ferramentas de IA e sem caracteres de travessão.
 

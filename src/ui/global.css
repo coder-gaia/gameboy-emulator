@@ -8,7 +8,7 @@
   -moz-osx-font-smoothing: grayscale;
   --color-paper: #f4f2ec;
   --color-ink: #30322d;
-  --color-muted: #74756c;
+  --color-muted: #626659;
   --color-accent: #5b477d;
   --font-mono: 'Space Mono', monospace;
 }
@@ -42,13 +42,14 @@ a {
   color: inherit;
 }
 
-button:focus-visible,
-a:focus-visible,
-input:focus-visible,
-select:focus-visible,
-textarea:focus-visible {
+:focus-visible {
   outline: 3px solid var(--color-accent);
   outline-offset: 5px;
+}
+
+canvas:focus-visible {
+  outline: 3px solid var(--lcd-ink, var(--color-accent));
+  outline-offset: -5px;
 }
 
 button:not(:disabled),

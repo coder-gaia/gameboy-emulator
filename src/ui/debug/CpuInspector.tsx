@@ -75,7 +75,9 @@ export function CpuInspector({
           <div key={name}>
             <dt>{name}</dt>
             <dd>
-              <output aria-label={`Registrador ${name}`}>{hex(value)}</output>
+              <output aria-label={`Registrador ${name}`} aria-live="off">
+                {hex(value)}
+              </output>
             </dd>
           </div>
         ))}
@@ -84,13 +86,16 @@ export function CpuInspector({
         <div>
           <dt>Ciclos</dt>
           <dd>
-            <output aria-label="T-cycles executados">{state.totalTCycles}</output> T
+            <output aria-label="T-cycles executados" aria-live="off">
+              {state.totalTCycles}
+            </output>{' '}
+            T
           </dd>
         </div>
         <div>
           <dt>Estado</dt>
           <dd>
-            <output aria-label="Estado da CPU">
+            <output aria-label="Estado da CPU" aria-live="off">
               {error ? 'Interrompida' : state.halted ? 'HALT' : state.stopped ? 'STOP' : 'Pronta'}
             </output>
           </dd>

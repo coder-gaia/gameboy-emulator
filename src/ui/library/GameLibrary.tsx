@@ -27,17 +27,16 @@ export function GameLibrary({
             <button
               className={styles.game}
               type="button"
-              aria-label={`Jogar ${game.title}`}
+              aria-label={`Jogar ${String(index + 1).padStart(2, '0')} ${game.title}. ${game.subtitle}`}
               aria-pressed={activeGameId === game.id}
               disabled={loading}
               onClick={() => onSelect(game)}
             >
               <span className={styles.stamp} aria-hidden="true">
                 {String(index + 1).padStart(2, '0')}
-              </span>
+              </span>{' '}
               <span className={styles.title}>
-                <strong>{game.title}</strong>
-                <span>{game.subtitle}</span>
+                <strong>{game.title}</strong> <span>{game.subtitle}</span>
               </span>
               <Play size={15} aria-hidden="true" />
             </button>

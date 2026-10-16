@@ -91,7 +91,7 @@ async function readProbe(page: Page) {
 
 async function openTobu(page: Page): Promise<Locator> {
   await page.goto('/')
-  await page.getByRole('button', { name: 'Jogar Tobu Tobu Girl', exact: true }).click()
+  await page.getByRole('button', { name: /^Jogar 01 Tobu Tobu Girl\./ }).click()
   const canvas = page.getByLabel('Tela do emulador', { exact: true })
   await expect
     .poll(async () => Number(await canvas.getAttribute('data-frame-id')))

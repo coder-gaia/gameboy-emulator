@@ -4,7 +4,9 @@ import { DEMO_GAMES } from '../../src/platform/games/catalog'
 for (const game of DEMO_GAMES) {
   test(`abre ${game.title} sem arquivo e deixa o teclado pronto para jogar`, async ({ page }) => {
     await page.goto('/')
-    const choice = page.getByRole('button', { name: `Jogar ${game.title}`, exact: true })
+    const choice = page.getByRole('button', {
+      name: new RegExp(`^Jogar \\d{2} ${game.title}\\.`),
+    })
     await choice.click()
     const canvas = page.getByLabel('Tela do emulador', { exact: true })
     await expect(canvas).toBeFocused()
@@ -35,11 +37,11 @@ test('recusa uma demo alterada e permite tentar novamente com os bytes originais
     route.fulfill({ status: 200, body: Buffer.alloc(32768) }),
   )
   await page.goto('/')
-  await page.getByRole('button', { name: `Jogar ${game.title}`, exact: true }).click()
+  await page.getByRole('button', { name: new RegExp(`^Jogar \\d{2} ${game.title}\\.`) }).click()
   await expect(page.getByRole('alert')).toContainText('está incompleto ou mudou')
   await expect(page.getByLabel('Tela do emulador', { exact: true })).toHaveCount(0)
   await page.unroute(`**${game.romUrl}`)
-  await page.getByRole('button', { name: `Jogar ${game.title}`, exact: true }).click()
+  await page.getByRole('button', { name: new RegExp(`^Jogar \\d{2} ${game.title}\\.`) }).click()
   await expect(page.getByLabel('Tela do emulador', { exact: true })).toBeVisible()
   await expect(page.getByRole('alert')).toHaveCount(0)
 })

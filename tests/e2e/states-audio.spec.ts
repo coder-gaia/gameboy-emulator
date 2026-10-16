@@ -96,7 +96,7 @@ async function readProbe(page: Page) {
 async function openTobuWithAudio(page: Page): Promise<void> {
   await instrument(page)
   await page.goto('/')
-  await page.getByRole('button', { name: 'Jogar Tobu Tobu Girl', exact: true }).click()
+  await page.getByRole('button', { name: /^Jogar 01 Tobu Tobu Girl\./ }).click()
   await expect.poll(async () => (await readProbe(page)).frame ?? 0).toBeGreaterThan(3)
   await page.getByRole('button', { name: 'Ativar som', exact: true }).click()
   await expect(page.getByRole('button', { name: 'Silenciar', exact: true })).toBeEnabled()
