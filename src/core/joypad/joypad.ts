@@ -1,4 +1,12 @@
+import { stateInteger, stateRecord } from '../state/validation'
+
 export type JoypadButton = 'right' | 'left' | 'up' | 'down' | 'a' | 'b' | 'select' | 'start'
+
+export interface JoypadState {
+  version: 1
+  selection: number
+  pressedButtons: number
+}
 
 const BUTTON_MASKS: Readonly<Record<JoypadButton, number>> = {
   right: 0x01,
@@ -47,6 +55,21 @@ export class Joypad {
 
   releaseAll(): void {
     this.pressedButtons = 0
+  }
+
+  snapshotState(): JoypadState {
+    return { version: 1, selection: this.selection, pressedButtons: this.pressedButtons }
+  }
+
+  restoreState(value: unknown): void {
+    const state = stateRecord(value, 'joypad')
+    stateInteger(state.version, 1, 1, 'joypad.version')
+    const selection = stateInteger(state.selection, 0, 0x30, 'joypad.selection')
+    const pressedButtons = stateInteger(state.pressedButtons, 0, 0xff, 'joypad.pressedButtons')
+    if ((selection & 0x0f) !== 0) throw new Error('Estado do joypad inválido: seleção.')
+    // Restaurar a matriz não produz uma nova borda de hardware ou IRQ.
+    this.selection = selection
+    this.pressedButtons = pressedButtons
   }
 
   private detectFallingEdge(previous: number): void {

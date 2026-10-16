@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
 import {
   ArrowUpRight,
@@ -30,6 +30,7 @@ import { loadDemo } from '../platform/games/load-demo'
 import { BatteryRepository, hashRom } from '../platform/storage'
 import { BatterySession } from '../runtime/battery-session'
 import { AudioOutput } from '../platform/audio'
+import { SaveStates } from '../ui/states/SaveStates'
 import styles from './App.module.css'
 
 const palettes = [
@@ -104,6 +105,7 @@ export function App() {
   const [viewRevision, setViewRevision] = useState(0)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [stateBusy, setStateBusy] = useState(false)
   const [activeGameId, setActiveGameId] = useState<string | null>(null)
   const [batteryNotice, setBatteryNotice] = useState('')
   const [saveBlocked, setSaveBlocked] = useState(false)
@@ -152,10 +154,18 @@ export function App() {
   }, [])
   const refreshScreen = useCallback(() => setViewRevision((value) => value + 1), [])
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     liveDevice.current = device
-    return () => device?.dispose()
   }, [device])
+
+  useEffect(() => () => device?.dispose(), [device])
+
+  const stateBusyChanged = useCallback(
+    (busy: boolean) => {
+      if (liveDevice.current === device) setStateBusy(busy)
+    },
+    [device],
+  )
 
   useEffect(
     () => () => {
@@ -228,9 +238,14 @@ export function App() {
     if (!controller) return
     return controller.bindKeyboard(
       window,
-      () => playing && !loading && !aboutDialog.current?.open && !cartridgeHelp.current?.open,
+      () =>
+        playing &&
+        !loading &&
+        !stateBusy &&
+        !aboutDialog.current?.open &&
+        !cartridgeHelp.current?.open,
     )
-  }, [controller, playing, loading])
+  }, [controller, playing, loading, stateBusy])
 
   useEffect(() => {
     const session = batterySession.current
@@ -333,13 +348,14 @@ export function App() {
     setCartridge(loaded)
     device?.dispose()
     setDevice(machine)
+    setStateBusy(false)
     setPlaying(Boolean(machine && autoplay))
     setCartridgeRevision((value) => value + 1)
     setError('')
   }
 
   async function restart() {
-    if (!cartridge?.metadata.isSupported) return
+    if (stateBusy || !cartridge?.metadata.isSupported) return
     const request = ++loadRequest.current
     setPlaying(false)
     setLoading(true)
@@ -354,6 +370,7 @@ export function App() {
   }
 
   async function loadFiles(files: FileList | null) {
+    if (stateBusy) return
     const request = ++loadRequest.current
     setError('')
     setLoading(false)
@@ -378,6 +395,7 @@ export function App() {
   }
 
   async function openFixture(rom: Uint8Array, fileName: string, autoplay: boolean) {
+    if (stateBusy || loading) return
     const request = ++loadRequest.current
     setPlaying(false)
     setLoading(true)
@@ -399,6 +417,7 @@ export function App() {
   }
 
   async function openDemo(game: DemoGame) {
+    if (stateBusy || loading) return
     const request = ++loadRequest.current
     setPlaying(false)
     setLoading(true)
@@ -527,7 +546,7 @@ export function App() {
               </div>
             </div>
 
-            <TouchControls controller={controller} disabled={!playing || loading} />
+            <TouchControls controller={controller} disabled={!playing || loading || stateBusy} />
             <div className={styles.consoleBottom} aria-hidden="true">
               <span>BOAS HISTÓRIAS CABEM NO BOLSO.</span>
               <div className={styles.speaker}>
@@ -546,7 +565,7 @@ export function App() {
               <button
                 type="button"
                 onClick={() => (playing ? pausePlayback() : setPlaying(true))}
-                disabled={Boolean(error)}
+                disabled={Boolean(error) || loading || stateBusy}
               >
                 {playing ? (
                   <Pause size={15} aria-hidden="true" />
@@ -555,7 +574,7 @@ export function App() {
                 )}
                 {playing ? 'Pausar' : 'Iniciar'}
               </button>
-              <button type="button" onClick={() => void restart()} disabled={loading}>
+              <button type="button" onClick={() => void restart()} disabled={loading || stateBusy}>
                 <RotateCcw size={15} aria-hidden="true" />
                 Reiniciar
               </button>
@@ -563,7 +582,7 @@ export function App() {
                 <button
                   type="button"
                   onClick={() => void toggleAudio()}
-                  disabled={audioBusy}
+                  disabled={audioBusy || stateBusy}
                   aria-pressed={audioReady && !muted}
                 >
                   {audioReady && !muted ? (
@@ -644,7 +663,7 @@ export function App() {
           </p>
 
           <GameLibrary
-            loading={loading}
+            loading={loading || stateBusy}
             activeGameId={activeGameId}
             onSelect={(game) => void openDemo(game)}
           />
@@ -671,7 +690,7 @@ export function App() {
             <button
               className={styles.loadButton}
               type="button"
-              disabled={loading}
+              disabled={loading || stateBusy}
               onClick={() => fileInput.current?.click()}
               aria-describedby="cartridge-help"
             >
@@ -704,13 +723,19 @@ export function App() {
                 Continuar sem salvar
               </button>
             )}
-            <button className={styles.visualButton} type="button" onClick={openVisualCartridge}>
+            <button
+              className={styles.visualButton}
+              type="button"
+              onClick={openVisualCartridge}
+              disabled={loading || stateBusy}
+            >
               Explorar jardim <Play size={14} aria-hidden="true" />
             </button>
             <button
               className={styles.diagnosticButton}
               type="button"
               onClick={openDiagnosticCartridge}
+              disabled={loading || stateBusy}
             >
               Experimentar cartucho de diagnóstico <ArrowUpRight size={13} aria-hidden="true" />
             </button>
@@ -728,11 +753,42 @@ export function App() {
                 key={cartridgeRevision}
                 device={device}
                 playing={playing}
+                disabled={loading || stateBusy}
                 onAdvance={refreshScreen}
                 onReset={() => void restart()}
               />
             )}
           </div>
+
+          {device && (
+            <SaveStates
+              key={device.instanceId}
+              device={device}
+              title={cartridge?.metadata.title ?? 'cartucho'}
+              disabled={loading || audioBusy}
+              onBusyChange={stateBusyChanged}
+              onPause={async () => {
+                if (liveDevice.current !== device) throw new Error('O cartucho foi trocado.')
+                setPlaying(false)
+                controller?.releaseAll()
+                await device.pause()
+              }}
+              onLoaded={() => {
+                if (liveDevice.current !== device) return
+                controller?.releaseAll()
+                setCartridgeRevision((value) => value + 1)
+                const session = batterySession.current
+                void session?.flush().catch((cause: unknown) => {
+                  if (session === batterySession.current)
+                    setBatteryNotice(
+                      cause instanceof Error
+                        ? cause.message
+                        : 'Não foi possível salvar o progresso.',
+                    )
+                })
+              }}
+            />
+          )}
 
           {device && (
             <p className={styles.controlHint}>
@@ -837,7 +893,8 @@ export function App() {
           Para experimentar sem arquivo, escolha <strong>Tobu Tobu Girl</strong> ou{' '}
           <strong>2048</strong>
           na seleção de jogos. Cartuchos com bateria salvam o progresso neste navegador. O jardim é
-          um teste interativo próprio e não tem trilha sonora. Save states chegam na próxima etapa.
+          um teste interativo próprio e não tem trilha sonora. Use os slots para guardar um ponto
+          exato da partida ou exporte um arquivo .pocketstate como cópia.
         </p>
       </dialog>
     </div>

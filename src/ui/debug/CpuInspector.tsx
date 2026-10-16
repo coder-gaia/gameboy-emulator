@@ -10,11 +10,13 @@ function hex(value: number, length = 4) {
 export function CpuInspector({
   device,
   playing,
+  disabled = false,
   onAdvance,
   onReset,
 }: {
   device: EmulatorClient
   playing: boolean
+  disabled?: boolean
   onAdvance: () => void
   onReset: () => void
 }) {
@@ -59,7 +61,7 @@ export function CpuInspector({
     SP: state.sp,
     PC: state.pc,
   }
-  const paused = playing || busy || state.stopped || Boolean(error)
+  const paused = playing || disabled || busy || state.stopped || Boolean(error)
 
   return (
     <details className={styles.panel} onToggle={(event) => setOpen(event.currentTarget.open)}>
@@ -104,7 +106,7 @@ export function CpuInspector({
         <button type="button" onClick={() => void advance(1000)} disabled={paused}>
           Até 1000 instruções
         </button>
-        <button type="button" onClick={reset}>
+        <button type="button" onClick={reset} disabled={disabled || busy}>
           Reiniciar CPU
         </button>
       </div>

@@ -1,4 +1,16 @@
+import { stateInteger, stateRecord } from '../state/validation'
+
 const COUNTER_BITS = [9, 3, 5, 7] as const
+
+export interface TimerState {
+  readonly version: 1
+  readonly divider: number
+  readonly counter: number
+  readonly modulo: number
+  readonly control: number
+  readonly reloadDelay: number
+  readonly reloadWindow: number
+}
 
 /**
  * Timer DMG por bordas de descida do contador de 16 bits.
@@ -15,6 +27,44 @@ export class Timer {
 
   get systemCounter(): number {
     return this.divider
+  }
+
+  snapshotState(): TimerState {
+    return {
+      version: 1,
+      divider: this.divider,
+      counter: this.counter,
+      modulo: this.modulo,
+      control: this.control,
+      reloadDelay: this.reloadDelay,
+      reloadWindow: this.reloadWindow,
+    }
+  }
+
+  /** Aplica os contadores diretamente, sem gerar bordas de DIV/TAC ou IRQ. */
+  restoreState(value: unknown): void {
+    const state = stateRecord(value, 'timer')
+    const valid: TimerState = {
+      version: stateInteger(state.version, 1, 1, 'timer.version') as 1,
+      divider: stateInteger(state.divider, 0, 0xffff, 'timer.divider'),
+      counter: stateInteger(state.counter, 0, 0xff, 'timer.counter'),
+      modulo: stateInteger(state.modulo, 0, 0xff, 'timer.modulo'),
+      control: stateInteger(state.control, 0, 7, 'timer.control'),
+      reloadDelay: stateInteger(state.reloadDelay, 0, 4, 'timer.reloadDelay'),
+      reloadWindow: stateInteger(state.reloadWindow, 0, 4, 'timer.reloadWindow'),
+    }
+    if (valid.reloadDelay > 0 && (valid.reloadWindow > 0 || valid.counter !== 0)) {
+      throw new Error('Estado inválido: atraso de reload do timer incompatível com TIMA ou janela.')
+    }
+    if (valid.reloadWindow > 0 && valid.counter !== valid.modulo) {
+      throw new Error('Estado inválido: TIMA diverge de TMA durante a janela de reload.')
+    }
+    this.divider = valid.divider
+    this.counter = valid.counter
+    this.modulo = valid.modulo
+    this.control = valid.control
+    this.reloadDelay = valid.reloadDelay
+    this.reloadWindow = valid.reloadWindow
   }
 
   read8(address: number): number {

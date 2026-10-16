@@ -30,6 +30,14 @@ export class CartridgeRam {
     return this.hasBattery && this.bytes.length > 0 ? this.bytes.slice() : null
   }
 
+  snapshotState(): Uint8Array {
+    return this.bytes.slice()
+  }
+
+  restoreState(state: unknown): void {
+    this.replaceBytes(stateBytes(state, this.bytes.length, 'RAM do cartucho'))
+  }
+
   importBatteryRam(bytes: Uint8Array): void {
     if (!this.hasBattery || this.bytes.length === 0) {
       throw new Error('Este cartucho não possui RAM de bateria.')
@@ -39,6 +47,10 @@ export class CartridgeRam {
         `Save de bateria incompatível: esperado ${this.bytes.length} bytes, recebido ${bytes.length}.`,
       )
     }
+    this.replaceBytes(bytes)
+  }
+
+  private replaceBytes(bytes: Uint8Array): void {
     let changed = false
     for (let index = 0; index < bytes.length; index += 1) {
       if (this.bytes[index] !== bytes[index]) {
@@ -48,6 +60,7 @@ export class CartridgeRam {
     }
     if (!changed) return
     this.bytes.set(bytes)
-    this.revision += 1
+    if (this.hasBattery) this.revision += 1
   }
 }
+import { stateBytes } from '../state/validation'

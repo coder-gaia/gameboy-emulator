@@ -1,6 +1,8 @@
 import { GameBoy } from '../core/gameboy'
 import { DMG_CLOCK_HZ, DMG_FRAME_T_CYCLES } from '../core/model'
 import type { EmulatorMessage, EmulatorRequest, EmulatorSnapshot } from './worker-protocol'
+import type { MachineCheckpoint } from './worker-protocol'
+import { stateInteger, stateRecord } from '../core/state/validation'
 
 interface WorkerEndpoint {
   onmessage: ((event: MessageEvent<EmulatorRequest>) => void) | null
@@ -19,6 +21,7 @@ let publishedBatteryRevision = -1
 let audioPort: MessagePort | null = null
 let audioEpoch = 0
 let audioDriven = false
+let audioSampleRate: number | null = null
 
 function snapshot(includeBattery = false): EmulatorSnapshot {
   if (!device) throw new Error('O emulador ainda não está pronto.')
@@ -34,6 +37,7 @@ function snapshot(includeBattery = false): EmulatorSnapshot {
     batteryRevision: device.cartridge.batteryRevision,
     playing,
     audioEpoch,
+    romId: device.romId,
   }
   if (includeBattery || publishedBatteryRevision !== state.batteryRevision) {
     state.batteryRam = device.cartridge.exportBatteryRam()
@@ -84,7 +88,7 @@ function clock(): void {
         DMG_FRAME_T_CYCLES * 4,
       )
       if (debt >= 1) debt -= device.runCycles(Math.floor(debt))
-      device.bus.apu.clearSamples()
+      device.bus.apu.discardSamples()
       publishFrame()
     }
     previous = now
@@ -120,11 +124,13 @@ function onAudio(event: MessageEvent<{ type: string; frames: number; epoch: numb
 
 endpoint.onmessage = ({ data: request }) => {
   try {
+    let checkpoint: MachineCheckpoint | undefined
     const command = request.command
     if (command.type === 'init') {
       stopTimer()
       playing = false
       audioDriven = false
+      audioSampleRate = null
       audioPort?.close()
       audioPort = null
       device = new GameBoy(command.rom)
@@ -137,7 +143,7 @@ endpoint.onmessage = ({ data: request }) => {
         case 'play':
           stopTimer()
           playing = command.playing
-          device.bus.apu.clearSamples()
+          device.bus.apu.discardSamples()
           if (!playing) {
             device.releaseButtons()
             audioEpoch += 1
@@ -156,7 +162,7 @@ endpoint.onmessage = ({ data: request }) => {
           for (let index = 0; index < command.count; index += 1) {
             if (device.step() === 0) break
           }
-          device.bus.apu.clearSamples()
+          device.bus.apu.discardSamples()
           break
         case 'import-battery':
           if (playing) throw new Error('Pause a reprodução antes de recuperar o progresso.')
@@ -167,28 +173,59 @@ endpoint.onmessage = ({ data: request }) => {
           audioPort?.close()
           audioPort = command.port
           audioEpoch = command.epoch
+          audioSampleRate = command.sampleRate
           device.bus.apu.setSampleRate(command.sampleRate)
-          device.bus.apu.clearSamples()
+          device.bus.apu.discardSamples()
           audioDriven = true
           audioPort.onmessage = onAudio
           audioPort.start()
           break
         case 'audio-disable':
           audioDriven = false
+          audioSampleRate = null
           audioEpoch += 1
           audioPort?.close()
           audioPort = null
-          device.bus.apu.clearSamples()
+          device.bus.apu.discardSamples()
           stopTimer()
           if (playing) clock()
           break
         case 'inspect':
           break
+        case 'capture-state':
+          if (playing) throw new Error('Pause a reprodução antes de salvar um estado.')
+          if (device.bus.serial.pendingOutputBytes)
+            serial = (serial + device.bus.serial.drainOutput().text).slice(-4096)
+          checkpoint = { version: 1, core: device.snapshotState(), serial }
+          break
+        case 'load-state': {
+          if (playing) throw new Error('Pause a reprodução antes de carregar um estado.')
+          const saved = stateRecord(command.checkpoint, 'Estado da sessão')
+          stateInteger(saved.version, 1, 1, 'Versão da sessão')
+          if (typeof saved.serial !== 'string' || saved.serial.length > 4096)
+            throw new Error('A saída serial do estado é inválida.')
+          device.restoreState(saved.core)
+          if (
+            audioDriven &&
+            audioSampleRate !== null &&
+            device.bus.apu.sampleRate !== audioSampleRate
+          )
+            device.bus.apu.setSampleRate(audioSampleRate)
+          serial = saved.serial
+          device.releaseButtons()
+          audioEpoch += 1
+          publishedFrame = -1
+          publishedBatteryRevision = -1
+          break
+        }
       }
     }
     if (request.id === 0) return
     const state = snapshot(request.command.type === 'init')
-    endpoint.postMessage({ type: 'reply', id: request.id, snapshot: state }, transfers(state))
+    endpoint.postMessage(
+      { type: 'reply', id: request.id, snapshot: state, checkpoint },
+      transfers(state),
+    )
   } catch (cause) {
     endpoint.postMessage({
       type: 'reply',

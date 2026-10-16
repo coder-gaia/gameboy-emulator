@@ -172,7 +172,7 @@ test('IndexedDB indisponível avisa sobre a sessão e continua executando o jogo
   await expect(page.getByRole('alert')).toHaveCount(0)
 })
 
-test('save incompatível recebe aviso e permanece intacto após jogar e pausar', async ({ page }) => {
+test('migra banco v1 e preserva bateria incompatível após jogar e pausar', async ({ page }) => {
   const rom = batteryRom()
   const id = romId(rom)
   await page.goto('/')
@@ -206,7 +206,7 @@ test('save incompatível recebe aviso e permanece intacto após jogar e pausar',
     {
       databaseName: SAVE_DATABASE_NAME,
       storeName: BATTERY_STORE_NAME,
-      version: SAVE_DATABASE_VERSION,
+      version: 1, // Banco da M06/M07, antes da criação da coleção de estados.
       recordVersion: BATTERY_RECORD_VERSION,
       id,
     },

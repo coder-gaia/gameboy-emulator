@@ -7,6 +7,17 @@ export interface SerialOutput {
   readonly droppedBytes: number
 }
 
+export interface SerialState {
+  version: 1
+  data: number
+  control: number
+  bitCycles: number
+  shiftedBits: number
+  outgoing: number
+  outputBytes: Uint8Array
+  droppedBytes: number
+}
+
 export class SerialPort {
   private data = 0
   private control = 0
@@ -20,6 +31,60 @@ export class SerialPort {
 
   get pendingOutputBytes(): number {
     return this.outputLength
+  }
+
+  snapshotState(): SerialState {
+    const outputBytes = new Uint8Array(this.outputLength)
+    for (let index = 0; index < this.outputLength; index += 1) {
+      outputBytes[index] = this.output[(this.outputStart + index) % OUTPUT_CAPACITY]!
+    }
+    return {
+      version: 1,
+      data: this.data,
+      control: this.control,
+      bitCycles: this.bitCycles,
+      shiftedBits: this.shiftedBits,
+      outgoing: this.outgoing,
+      outputBytes,
+      droppedBytes: this.droppedBytes,
+    }
+  }
+
+  restoreState(value: unknown): void {
+    const state = stateRecord(value, 'serial')
+    stateInteger(state.version, 1, 1, 'serial.version')
+    const data = stateInteger(state.data, 0, 0xff, 'serial.data')
+    const control = stateInteger(state.control, 0, 0x81, 'serial.control')
+    const bitCycles = stateInteger(state.bitCycles, 0, BIT_T_CYCLES - 1, 'serial.bitCycles')
+    const shiftedBits = stateInteger(state.shiftedBits, 0, 8, 'serial.shiftedBits')
+    const outgoing = stateInteger(state.outgoing, 0, 0xff, 'serial.outgoing')
+    const droppedBytes = stateInteger(
+      state.droppedBytes,
+      0,
+      Number.MAX_SAFE_INTEGER,
+      'serial.droppedBytes',
+    )
+    if (!(state.outputBytes instanceof Uint8Array) || state.outputBytes.length > OUTPUT_CAPACITY) {
+      throw new Error('Estado da serial inválido: buffer de saída.')
+    }
+    const outputBytes = stateBytes(
+      state.outputBytes,
+      state.outputBytes.length,
+      'serial.outputBytes',
+    )
+    if ((control & ~0x81) !== 0 || ((control & 0x80) !== 0 && shiftedBits === 8)) {
+      throw new Error('Estado da serial inválido: controle de transferência.')
+    }
+    this.data = data
+    this.control = control
+    this.bitCycles = bitCycles
+    this.shiftedBits = shiftedBits
+    this.outgoing = outgoing
+    this.output.fill(0)
+    this.output.set(outputBytes)
+    this.outputStart = 0
+    this.outputLength = outputBytes.length
+    this.droppedBytes = droppedBytes
   }
 
   readData(): number {
@@ -90,3 +155,4 @@ export class SerialPort {
     return { bytes, text, droppedBytes }
   }
 }
+import { stateBytes, stateInteger, stateRecord } from '../state/validation'

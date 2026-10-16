@@ -5,6 +5,22 @@ import { Timer } from '../timer'
 import { Ppu } from '../ppu'
 import { Joypad } from '../joypad'
 import { Apu } from '../apu'
+import { stateBytes, stateInteger, stateRecord } from '../state/validation'
+
+export interface MemoryBusState {
+  version: 1
+  tCycles: number
+  wram: Uint8Array
+  io: Uint8Array
+  hram: Uint8Array
+  interruptEnable: number
+  timer: ReturnType<Timer['snapshotState']>
+  dma: ReturnType<OamDma['snapshotState']>
+  ppu: ReturnType<Ppu['snapshotState']>
+  apu: ReturnType<Apu['snapshotState']>
+  joypad: ReturnType<Joypad['snapshotState']>
+  serial: ReturnType<SerialPort['snapshotState']>
+}
 
 export class MemoryBus {
   readonly serial = new SerialPort()
@@ -127,6 +143,55 @@ export class MemoryBus {
     const previous = this.timer.systemCounter
     this.timer.resetDivider()
     if ((previous & 0x1000) !== 0) this.apu.clockFrameSequencer()
+  }
+
+  snapshotState(): MemoryBusState {
+    return {
+      version: 1,
+      tCycles: this.tCycles,
+      wram: this.wram.slice(),
+      io: this.io.slice(),
+      hram: this.hram.slice(),
+      interruptEnable: this.interruptEnable,
+      timer: this.timer.snapshotState(),
+      dma: this.dma.snapshotState(),
+      ppu: this.ppu.snapshotState(),
+      apu: this.apu.snapshotState(),
+      joypad: this.joypad.snapshotState(),
+      serial: this.serial.snapshotState(),
+    }
+  }
+
+  restoreState(value: unknown): void {
+    const candidate = new MemoryBus(this.cartridge)
+    candidate.applyState(value)
+    this.applyState(candidate.snapshotState())
+  }
+
+  private applyState(value: unknown): void {
+    const state = stateRecord(value, 'Estado do barramento')
+    stateInteger(state.version, 1, 1, 'Versão do barramento')
+    const tCycles = stateInteger(
+      state.tCycles,
+      0,
+      Number.MAX_SAFE_INTEGER,
+      'T-cycles do barramento',
+    )
+    const wram = stateBytes(state.wram, this.wram.length, 'WRAM')
+    const io = stateBytes(state.io, this.io.length, 'Registradores IO')
+    const hram = stateBytes(state.hram, this.hram.length, 'HRAM')
+    const interruptEnable = stateInteger(state.interruptEnable, 0, 255, 'IE')
+    this.timer.restoreState(state.timer)
+    this.dma.restoreState(state.dma)
+    this.ppu.restoreState(state.ppu)
+    this.apu.restoreState(state.apu)
+    this.joypad.restoreState(state.joypad)
+    this.serial.restoreState(state.serial)
+    this.tCycles = tCycles
+    this.wram.set(wram)
+    this.io.set(io)
+    this.hram.set(hram)
+    this.interruptEnable = interruptEnable
   }
 
   tick(tCycles: number): void {

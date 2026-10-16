@@ -1,7 +1,8 @@
 import { parseCartridgeHeader } from './header'
 import type { CartridgeMetadata } from './header'
-import type { Cartridge } from './cartridge'
+import type { Cartridge, RomOnlyState } from './cartridge'
 import { CartridgeRam } from './ram'
+import { stateBytes, stateInteger, stateRecord } from '../state/validation'
 
 export class RomOnlyCartridge implements Cartridge {
   readonly metadata: CartridgeMetadata
@@ -46,5 +47,17 @@ export class RomOnlyCartridge implements Cartridge {
 
   importBatteryRam(bytes: Uint8Array): void {
     this.ram.importBatteryRam(bytes)
+  }
+
+  snapshotState(): RomOnlyState {
+    return { version: 1, mapper: 'ROM_ONLY', ram: this.ram.snapshotState() }
+  }
+
+  restoreState(value: unknown): void {
+    const state = stateRecord(value, 'cartucho ROM Only')
+    stateInteger(state.version, 1, 1, 'cartucho.version')
+    if (state.mapper !== 'ROM_ONLY') throw new Error('Estado de cartucho incompatível: mapper.')
+    const ram = stateBytes(state.ram, this.metadata.ramSize, 'cartucho.ram')
+    this.ram.restoreState(ram)
   }
 }

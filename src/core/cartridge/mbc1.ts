@@ -1,7 +1,8 @@
 import { parseCartridgeHeader, ROM_BANK_SIZE } from './header'
 import type { CartridgeMetadata } from './header'
-import type { Cartridge } from './cartridge'
+import type { Cartridge, Mbc1State } from './cartridge'
 import { CartridgeRam } from './ram'
+import { stateBoolean, stateBytes, stateInteger, stateRecord } from '../state/validation'
 
 /**
  * MBC1 com fiação padrão: ROM de até 2 MiB, RAM de até 32 KiB.
@@ -72,6 +73,34 @@ export class Mbc1Cartridge implements Cartridge {
 
   importBatteryRam(bytes: Uint8Array): void {
     this.ram.importBatteryRam(bytes)
+  }
+
+  snapshotState(): Mbc1State {
+    return {
+      version: 1,
+      mapper: 'MBC1',
+      ram: this.ram.snapshotState(),
+      ramEnabled: this.ramEnabled,
+      primaryBank: this.primaryBank,
+      secondaryBank: this.secondaryBank,
+      bankingMode: this.bankingMode,
+    }
+  }
+
+  restoreState(value: unknown): void {
+    const state = stateRecord(value, 'cartucho MBC1')
+    stateInteger(state.version, 1, 1, 'cartucho.version')
+    if (state.mapper !== 'MBC1') throw new Error('Estado de cartucho incompatível: mapper.')
+    const ram = stateBytes(state.ram, this.metadata.ramSize, 'cartucho.ram')
+    const ramEnabled = stateBoolean(state.ramEnabled, 'MBC1.ramEnabled')
+    const primaryBank = stateInteger(state.primaryBank, 0, 31, 'MBC1.primaryBank')
+    const secondaryBank = stateInteger(state.secondaryBank, 0, 3, 'MBC1.secondaryBank')
+    const bankingMode = stateInteger(state.bankingMode, 0, 1, 'MBC1.bankingMode')
+    this.ram.restoreState(ram)
+    this.ramEnabled = ramEnabled
+    this.primaryBank = primaryBank
+    this.secondaryBank = secondaryBank
+    this.bankingMode = bankingMode
   }
 
   private ramOffset(address: number): number {

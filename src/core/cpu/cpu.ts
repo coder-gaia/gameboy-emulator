@@ -1,4 +1,5 @@
 import { CPU_FLAGS, type CpuBus, type CpuSnapshot } from './types'
+import { stateBoolean, stateInteger, stateRecord } from '../state/validation'
 
 const { Z, N, H, C } = CPU_FLAGS
 const IF = 0xff0f
@@ -228,38 +229,46 @@ export class Cpu {
     }
   }
 
+  snapshotState(): CpuSnapshot {
+    return this.snapshot()
+  }
+
+  restoreState(state: unknown): void {
+    this.restore(state)
+  }
+
   restore(snapshot: unknown): void {
-    if (snapshot === null || typeof snapshot !== 'object' || Array.isArray(snapshot)) {
-      throw new Error('Estado da CPU inválido: esperado objeto.')
-    }
-    const state = snapshot as Record<string, unknown>
+    const state = stateRecord(snapshot, 'CPU')
     if (state.version !== 1) throw new Error('Versão do estado da CPU incompatível.')
-
-    const integer = (key: string, maximum: number): number => {
-      const value = state[key]
-      if (
-        typeof value !== 'number' ||
-        !Number.isSafeInteger(value) ||
-        value < 0 ||
-        value > maximum
-      ) {
-        throw new Error(`Estado da CPU inválido: ${key}.`)
-      }
-      return value
+    const valid: CpuSnapshot = {
+      version: 1,
+      a: stateInteger(state.a, 0, 0xff, 'CPU.a'),
+      f: stateInteger(state.f, 0, 0xff, 'CPU.f'),
+      b: stateInteger(state.b, 0, 0xff, 'CPU.b'),
+      c: stateInteger(state.c, 0, 0xff, 'CPU.c'),
+      d: stateInteger(state.d, 0, 0xff, 'CPU.d'),
+      e: stateInteger(state.e, 0, 0xff, 'CPU.e'),
+      h: stateInteger(state.h, 0, 0xff, 'CPU.h'),
+      l: stateInteger(state.l, 0, 0xff, 'CPU.l'),
+      sp: stateInteger(state.sp, 0, 0xffff, 'CPU.sp'),
+      pc: stateInteger(state.pc, 0, 0xffff, 'CPU.pc'),
+      ime: stateBoolean(state.ime, 'CPU.ime'),
+      imeEnableDelay: stateInteger(state.imeEnableDelay, 0, 2, 'CPU.imeEnableDelay'),
+      halted: stateBoolean(state.halted, 'CPU.halted'),
+      stopped: stateBoolean(state.stopped, 'CPU.stopped'),
+      haltBug: stateBoolean(state.haltBug, 'CPU.haltBug'),
+      totalTCycles: stateInteger(
+        state.totalTCycles,
+        0,
+        Number.MAX_SAFE_INTEGER,
+        'CPU.totalTCycles',
+      ),
     }
-    for (const key of ['a', 'f', 'b', 'c', 'd', 'e', 'h', 'l']) integer(key, 0xff)
-    for (const key of ['sp', 'pc']) integer(key, 0xffff)
-    integer('imeEnableDelay', 2)
-    integer('totalTCycles', Number.MAX_SAFE_INTEGER)
-    if ((integer('f', 0xff) & 0x0f) !== 0)
-      throw new Error('Estado da CPU inválido: bits reservados de F.')
-    for (const key of ['ime', 'halted', 'stopped', 'haltBug']) {
-      if (typeof state[key] !== 'boolean') throw new Error(`Estado da CPU inválido: ${key}.`)
-    }
-    if (state.halted && state.stopped)
+    if ((valid.f & 0x0f) !== 0) throw new Error('Estado da CPU inválido: bits reservados de F.')
+    if (valid.halted && valid.stopped)
       throw new Error('Estado da CPU inválido: HALT e STOP simultâneos.')
-
-    const valid = snapshot as CpuSnapshot
+    if (valid.totalTCycles % 4 !== 0)
+      throw new Error('Estado da CPU inválido: alinhamento de T-cycles.')
     this.a = valid.a
     this.f = valid.f
     this.b = valid.b

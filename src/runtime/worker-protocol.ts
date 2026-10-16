@@ -1,5 +1,12 @@
 import type { CpuSnapshot } from '../core/cpu'
 import type { JoypadButton } from '../core/joypad'
+import type { GameBoyState } from '../core/gameboy'
+
+export interface MachineCheckpoint {
+  version: 1
+  core: GameBoyState
+  serial: string
+}
 
 export interface EmulatorSnapshot {
   framebuffer: Uint8Array
@@ -11,6 +18,7 @@ export interface EmulatorSnapshot {
   batteryRam?: Uint8Array | null
   playing: boolean
   audioEpoch: number
+  romId: string
 }
 
 export type EmulatorCommand =
@@ -23,6 +31,8 @@ export type EmulatorCommand =
   | { type: 'import-battery'; bytes: Uint8Array }
   | { type: 'audio-port'; port: MessagePort; sampleRate: number; epoch: number }
   | { type: 'audio-disable' }
+  | { type: 'capture-state' }
+  | { type: 'load-state'; checkpoint: unknown }
 
 export interface EmulatorRequest {
   id: number
@@ -30,6 +40,12 @@ export interface EmulatorRequest {
 }
 
 export type EmulatorMessage =
-  | { type: 'reply'; id: number; snapshot?: EmulatorSnapshot; error?: string }
+  | {
+      type: 'reply'
+      id: number
+      snapshot?: EmulatorSnapshot
+      checkpoint?: MachineCheckpoint
+      error?: string
+    }
   | { type: 'frame'; snapshot: EmulatorSnapshot }
   | { type: 'error'; error: string }

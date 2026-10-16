@@ -2,7 +2,7 @@
 
 Um emulador de Game Boy DMG no navegador, com núcleo TypeScript independente da interface.
 
-Projeto em desenvolvimento, com M00 a M07 concluídas. CPU, timer, DMA, vídeo, sprites, janela, controles, MBC1, saves de bateria e áudio já estão disponíveis. A biblioteca oferece Tobu Tobu Girl e 2048 para jogar sem fornecer arquivos. O jardim interativo continua disponível como ROM própria de diagnóstico. Save states versionados e slots pertencem à M08, ainda pendente.
+Projeto em desenvolvimento, com M00 a M08 concluídas. CPU, timer, DMA, vídeo, sprites, janela, controles, MBC1, saves de bateria, áudio e save states versionados já estão disponíveis. A biblioteca oferece Tobu Tobu Girl e 2048 para jogar sem fornecer arquivos. O jardim interativo continua disponível como ROM própria de diagnóstico. O grupo M06, M07 e M08 está em revisão pelo proprietário, com pausa antes da M09.
 
 ## Desenvolvimento local
 
@@ -29,7 +29,7 @@ Um repositório e um pacote npm, sem monorepo. React e Vite compõem a interface
 
 O Web Worker possui a máquina `GameBoy` e executa todas as instruções. A interface mantém cópias para apresentação no Canvas 2D de 160 por 144 pixels e para inspeção da CPU. Sem som, o Worker usa tempo monotônico e um orçamento de ciclos, independentemente da frequência do monitor. Com som, o AudioWorklet solicita PCM ao Worker por MessageChannel e controla a cadência. A implementação usa mensagens e buffers transferíveis, sem SharedArrayBuffer ou exigência de COOP/COEP.
 
-IndexedDB armazena a RAM de bateria localmente, identificada pelo SHA-256 da ROM. O destino de publicação é Cloudflare Pages Free, como site estático. Consulte a [arquitetura de áudio e execução](docs/audio-runtime.md).
+IndexedDB armazena a RAM de bateria e três slots de estado por cartucho, identificados pelo SHA-256 da ROM. O destino de publicação é Cloudflare Pages Free, como site estático. Consulte a [arquitetura de áudio e execução](docs/audio-runtime.md) e o [formato dos estados salvos](docs/save-states.md).
 
 ## Cartuchos e testes atuais
 
@@ -70,7 +70,19 @@ O progresso que o próprio jogo grava na RAM de bateria é salvo automaticamente
 
 As gravações ocorrem em lotes periódicos quando a RAM muda e nos checkpoints de pausa, troca de cartucho e saída da aba. Reiniciar a máquina preserva a bateria. Os dados pertencem ao navegador e à origem do site; limpar os dados do site ou mudar de origem não mantém esses saves. Não há conta nem sincronização em nuvem.
 
-Esse recurso preserva apenas os dados de progresso que cada jogo decide gravar. Salvar e restaurar a máquina inteira em qualquer momento pertence aos save states da M08.
+Esse recurso preserva os dados de progresso que cada jogo decide gravar. Não garante retornar à posição exata em que a partida foi interrompida. Para guardar esse ponto, use um estado salvo.
+
+## Estados salvos
+
+O painel **Um ponto para voltar.** oferece três slots por cartucho. Selecione um slot e use **Salvar estado** para guardar a máquina no ponto atual, substituindo o conteúdo anterior desse slot. A operação pausa o jogo. **Carregar estado** restaura o ponto e mantém a máquina em pausa; use **Iniciar** para continuar.
+
+**Exportar estado** baixa o ponto atual em um arquivo `.pocketstate`, mesmo sem um slot gravado. **Importar estado** valida o arquivo para o cartucho aberto, restaura a máquina em pausa e grava no slot selecionado. O arquivo não contém a ROM; mantenha o mesmo cartucho para usá-lo. Exportações servem de backup porque os slots pertencem ao navegador e à origem do site.
+
+O formato tem limite de 1 MiB, versão, modelo DMG-CPU-B, hash da ROM e checksum SHA-256. Arquivos corrompidos ou incompatíveis são rejeitados sem substituir o estado da máquina. A migração para IndexedDB v2 preserva os saves de bateria anteriores. Consulte [conteúdo, validação e limites dos estados](docs/save-states.md).
+
+## Testar M06, M07 e M08
+
+Siga o [roteiro do grupo atual](docs/testing-m06-m08.md) para conferir a biblioteca, a bateria, o áudio, os três slots, a exportação e a importação. Ele inclui resultados esperados e opções de teste no celular. O desenvolvimento permanece pausado antes da M09, aguardando o ok do proprietário.
 
 ## Testar o primeiro grupo de milestones
 
@@ -88,7 +100,7 @@ Os registradores da CPU usam inicialização pós boot DMG, incluindo F dependen
 
 A M03 corrige `EI;HALT` com interrupção pendente e a resseleção de interrupção quando a pilha escreve sobre IE. Os testes externos não representam aprovação de todos os comportamentos de todas as revisões do hardware.
 
-Os grupos M00 a M02 e M03 a M05 foram aprovados pelo proprietário. O [roteiro de teste M03 a M05](docs/testing-m03-m05.md) permanece como referência. O grupo atual contém M06, M07 e M08, com M06 e M07 concluídas e M08 pendente. A próxima pausa para teste será antes da M09, com instruções e resultados esperados.
+Os grupos M00 a M02 e M03 a M05 foram aprovados pelo proprietário. O [roteiro de teste M03 a M05](docs/testing-m03-m05.md) permanece como referência histórica. M06, M07 e M08 estão concluídas; o [roteiro atual](docs/testing-m06-m08.md) orienta a revisão antes da M09.
 
 ## Vídeo e reprodução
 

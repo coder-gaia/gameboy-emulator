@@ -1,3 +1,5 @@
+import { stateBoolean, stateBytes, stateInteger, stateRecord } from '../state/validation'
+
 export const SCREEN_WIDTH = 160
 export const SCREEN_HEIGHT = 144
 export const T_CYCLES_PER_LINE = 456
@@ -17,6 +19,34 @@ export interface PpuSnapshot {
   mode: PpuMode
   lineTCycles: number
   frameId: number
+}
+
+export interface PpuState {
+  readonly version: 1
+  readonly vram: Uint8Array
+  readonly oam: Uint8Array
+  readonly framebuffer: Uint8Array
+  readonly lcdc: number
+  readonly statSelect: number
+  readonly scy: number
+  readonly scx: number
+  readonly lyc: number
+  readonly bgp: number
+  readonly obp0: number
+  readonly obp1: number
+  readonly wy: number
+  readonly wx: number
+  readonly line: number
+  readonly lineTCycles: number
+  readonly mode: PpuMode
+  readonly transferEnd: number
+  readonly statLine: boolean
+  readonly statWriteTCycles: number
+  readonly frameId: number
+  readonly windowYTriggered: boolean
+  readonly windowLine: number
+  readonly selectedObjects: Uint8Array
+  readonly selectedObjectCount: number
 }
 
 /**
@@ -221,6 +251,157 @@ export class Ppu {
       lineTCycles: this.lineTCycles,
       frameId: this.completedFrames,
     }
+  }
+
+  snapshotState(): PpuState {
+    return {
+      version: 1,
+      vram: this.vram.slice(),
+      oam: this.oam.slice(),
+      framebuffer: this.framebuffer.slice(),
+      lcdc: this.lcdc,
+      statSelect: this.statSelect,
+      scy: this.scy,
+      scx: this.scx,
+      lyc: this.lyc,
+      bgp: this.bgp,
+      obp0: this.obp0,
+      obp1: this.obp1,
+      wy: this.wy,
+      wx: this.wx,
+      line: this.line,
+      lineTCycles: this.lineTCycles,
+      mode: this.currentMode,
+      transferEnd: this.transferEnd,
+      statLine: this.statLine,
+      statWriteTCycles: this.statWriteTCycles,
+      frameId: this.completedFrames,
+      windowYTriggered: this.windowYTriggered,
+      windowLine: this.windowLine,
+      selectedObjects: this.selectedObjects.slice(),
+      selectedObjectCount: this.selectedObjectCount,
+    }
+  }
+
+  /** Aplica um estado completo sem escrever registradores nem refazer bordas de STAT. */
+  restoreState(value: unknown): void {
+    const state = stateRecord(value, 'ppu')
+    const valid: PpuState = {
+      version: stateInteger(state.version, 1, 1, 'ppu.version') as 1,
+      vram: stateBytes(state.vram, 0x2000, 'ppu.vram'),
+      oam: stateBytes(state.oam, 0xa0, 'ppu.oam'),
+      framebuffer: stateBytes(state.framebuffer, SCREEN_WIDTH * SCREEN_HEIGHT, 'ppu.framebuffer'),
+      lcdc: stateInteger(state.lcdc, 0, 0xff, 'ppu.lcdc'),
+      statSelect: stateInteger(state.statSelect, 0, 0x78, 'ppu.statSelect'),
+      scy: stateInteger(state.scy, 0, 0xff, 'ppu.scy'),
+      scx: stateInteger(state.scx, 0, 0xff, 'ppu.scx'),
+      lyc: stateInteger(state.lyc, 0, 0xff, 'ppu.lyc'),
+      bgp: stateInteger(state.bgp, 0, 0xff, 'ppu.bgp'),
+      obp0: stateInteger(state.obp0, 0, 0xff, 'ppu.obp0'),
+      obp1: stateInteger(state.obp1, 0, 0xff, 'ppu.obp1'),
+      wy: stateInteger(state.wy, 0, 0xff, 'ppu.wy'),
+      wx: stateInteger(state.wx, 0, 0xff, 'ppu.wx'),
+      line: stateInteger(state.line, 0, 153, 'ppu.line'),
+      lineTCycles: stateInteger(state.lineTCycles, 0, T_CYCLES_PER_LINE - 1, 'ppu.lineTCycles'),
+      mode: stateInteger(state.mode, 0, 3, 'ppu.mode') as PpuMode,
+      // Inclui a duração máxima alcançável pelo renderizador por scanline atual.
+      transferEnd: stateInteger(state.transferEnd, 252, 375, 'ppu.transferEnd'),
+      statLine: stateBoolean(state.statLine, 'ppu.statLine'),
+      statWriteTCycles: stateInteger(state.statWriteTCycles, 0, 4, 'ppu.statWriteTCycles'),
+      frameId: stateInteger(state.frameId, 0, Number.MAX_SAFE_INTEGER, 'ppu.frameId'),
+      windowYTriggered: stateBoolean(state.windowYTriggered, 'ppu.windowYTriggered'),
+      windowLine: stateInteger(state.windowLine, 0, SCREEN_HEIGHT, 'ppu.windowLine'),
+      selectedObjects: stateBytes(state.selectedObjects, 10, 'ppu.selectedObjects'),
+      selectedObjectCount: stateInteger(
+        state.selectedObjectCount,
+        0,
+        10,
+        'ppu.selectedObjectCount',
+      ),
+    }
+    if ((valid.statSelect & 0x87) !== 0) {
+      throw new Error('Estado inválido: bits reservados na seleção STAT.')
+    }
+    if (valid.framebuffer.some((pixel) => pixel > 3)) {
+      throw new Error('Estado inválido: pixels da PPU devem estar entre zero e três.')
+    }
+    let selectedMask = 0n
+    for (let index = 0; index < valid.selectedObjects.length; index += 1) {
+      const object = valid.selectedObjects[index]!
+      if (object > 39) throw new Error('Estado inválido: índice de objeto da PPU fora de OAM.')
+      if (index >= valid.selectedObjectCount) continue
+      const bit = 1n << BigInt(object)
+      if ((selectedMask & bit) !== 0n)
+        throw new Error('Estado inválido: objeto selecionado repetido.')
+      selectedMask |= bit
+    }
+    const enabled = (valid.lcdc & 0x80) !== 0
+    if (!enabled) {
+      if (
+        valid.mode !== 0 ||
+        valid.line !== 0 ||
+        valid.lineTCycles !== 0 ||
+        valid.statWriteTCycles !== 0 ||
+        valid.windowYTriggered ||
+        valid.windowLine !== 0 ||
+        valid.selectedObjectCount !== 0
+      ) {
+        throw new Error('Estado inválido: contadores da PPU incompatíveis com LCD desligado.')
+      }
+    } else {
+      const expectedMode: PpuMode =
+        valid.line >= SCREEN_HEIGHT
+          ? 1
+          : valid.lineTCycles < 80
+            ? 2
+            : valid.lineTCycles < valid.transferEnd
+              ? 3
+              : 0
+      if (valid.mode !== expectedMode)
+        throw new Error('Estado inválido: modo e fase da PPU divergem.')
+    }
+    if (
+      (!valid.windowYTriggered && valid.windowLine !== 0) ||
+      (valid.line >= SCREEN_HEIGHT && (valid.windowYTriggered || valid.windowLine !== 0)) ||
+      (valid.line < SCREEN_HEIGHT && valid.windowLine > valid.line + (valid.mode === 0 ? 1 : 0))
+    ) {
+      throw new Error('Estado inválido: contador interno da janela incompatível com a linha.')
+    }
+    const ly = valid.line === 153 && valid.lineTCycles >= 4 ? 0 : valid.line
+    const selected = valid.statWriteTCycles > 0 ? 0x78 : valid.statSelect
+    const statHigh =
+      enabled &&
+      (((selected & 0x40) !== 0 && ly === valid.lyc) ||
+        ((selected & 0x20) !== 0 && valid.mode === 2) ||
+        ((selected & 0x10) !== 0 && valid.mode === 1) ||
+        ((selected & 0x08) !== 0 && valid.mode === 0))
+    if (valid.statLine !== statHigh)
+      throw new Error('Estado inválido: nível interno de STAT divergente.')
+
+    this.vram.set(valid.vram)
+    this.oam.set(valid.oam)
+    this.framebuffer.set(valid.framebuffer)
+    this.lcdc = valid.lcdc
+    this.statSelect = valid.statSelect
+    this.scy = valid.scy
+    this.scx = valid.scx
+    this.lyc = valid.lyc
+    this.bgp = valid.bgp
+    this.obp0 = valid.obp0
+    this.obp1 = valid.obp1
+    this.wy = valid.wy
+    this.wx = valid.wx
+    this.line = valid.line
+    this.lineTCycles = valid.lineTCycles
+    this.currentMode = valid.mode
+    this.transferEnd = valid.transferEnd
+    this.statLine = valid.statLine
+    this.statWriteTCycles = valid.statWriteTCycles
+    this.completedFrames = valid.frameId
+    this.windowYTriggered = valid.windowYTriggered
+    this.windowLine = valid.windowLine
+    this.selectedObjects.set(valid.selectedObjects)
+    this.selectedObjectCount = valid.selectedObjectCount
   }
 
   private advanceBoundary(): void {

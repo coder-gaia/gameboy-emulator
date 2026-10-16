@@ -1,17 +1,24 @@
 import type { JoypadButton } from '../core/joypad'
 import type { AudioOutput } from '../platform/audio'
-import type { EmulatorCommand, EmulatorMessage, EmulatorSnapshot } from './worker-protocol'
+import type {
+  EmulatorCommand,
+  EmulatorMessage,
+  EmulatorSnapshot,
+  MachineCheckpoint,
+} from './worker-protocol'
 
 const audioOwners = new WeakMap<AudioOutput, EmulatorClient>()
+let clientSequence = 0
 
 interface PendingRequest {
-  resolve: () => void
+  resolve: (checkpoint: MachineCheckpoint | undefined) => void
   reject: (error: Error) => void
   timeout: ReturnType<typeof setTimeout>
 }
 
 /** A interface só mantém uma cópia de apresentação; toda instrução roda no Worker. */
 export class EmulatorClient {
+  readonly instanceId = ++clientSequence
   private readonly worker: Worker
   private readonly listeners = new Set<() => void>()
   private readonly errorListeners = new Set<(error: Error) => void>()
@@ -42,7 +49,7 @@ export class EmulatorClient {
       if (data.error) pending.reject(new Error(data.error))
       else {
         if (data.snapshot) this.update(data.snapshot)
-        pending.resolve()
+        pending.resolve(data.checkpoint)
       }
     }
     this.worker.onerror = () =>
@@ -74,6 +81,22 @@ export class EmulatorClient {
   }
   get batteryRevision(): number {
     return this.current.batteryRevision
+  }
+
+  get romId(): string {
+    return this.current.romId
+  }
+
+  async captureState(): Promise<MachineCheckpoint> {
+    const checkpoint = await this.request({ type: 'capture-state' })
+    if (!checkpoint) throw new Error('O emulador não entregou o estado solicitado.')
+    return checkpoint
+  }
+
+  async loadState(checkpoint: unknown): Promise<void> {
+    await this.request({ type: 'load-state', checkpoint })
+    if (this.output && audioOwners.get(this.output) === this)
+      await this.output.pause(this.current.audioEpoch)
   }
 
   exportBatteryRam(): Uint8Array | null {
@@ -185,7 +208,10 @@ export class EmulatorClient {
     if (!this.disposed) this.worker.postMessage({ id: 0, command })
   }
 
-  private request(command: EmulatorCommand, transfer: Transferable[] = []): Promise<void> {
+  private request(
+    command: EmulatorCommand,
+    transfer: Transferable[] = [],
+  ): Promise<MachineCheckpoint | undefined> {
     if (this.disposed) return Promise.reject(new Error('O cartucho foi fechado.'))
     const id = ++this.sequence
     return new Promise((resolve, reject) => {

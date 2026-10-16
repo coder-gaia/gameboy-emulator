@@ -1,4 +1,6 @@
 import { DMG_CLOCK_HZ } from '../model'
+import { validateApuState } from './state'
+import type { ApuState } from './state'
 
 const REGISTER_MASKS = new Uint8Array([
   0x80, 0x3f, 0x00, 0xff, 0xbf, 0xff, 0x3f, 0x00, 0xff, 0xbf, 0x7f, 0xff, 0x9f, 0xff, 0xbf, 0xff,
@@ -368,14 +370,19 @@ export class Apu {
   }
 
   clearSamples(): void {
-    this.readFrame = 0
-    this.writeFrame = 0
-    this.queuedFrames = 0
-    this.droppedFrames = 0
+    this.discardSamples()
     this.samplePhase = 0
     this.sampleSpan = 0
     this.sampleSumLeft = 0
     this.sampleSumRight = 0
+  }
+
+  /** Descarta apresentação sem alterar a fase de amostragem ou os capacitores. */
+  discardSamples(): void {
+    this.readFrame = 0
+    this.writeFrame = 0
+    this.queuedFrames = 0
+    this.droppedFrames = 0
   }
 
   drainSamples(): Float32Array {
@@ -408,6 +415,64 @@ export class Apu {
         negateUsed: this.sweepNegateUsed,
       },
     }
+  }
+
+  snapshotState(): ApuState {
+    return {
+      version: 1,
+      powered: this.powered,
+      frameSequencerStep: this.frameStep,
+      dividerCounter: this.dividerCounter,
+      skipNextFrameEvent: this.skipNextFrameEvent,
+      registers: this.registers.slice(),
+      waveRam: this.waveRam.slice(),
+      pulse1: { ...this.pulse1 },
+      pulse2: { ...this.pulse2 },
+      wave: { ...this.wave },
+      noise: { ...this.noise },
+      sweep: {
+        shadow: this.sweepShadow,
+        timer: this.sweepTimer,
+        enabled: this.sweepEnabled,
+        negateUsed: this.sweepNegateUsed,
+      },
+      sampling: {
+        rate: this.rate,
+        phase: this.samplePhase,
+        span: this.sampleSpan,
+        sumLeft: this.sampleSumLeft,
+        sumRight: this.sampleSumRight,
+        capacitorLeft: this.capacitorLeft,
+        capacitorRight: this.capacitorRight,
+      },
+    }
+  }
+
+  restoreState(value: unknown): void {
+    const state = validateApuState(value)
+    this.registers.set(state.registers)
+    this.waveRam.set(state.waveRam)
+    this.pulse1 = state.pulse1
+    this.pulse2 = state.pulse2
+    this.wave = state.wave
+    this.noise = state.noise
+    this.powered = state.powered
+    this.frameStep = state.frameSequencerStep
+    this.dividerCounter = state.dividerCounter
+    this.skipNextFrameEvent = state.skipNextFrameEvent
+    this.sweepShadow = state.sweep.shadow
+    this.sweepTimer = state.sweep.timer
+    this.sweepEnabled = state.sweep.enabled
+    this.sweepNegateUsed = state.sweep.negateUsed
+    // A fila é apresentação. O resampler e o HPF fazem parte da continuação salva.
+    this.setSampleRate(state.sampling.rate)
+    this.samplePhase = state.sampling.phase
+    this.sampleSpan = state.sampling.span
+    this.sampleSumLeft = state.sampling.sumLeft
+    this.sampleSumRight = state.sampling.sumRight
+    this.capacitorLeft = state.sampling.capacitorLeft
+    this.capacitorRight = state.sampling.capacitorRight
+    this.refreshMixer()
   }
 
   private setPower(on: boolean): void {

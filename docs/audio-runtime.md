@@ -37,7 +37,9 @@ Com áudio ativo, a demanda do AudioWorklet controla a execução. O Worker rece
 
 O Worklet começa com uma reserva de 1536 frames estéreo e solicita reposições de 512 frames. Em 48 kHz, a reserva corresponde a 32 ms de PCM; a latência total também depende do navegador, do dispositivo de áudio e de seu buffer. Há somente um pedido pendente por vez, e as filas possuem capacidade fixa de 16.384 frames. Se faltar PCM, a saída restante do bloco recebe silêncio e os contadores registram a falta; se a fila exceder o limite, os dados mais antigos são descartados.
 
-O protocolo inclui um identificador de geração, `epoch`. Pausa, reinício, troca de cartucho e reconexão limpam a fila e invalidam amostras anteriores. Isso impede que uma resposta atrasada reproduza um trecho de outra sessão. Ao pausar, a máquina e a saída de áudio são suspensas; ao retomar, uma nova reserva é preenchida. A aba oculta também pausa a execução.
+O protocolo inclui um identificador de geração, `epoch`. Pausa, reinício, troca de cartucho, carregamento de estado e reconexão limpam a fila e invalidam amostras anteriores. Isso impede que uma resposta atrasada reproduza um trecho de outra sessão. Ao pausar, a máquina e a saída de áudio são suspensas; ao retomar, uma nova reserva é preenchida. A aba oculta também pausa a execução.
+
+Descartar PCM de apresentação preserva a fase de amostragem, o intervalo parcialmente acumulado e os capacitores do filtro da APU. Isso vale também para a execução sem som e os avanços manuais. Reiniciar a máquina ou mudar a taxa de áudio tem uma semântica própria de reinicialização do amostrador.
 
 ## APU DMG
 
@@ -64,4 +66,12 @@ Os testes locais também verificam os geradores, o mixer estéreo, a produção 
 
 O projeto usa inicialização pós boot DMG e não distribui nem executa a boot ROM original. Essa inicialização não reproduz integralmente todas as revisões físicas. A PPU continua usando renderização por scanline, sem pixel FIFO, escritas dentro do modo 3 ou as peculiaridades de janela em WX 0 e 166. A aprovação de dmg-acid2 mantém esses limites explícitos.
 
-Save states versionados e slots ainda pertencem à M08 pendente. O grupo M06, M07 e M08 terá pausa para teste antes da M09.
+## Áudio em estados salvos
+
+A M08 captura timers e fases dos quatro canais, length, envelope, sweep, LFSR, wave RAM, janela de acesso, fase do sequenciador ligada ao DIV, resampler e capacitores do filtro. O núcleo restaura esses dados antes de continuar os T-cycles. Testes verificam PCM idêntico após a continuação a partir de um estado com amostragem parcial, usando a mesma taxa de áudio.
+
+As filas PCM do núcleo e do navegador são dados de apresentação e não entram no arquivo. Carregar um estado descarta essas filas, muda a geração e mantém a partida em pausa. **Iniciar** preenche uma nova reserva; não toca o áudio que já estava pendente antes do carregamento. Volume, mute e a autorização do AudioContext continuam sendo preferências da sessão no navegador.
+
+O estado registra a taxa de amostragem usada na captura. Com saída de áudio conectada, se o AudioContext atual usar outra taxa, o Worker adapta o amostrador para essa taxa real após restaurar a máquina. A continuidade de CPU, canais e memória é preservada, mas não se promete PCM idêntico entre taxas diferentes. Consulte [formato e limites dos estados](save-states.md).
+
+M06, M07 e M08 estão concluídas. O desenvolvimento permanece pausado antes da M09 até a revisão do proprietário, orientada pelo [roteiro do grupo](testing-m06-m08.md).

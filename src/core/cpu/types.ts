@@ -26,6 +26,8 @@ export interface CpuSnapshot {
   totalTCycles: number
 }
 
+export type CpuState = CpuSnapshot
+
 export const CPU_FLAGS = {
   Z: 0x80,
   N: 0x40,

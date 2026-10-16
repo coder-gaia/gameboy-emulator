@@ -1,3 +1,16 @@
+import { stateBoolean, stateInteger, stateRecord } from '../state/validation'
+
+export interface OamDmaState {
+  readonly version: 1
+  readonly source: number
+  readonly pendingSource: number
+  readonly startupTCycles: number
+  readonly byteTCycles: number
+  readonly index: number
+  readonly transferring: boolean
+  readonly register: number
+}
+
 /**
  * OAM DMA: o M-cycle de escrita e um M-cycle de espera precedem a cópia.
  * Depois, 160 leituras/escritas ocupam 4T cada, totalizando 640T de cópia.
@@ -29,6 +42,65 @@ export class OamDma {
 
   get bytesTransferred(): number {
     return this.index
+  }
+
+  snapshotState(): OamDmaState {
+    return {
+      version: 1,
+      source: this.source,
+      pendingSource: this.pendingSource,
+      startupTCycles: this.startupTCycles,
+      byteTCycles: this.byteTCycles,
+      index: this.index,
+      transferring: this.transferring,
+      register: this.register,
+    }
+  }
+
+  /** Restaura a latência e a origem ativa sem ler a fonte nem escrever OAM. */
+  restoreState(value: unknown): void {
+    const state = stateRecord(value, 'dma')
+    const valid: OamDmaState = {
+      version: stateInteger(state.version, 1, 1, 'dma.version') as 1,
+      source: stateInteger(state.source, 0, 0xdf00, 'dma.source'),
+      pendingSource: stateInteger(state.pendingSource, 0, 0xdf00, 'dma.pendingSource'),
+      startupTCycles: stateInteger(state.startupTCycles, 0, 8, 'dma.startupTCycles'),
+      byteTCycles: stateInteger(state.byteTCycles, 0, 3, 'dma.byteTCycles'),
+      index: stateInteger(state.index, 0, 160, 'dma.index'),
+      transferring: stateBoolean(state.transferring, 'dma.transferring'),
+      register: stateInteger(state.register, 0, 0xff, 'dma.register'),
+    }
+    if ((valid.source & 0xff) !== 0 || (valid.pendingSource & 0xff) !== 0) {
+      throw new Error('Estado inválido: a origem do DMA deve estar alinhada em 256 bytes.')
+    }
+    if (valid.transferring ? valid.index === 160 : valid.index !== 0 && valid.index !== 160) {
+      throw new Error('Estado inválido: índice do DMA incompatível com transferência ativa.')
+    }
+    if (!valid.transferring && valid.byteTCycles !== 0) {
+      throw new Error('Estado inválido: DMA inativo não pode ter cópia parcial de byte.')
+    }
+    if (valid.startupTCycles === 0 && valid.source !== valid.pendingSource) {
+      throw new Error('Estado inválido: origem pendente do DMA sem latência de início.')
+    }
+    const expectedSource = (valid.register >= 0xe0 ? valid.register - 0x20 : valid.register) << 8
+    const initial =
+      valid.register === 0xff &&
+      valid.source === 0 &&
+      valid.pendingSource === 0 &&
+      valid.startupTCycles === 0 &&
+      valid.byteTCycles === 0 &&
+      valid.index === 0 &&
+      !valid.transferring
+    if (valid.pendingSource !== expectedSource && !initial) {
+      throw new Error('Estado inválido: registrador do DMA diverge da origem pendente.')
+    }
+    this.source = valid.source
+    this.pendingSource = valid.pendingSource
+    this.startupTCycles = valid.startupTCycles
+    this.byteTCycles = valid.byteTCycles
+    this.index = valid.index
+    this.transferring = valid.transferring
+    this.register = valid.register
   }
 
   /**

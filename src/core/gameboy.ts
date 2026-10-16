@@ -2,16 +2,31 @@ import { Cpu } from './cpu'
 import { MemoryBus } from './memory'
 import { createCartridge } from './cartridge'
 import type { Cartridge } from './cartridge'
-import { DMG_FRAME_T_CYCLES } from './model'
+import { DMG_FRAME_T_CYCLES, DMG_MODEL } from './model'
 import type { JoypadButton } from './joypad'
+import { sha256 } from '@noble/hashes/sha2.js'
+import { stateInteger, stateRecord } from './state/validation'
+
+export interface GameBoyState {
+  version: 1
+  model: typeof DMG_MODEL
+  romId: string
+  cpu: ReturnType<Cpu['snapshotState']>
+  cartridge: ReturnType<Cartridge['snapshotState']>
+  bus: ReturnType<MemoryBus['snapshotState']>
+}
 
 /** Máquina DMG independente do navegador. A execução sempre possui orçamento. */
 export class GameBoy {
   readonly bus: MemoryBus
   readonly cpu: Cpu
   readonly cartridge: Cartridge
+  readonly romId: string
+  private readonly rom: Uint8Array
 
   constructor(rom: Uint8Array) {
+    this.rom = rom.slice()
+    this.romId = Array.from(sha256(this.rom), (byte) => byte.toString(16).padStart(2, '0')).join('')
     this.cartridge = createCartridge(rom)
     this.bus = new MemoryBus(this.cartridge)
     this.bus.ppu.reset(true)
@@ -38,6 +53,33 @@ export class GameBoy {
 
   releaseButtons(): void {
     this.bus.joypad.releaseAll()
+  }
+
+  snapshotState(): GameBoyState {
+    return {
+      version: 1,
+      model: DMG_MODEL,
+      romId: this.romId,
+      cpu: this.cpu.snapshotState(),
+      cartridge: this.cartridge.snapshotState(),
+      bus: this.bus.snapshotState(),
+    }
+  }
+
+  restoreState(value: unknown): void {
+    const state = stateRecord(value, 'Estado do Game Boy')
+    stateInteger(state.version, 1, 1, 'Versão do núcleo')
+    if (state.model !== DMG_MODEL)
+      throw new Error('O estado usa um modelo de Game Boy incompatível.')
+    if (state.romId !== this.romId) throw new Error('Este estado pertence a outro cartucho.')
+    // Nenhuma parte da máquina atual muda antes de validar todos os componentes.
+    const candidate = new GameBoy(this.rom)
+    candidate.cpu.restoreState(state.cpu)
+    candidate.cartridge.restoreState(state.cartridge)
+    candidate.bus.restoreState(state.bus)
+    this.cpu.restoreState(candidate.cpu.snapshotState())
+    this.cartridge.restoreState(candidate.cartridge.snapshotState())
+    this.bus.restoreState(candidate.bus.snapshotState())
   }
 
   runCycles(budget: number): number {
