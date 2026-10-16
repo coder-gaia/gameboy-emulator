@@ -1,0 +1,8 @@
+node_modules
+dist
+coverage
+playwright-report
+test-results
+.work
+package-lock.json
+plano-emulador-gameboy.md
