@@ -1,0 +1,52 @@
+.details {
+  margin-top: 20px;
+  border-top: 1px solid #d7d5cc;
+  padding-top: 18px;
+}
+.label {
+  font: 8px var(--font-mono);
+  letter-spacing: 1px;
+  color: #65695f;
+}
+.details h3 {
+  font-size: 18px;
+  overflow-wrap: anywhere;
+  margin: 10px 0 4px;
+}
+.fileName {
+  font-size: 11px;
+  overflow-wrap: anywhere;
+  color: #626659;
+  margin: 0;
+}
+.metadata {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin: 20px 0;
+}
+.metadata div {
+  min-width: 0;
+}
+.metadata dt {
+  font-size: 10px;
+  color: #626659;
+  margin-bottom: 4px;
+}
+.metadata dd {
+  font: 12px var(--font-mono);
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.warnings {
+  font-size: 11px;
+  line-height: 1.6;
+  padding-left: 16px;
+  color: #665a39;
+}
+.note {
+  font-size: 11px;
+  line-height: 1.6;
+  color: #626659;
+  margin-bottom: 0;
+}

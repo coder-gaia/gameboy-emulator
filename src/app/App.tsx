@@ -1,6 +1,9 @@
 import { useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { ArrowUpRight, CodeXml, Info, LockKeyhole, Upload, X } from 'lucide-react'
+import { loadCartridgeFile } from '../platform/files/load-cartridge'
+import type { LoadedCartridge } from '../platform/files/load-cartridge'
+import { CartridgeDetails } from '../ui/cartridge/CartridgeDetails'
 import styles from './App.module.css'
 
 const palettes = [
@@ -35,6 +38,11 @@ function CartridgeDrawing() {
 
 export function App() {
   const [paletteId, setPaletteId] = useState<PaletteId>('dmg')
+  const [cartridge, setCartridge] = useState<LoadedCartridge | null>(null)
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
+  const fileInput = useRef<HTMLInputElement>(null)
+  const loadRequest = useRef(0)
   const aboutDialog = useRef<HTMLDialogElement>(null)
   const palette = palettes.find((item) => item.id === paletteId) ?? palettes[0]
   const screenStyle = {
@@ -42,8 +50,38 @@ export function App() {
     '--lcd-ink': palette.ink,
   } as CSSProperties
 
+  async function loadFiles(files: FileList | null) {
+    const request = ++loadRequest.current
+    setError('')
+    setLoading(false)
+    if (!files?.length) return
+    if (files.length !== 1) {
+      setError('Escolha um cartucho por vez.')
+      return
+    }
+    setLoading(true)
+    try {
+      const loaded = await loadCartridgeFile(files[0]!)
+      if (request === loadRequest.current) setCartridge(loaded)
+    } catch (cause) {
+      if (request === loadRequest.current)
+        setError(cause instanceof Error ? cause.message : 'Não foi possível ler o cartucho.')
+    } finally {
+      if (request === loadRequest.current) setLoading(false)
+    }
+  }
+
   return (
-    <div className={styles.page}>
+    <div
+      className={styles.page}
+      onDragOver={(event) => {
+        if (event.dataTransfer.types.includes('Files')) event.preventDefault()
+      }}
+      onDrop={(event) => {
+        event.preventDefault()
+        void loadFiles(event.dataTransfer.files)
+      }}
+    >
       <header className={styles.header}>
         <a className={styles.brand} href="#inicio" aria-label="Pocket Lab, início">
           <span className={styles.brandMark} aria-hidden="true">
@@ -93,7 +131,7 @@ export function App() {
               <span className={styles.deviceLabel}>POCKET LAB</span>
               <span className={styles.powerLabel}>
                 <span className={styles.powerLight} />
-                EM ESPERA
+                {cartridge ? 'CARTUCHO LIDO' : 'EM ESPERA'}
               </span>
             </div>
 
@@ -105,14 +143,24 @@ export function App() {
               </div>
               <div className={styles.screen} style={screenStyle}>
                 <div className={styles.screenContent}>
-                  <span className={styles.screenEyebrow}>OLÁ, JOGADOR.</span>
+                  <span className={styles.screenEyebrow}>
+                    {cartridge ? 'BOM TE VER POR AQUI.' : 'OLÁ, JOGADOR.'}
+                  </span>
                   <CartridgeDrawing />
                   <p>
-                    Seu próximo mundo
-                    <br />
-                    começa aqui.
+                    {cartridge ? (
+                      cartridge.metadata.title
+                    ) : (
+                      <>
+                        Seu próximo mundo
+                        <br />
+                        começa aqui.
+                      </>
+                    )}
                   </p>
-                  <span className={styles.screenPrompt}>AGUARDANDO CARTUCHO</span>
+                  <span className={styles.screenPrompt}>
+                    {cartridge ? 'REPRODUÇÃO EM PREPARAÇÃO' : 'AGUARDANDO CARTUCHO'}
+                  </span>
                 </div>
               </div>
               <div className={styles.screenBottomLabel} aria-hidden="true">
@@ -213,15 +261,39 @@ export function App() {
                 <p>Seu arquivo. Sua próxima aventura.</p>
               </div>
             </div>
-            <button className={styles.loadButton} type="button" disabled>
+            <input
+              className="sr-only"
+              ref={fileInput}
+              type="file"
+              accept=".gb,.gbc"
+              aria-label="Arquivo do cartucho"
+              tabIndex={-1}
+              onChange={(event) => {
+                void loadFiles(event.currentTarget.files)
+                event.currentTarget.value = ''
+              }}
+            />
+            <button
+              className={styles.loadButton}
+              type="button"
+              disabled={loading}
+              onClick={() => fileInput.current?.click()}
+              aria-describedby="cartridge-help"
+            >
               <Upload size={18} aria-hidden="true" />
-              Carregar cartucho
+              {loading ? 'Lendo cartucho...' : cartridge ? 'Trocar cartucho' : 'Carregar cartucho'}
               <span className={styles.buttonFileType}>.gb</span>
             </button>
-            <p className={styles.preparationNote}>
+            <p className={styles.preparationNote} id="cartridge-help">
               <span aria-hidden="true" />
-              Carregamento em preparação
+              ou arraste um arquivo .gb para a página
             </p>
+            {error && (
+              <p className={styles.loadError} role="alert">
+                {error}
+              </p>
+            )}
+            {cartridge && <CartridgeDetails cartridge={cartridge} />}
           </div>
 
           <p className={styles.privacyNote}>
@@ -271,7 +343,7 @@ export function App() {
           trazer suas histórias para o navegador.
         </p>
         <p>
-          O projeto está em desenvolvimento. Por enquanto, você pode conhecer a bancada e
+          O projeto está em desenvolvimento. Você já pode ler cartuchos, consultar seus dados e
           experimentar as paletas da tela. A reprodução de jogos chega nas próximas etapas.
         </p>
         <p>Nenhum jogo comercial ou boot ROM original faz parte do projeto.</p>

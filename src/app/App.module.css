@@ -587,6 +587,17 @@
   background: #6b5b84;
 }
 
+.loadButton:not(:disabled):hover {
+  background: #493768;
+}
+
+.loadError {
+  color: #853d34;
+  font-size: 12px;
+  line-height: 1.6;
+  margin-bottom: 0;
+}
+
 .buttonFileType {
   font-family: var(--font-mono);
   font-size: 9px;
