@@ -1,12 +1,12 @@
 # Testar M12, M13 e M14
 
-**Roteiro em andamento, iniciado em 17 de outubro de 2026.** A M12 está publicada e a M13 implementa inspeção de hardware e métricas. A M14 prepara o fechamento do projeto. Este documento não declara o Motorola homologado.
+**Roteiro iniciado em 17 de outubro de 2026.** A candidata M14 é identificada como **1.0.0-rc.1** em **Sobre o projeto**. O aceite do Motorola depende dos testes abaixo.
 
-| Marco | Situação deste roteiro                                                                                                                                    |
-| ----- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| M12   | Publicada, CI aprovado e 14 testes públicos aprovados. No Motorola, a música ficou contínua e não há travadas, mas ainda há lentidão percebida com áudio. |
-| M13   | Painel técnico e métricas concluídos: 1.395 testes locais, 103 externos, 176 de interface e 16 de produção aprovados.                                     |
-| M14   | Release, README, portfólio e material para LinkedIn aguardando implementação. O roteiro final depende das entregas e do aceite mobile real.               |
+| Marco | Situação deste roteiro                                                                                                                                       |
+| ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| M12   | Publicada, CI aprovado e 14 testes públicos aprovados. No Motorola, a música ficou contínua e não há travadas, mas ainda há lentidão percebida com áudio.    |
+| M13   | Painel técnico e métricas concluídos: 1.395 testes locais, 103 externos, 176 de interface e 16 de produção aprovados.                                        |
+| M14   | Candidata 1.0.0-rc.1 concluída: 1.473 testes locais, 103 externos, 176 de interface, 16 de produção e seis de áudio/vídeo aprovados. Aceite manual pendente. |
 
 O desktop foi aprovado no grupo anterior. O problema relatado no Motorola Edge 40 Neo com Chrome aparece somente depois de ativar o som, nos três cartuchos. O [diagnóstico MB01](mobile-audio-investigation.md) preserva as evidências históricas, a implementação preparada e os critérios de aceite.
 
@@ -99,15 +99,22 @@ Depois do fechamento da M12, quem já possui um cartucho próprio autorizado MBC
 
 ## Medição da M13 e lentidão restante
 
-1. Recarregue a beta no Motorola e abra Tobu sem ativar o som. Abra **Desempenho e áudio**, aguarde a primeira amostra e escolha **Medir por 60 segundos**. Jogue com a página visível, sem pausar nem ocultar a aba. Ao final, anote velocidade média e quadros desenhados/s; exporte o diagnóstico se desejar guardá-lo.
+1. Recarregue a beta no Motorola e abra Tobu sem ativar o som. Abra **Desempenho e áudio**, aguarde a primeira amostra e escolha **Medir por 60 segundos**. Volte ao console para jogar, mantendo o painel aberto e a página visível, sem pausar nem ocultar a aba. Deixe a inspeção técnica fechada. Ao final, anote velocidade média e quadros desenhados/s; exporte o diagnóstico se desejar guardá-lo.
 2. Ative o som, aguarde dez segundos de aquecimento e repita a janela. Compare velocidade, quadros desenhados, frames ausentes e descartados. Música contínua com velocidade próxima de 100% e menos imagens desenhadas sugere um problema de apresentação; velocidade menor pede investigação da cadência de execução. Esses sinais orientam a análise e não substituem a percepção no aparelho.
 3. Inicie outra medição e pause. O relatório deve informar interrupção e permitir exportar a janela parcial. Retome e comece uma nova janela, sem misturar gerações. Fechar somente **Inspecionar CPU** não encerra o painel independente de métricas; fechar **Desempenho e áudio** encerra a coleta.
 4. Confira que carregar um estado no mesmo cartucho preserva um relatório já concluído. Uma medição ativa é interrompida por mudança de sessão, rewind ou página oculta. Trocar ou reiniciar o cartucho inicia outra instância e não mantém um relatório da máquina anterior.
 
 ## M14 e fechamento do grupo
 
-M14 aguarda a revisão da release, documentação final e materiais de portfólio. A diferença visual restante com áudio no Motorola deve ser tratada no fechamento, preservando o desktop. Os passos finais serão incluídos quando essas entregas existirem.
+1. Abra **Sobre o projeto** e confirme **1.0.0-rc.1** depois do deploy. Isso evita testar uma aba que ainda contém a versão anterior.
+2. No Motorola, compare movimento do jardim, deslocamento dos tiles do 2048 e partida de Tobu antes e depois de ativar som. A música deve permanecer contínua e o desenho deve acompanhar o movimento. A reserva de áudio ainda pode introduzir latência entre o toque e a resposta; descreva essa diferença separadamente de movimento em saltos ou de velocidade emulada menor.
+3. Confira os direcionais maiores em retrato e paisagem, incluindo dois dedos. No desktop, repita um jogo com som, pausa e retomada para preservar o comportamento aprovado.
+4. Pause, salve um slot, avance e carregue. Depois teste rewind com som. O ponto escolhido deve voltar sem imagens ou áudio da sessão anterior. A pausa mostra o estado atual da máquina, que pode estar adiantado em relação à apresentação pela reserva PCM.
+5. Explore o painel técnico e exporte uma medição. Confira o fundo creme, a aparência sólida do console e o foco por teclado. As capturas em [mídia](media/README.md) servem de referência visual.
+6. Revise os textos de [portfólio](portfolio.md), [LinkedIn](linkedin.md) e [release](release-notes.md). São rascunhos prontos para revisão; o proprietário decide a publicação depois do aceite.
 
-Ao finalizar o grupo, o roteiro deve registrar os checks executados, a versão realmente publicada, os resultados dos três marcos e as pendências. O teste no Motorola continua necessário antes de afirmar desempenho mobile homologado ou apresentar essa correção como validada no aparelho.
+Ao finalizar o grupo, fazemos a pausa para o proprietário testar e dar o ok. O teste no Motorola continua necessário antes de afirmar desempenho mobile homologado ou apresentar essa correção como validada no aparelho. Não é preciso obter uma ROM adicional: os três cartuchos disponíveis cobrem o roteiro principal.
 
 Para relatar uma falha, envie jogo, versão do Chrome/Android, condição de som e rewind, saída utilizada, orientação, tempo aproximado até o problema e se ocorre antes ou depois de ativar áudio. Informe também se uma página recarregada volta a executar normalmente sem áudio. Uma gravação curta pode ajudar, mas a gravação no próprio celular acrescenta carga e deve ser identificada no relato.
+
+Fechamento automatizado M14: todos os checks passaram na fonte e no artefato final. A coleta em computador mediu 100,03% a 100,27% de velocidade emulada e 58,30 a 58,89 desenhos/s, sem PCM ausente ou descartado. Consulte o [relatório com hashes](performance-video-results.json). Confirme o deploy em main e a versão em Sobre antes de iniciar o teste físico; esses resultados não são números medidos no Motorola.

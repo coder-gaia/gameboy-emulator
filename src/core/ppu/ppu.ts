@@ -82,6 +82,7 @@ export class Ppu {
   private windowLine = 0
   private readonly selectedObjects = new Uint8Array(10)
   private selectedObjectCount = 0
+  private presentationObserver: (() => void) | null = null
 
   constructor(private readonly requestInterrupt: (mask: number) => void = () => {}) {}
 
@@ -100,6 +101,13 @@ export class Ppu {
   get ly(): number {
     // No DMG, LY volta a zero quatro T-cycles após começar a linha 153.
     return this.line === 153 && this.lineTCycles >= 4 ? 0 : this.line
+  }
+
+  /** Observador puro de VBlank/LCDC. Não faz parte do estado serializado. */
+  setPresentationObserver(observer: (() => void) | null): (() => void) | null {
+    const previous = this.presentationObserver
+    this.presentationObserver = observer
+    return previous
   }
 
   reset(postBoot = true): void {
@@ -175,6 +183,7 @@ export class Ppu {
           if (!this.lcdEnabled) this.framebuffer.fill(0)
         }
         this.updateStatLine()
+        if (wasEnabled !== this.lcdEnabled) this.presentationObserver?.()
         break
       }
       case 0xff41:
@@ -422,6 +431,7 @@ export class Ppu {
         this.windowYTriggered = false
         this.windowLine = 0
         this.requestInterrupt(0x01)
+        this.presentationObserver?.()
       } else if (this.line < SCREEN_HEIGHT) {
         this.currentMode = 2
         if (this.line === this.wy) this.windowYTriggered = true

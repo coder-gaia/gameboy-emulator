@@ -18,7 +18,7 @@ Stack aprovada: TypeScript estrito, React, Vite, CSS Modules, Canvas 2D, Worker,
 | M11   | Rewind com memória limitada                         | Concluída |
 | M12   | Correção mobile, setas maiores, MBC2, MBC3 e MBC5   | Concluída |
 | M13   | Painel técnico completo                             | Concluída |
-| M14   | Release, README, portfólio e material para LinkedIn | Pendente  |
+| M14   | Release, README, portfólio e material para LinkedIn | Concluída |
 
 ## Pontos de revisão
 
@@ -28,7 +28,7 @@ O grupo M06, M07 e M08 foi aprovado pelo proprietário. O [roteiro de teste M06 
 
 M09 completa preferências, remapeamento de teclado, gamepad padrão, tela cheia e acessibilidade. M10 mede desempenho de produção e publica a beta estática no Cloudflare Pages. M11 acrescenta rewind com memória limitada. Como último passo do grupo, o fundo recebeu o creme #eee9df, preservando contraste e aparência do console sem opacidade ou sobreposição.
 
-O cartucho sintético POCKET TEST permite testar CPU, memória e serial sem obter jogos. O [README](../README.md#testar-o-primeiro-grupo-de-milestones) explica o roteiro inicial. M03 adiciona timers, DMA, correção de EI seguido de HALT e prioridades de interrupção durante escrita na pilha, com 42 ROMs externas aprovadas.
+O cartucho sintético POCKET TEST permite testar CPU, memória e serial sem obter jogos. O [roteiro M00 a M02](testing-m00-m02.md) explica o roteiro inicial. M03 adiciona timers, DMA, correção de EI seguido de HALT e prioridades de interrupção durante escrita na pilha, com 42 ROMs externas aprovadas.
 
 M04 adiciona modos do LCD, fundo, tiles, scroll e o cartucho próprio POCKET GARDEN, com 62 ROMs externas de timing aprovadas. A validação também corrigiu a separação dos barramentos de VRAM e memória principal durante DMA.
 
@@ -50,7 +50,7 @@ Cada milestone recebe um commit, com título Conventional Commits em inglês e c
 
 Cada commit validado deve receber push imediatamente e ser confirmado no GitHub. O proprietário não precisa receber links individuais. A pausa a cada três milestones não adia o envio dos commits ao GitHub. Aguardar o ok dos testes antes de iniciar o próximo grupo.
 
-## Grupo M12 a M14 em andamento
+## Grupo M12 a M14 implementado, aguardando aceite
 
 **MB01 é prioridade da M12:** investigar e corrigir a cadência de áudio que desacelera a máquina no celular. Sem som, os três cartuchos ficaram fluidos no aparelho do proprietário. O diagnóstico reproduziu o padrão ao atrasar mensagens entre Worker e Worklet, mas ainda não mediu a origem do atraso no Motorola. O perfil Pixel 7 em desktop não homologou essa condição. Consulte [evidências, métricas e critérios](mobile-audio-investigation.md).
 
@@ -60,7 +60,11 @@ O fechamento automatizado da M12 aprovou `npm run check`, com 777 testes locais 
 
 A M13 implementa o desassemblador SM83 completo, atlas dos 384 tiles, prévia e tabela dos 40 sprites, páginas de memória de 256 bytes e registradores de PPU, timer, DMA, interrupções e RTC. A captura não avança a máquina nem drena serial ou PCM. O Worker responde somente com dados de inspeção e buffers limitados; o painel fechado, desabilitado ou oculto não mantém consultas. O painel independente de desempenho separa T-cycles e imagens desenhadas, registra janelas locais de 60 segundos e exporta um JSON sem ROM, memória ou progresso. Pausa, estados, rewind e mudanças de geração interrompem janelas incompatíveis. Consulte [captura de hardware](debugger-core.md) e [interpretação das métricas](performance-metrics.md).
 
-Depois da M12, o proprietário confirmou música contínua e ausência de travadas no Motorola, mas ainda percebe lentidão apenas com som. Sem áudio, confirmou fluidez total; o desktop continua perfeito. A M13 fornece os contadores para distinguir velocidade e apresentação. O código publica somente a última imagem de cada lote PCM, uma causa plausível de movimento em saltos com música contínua. O fechamento da M14 inclui tratar essa apresentação, além de release, portfólio e material para LinkedIn. Não atribuir a diferença ao aparelho sem medi-la.
+Depois da M12, o proprietário confirmou música contínua e ausência de travadas no Motorola, mas ainda percebe lentidão apenas com som. Sem áudio, confirmou fluidez total; o desktop continua perfeito. A M13 fornece os contadores para distinguir velocidade e apresentação. Até esse marco, o código publicava somente a última imagem de cada lote PCM, uma causa de movimento em saltos com música contínua reproduzida na revisão. A M14 trata essa apresentação, além de preparar a candidata, o portfólio e o material para LinkedIn. O resultado no aparelho continua dependendo do proprietário.
+
+A M14 captura VBlanks e mudanças do LCD no instante correto, preservando estado e PCM para o mesmo orçamento. Uma arena de 32 buffers indexados, limitada a 720 KiB incluindo mensagens em trânsito, transporta as imagens. O RAF escolhe os quadros pelo cursor PCM, com correlação de relógios quando getOutputTimestamp está disponível. Pausa, estado, rewind e reconexão invalidam as imagens futuras. A geração da saída reutilizada também participa da conexão, para não aceitar mensagens do cartucho anterior.
+
+A candidata é identificada como 1.0.0-rc.1 na interface e no diagnóstico exportado. README, guia de deploy, notas e rascunhos de portfólio e LinkedIn acompanham capturas reais do jardim. A revisão visual final preserva o creme #eee9df e o console com opacidade normal. O grupo termina com a pausa de teste; release estável e divulgação dependem do aceite, sem publicação automática dos rascunhos.
 
 O lançamento depende do aceite com áudio no aparelho real, além da regressão desktop. O [roteiro do grupo](testing-m12-m14.md) separa validações automatizadas e testes manuais pendentes. Preservar o grupo de três milestones e o commit por milestone.
 
@@ -88,3 +92,7 @@ Direção visual: bancada de cartuchos, papel quente, grafite, cinza mineral e v
 Previsão inicial: 10 a 16 semanas para beta e 16 a 24 para escopo completo, com 10 a 15 horas semanais. Reavaliar após CPU e timing. GBC, contas, backend, multiplayer e sincronização em nuvem ficam fora do V1.
 
 A M13 concluiu o check completo com 1.395 testes locais, os 103 testes externos, os 176 cenários de interface e os 16 testes de produção. Dois testes de relógio sintético foram repetidos após trocar o avanço contínuo de 60 segundos por 60 saltos de um segundo, preservando os asserts e o timeout original de 30 segundos. Os outros 174 cenários passaram na execução completa. O artefato de produção foi congelado e seus hashes registrados antes do envio.
+
+A M14 concluiu o check completo com 1.473 testes locais, os 103 testes externos, os 176 cenários finais de interface sem falhas e os 16 testes de produção. A coleta isolada final aprovou seis cenários: velocidade de 100,03% a 100,27%, Canvas de 58,30 a 58,89 desenhos/s e zero frames PCM ausentes ou descartados. Os 32 arquivos de dist coincidiram com o artefato congelado medido. O relatório performance-video-results.json registra os hashes e o escopo.
+
+A regressão intermediária identificou a corrida de geração na conexão, corrigida no produto com testes determinísticos e de navegador. A fixture de estado passou a conferir a nova geração após retomar. Um caso de rewind foi cancelado por HMR durante o gesto, gerando o flush final esperado; não houve alteração no teste ou na persistência. A regressão completa final, com a fonte congelada, aprovou os 176 casos. O grupo faz agora a pausa solicitada para teste no Motorola e regressão manual desktop. A implementação está concluída; a homologação física e a release estável aguardam o proprietário.

@@ -111,8 +111,9 @@ test('mede Canvas separadamente dos quadros emulados e exporta áudio sem dados 
   const first = report.measurement.started
   const last = report.measurement.samples.at(-1)!.point
   expect(last.drawnFrames - first.drawnFrames).toBeGreaterThan(0)
-  expect(last.drawnFrames - first.drawnFrames).toBeLessThan(last.frameId - first.frameId)
-  expect(report.summary.drawnFramesPerSecond).toBeGreaterThan(0)
+  expect(last.frameId - first.frameId).toBeGreaterThan(0)
+  expect(report.summary.drawnFramesPerSecond).toBeGreaterThan(40)
+  expect(report.summary.drawnFramesPerSecond).toBeLessThanOrEqual(65)
   expect(report.summary.speedPercent).toBeGreaterThan(0)
   expect(last.audio).toMatchObject({ connected: true, sampleRate: expect.any(Number) })
   expect(last.audio).toHaveProperty('baseLatencySeconds')

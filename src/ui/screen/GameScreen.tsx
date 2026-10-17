@@ -38,10 +38,19 @@ export function GameScreen({
       onError(cause instanceof Error ? cause : new Error(String(cause)))
       return
     }
+    let drawnRevision = -1
     const draw = () => {
+      if (drawnRevision === device.presentationRevision) return
       renderer.draw(device.framebuffer, device.frameId)
-      device.noteFrameDrawn(device.frameId)
+      drawnRevision = device.presentationRevision
+      device.noteFrameDrawn(drawnRevision)
     }
+    let animation = 0
+    const present = () => {
+      device.presentAudioFrame()
+      animation = requestAnimationFrame(present)
+    }
+    if (playing) animation = requestAnimationFrame(present)
     const unsubscribe = device.subscribe(draw)
     const unsubscribeError = device.subscribeError(onError)
     const resize = () => {
@@ -67,6 +76,7 @@ export function GameScreen({
     }
     document.addEventListener('visibilitychange', visibility)
     return () => {
+      cancelAnimationFrame(animation)
       unsubscribe()
       unsubscribeError()
       observer.disconnect()

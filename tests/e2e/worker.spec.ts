@@ -46,7 +46,7 @@ async function observeWorkers(page: Page): Promise<void> {
         this.addEventListener('message', (event: MessageEvent<EmulatorMessage>) => {
           const message = event.data
           if (message.type === 'reply' && message.id >= 1_000_000) probe.completed += 1
-          if (message.type !== 'error' && message.snapshot) {
+          if ('snapshot' in message && message.snapshot) {
             probe.last.set(this.probeId, {
               frameId: message.snapshot.frameId,
               cycles: message.snapshot.cpu.totalTCycles,
@@ -304,32 +304,42 @@ test('Worker entrega PCM por orçamento, mantém buffers válidos e descarta ger
         }
         poll()
       })
-    await rpc({ type: 'audio-port', port: channel.port1, sampleRate: 48_000, epoch: 1 }, [
-      channel.port1,
-    ])
+    const initial = await rpc({ type: 'inspect' })
+    await rpc(
+      {
+        type: 'audio-port',
+        port: channel.port1,
+        sampleRate: 48_000,
+        epoch: initial.audioEpoch + 1,
+      },
+      [channel.port1],
+    )
     const started = await rpc({ type: 'play', playing: true })
     let waiting = waitForSamples()
-    channel.port2.postMessage({ type: 'need', frames: 1536, epoch: 1 })
+    channel.port2.postMessage({ type: 'need', frames: 1536, epoch: started.audioEpoch })
     await waiting
     const afterFirst = await rpc({ type: 'inspect' })
     const paused = await rpc({ type: 'play', playing: false })
     const beforeStale = received.length
-    channel.port2.postMessage({ type: 'need', frames: 512, epoch: 1 })
+    channel.port2.postMessage({ type: 'need', frames: 512, epoch: started.audioEpoch })
     channel.port2.postMessage({ type: 'need', frames: 512, epoch: paused.audioEpoch })
     await new Promise((resolve) => setTimeout(resolve, 60))
     const whilePaused = await rpc({ type: 'inspect' })
-    await rpc({ type: 'play', playing: true })
-    channel.port2.postMessage({ type: 'need', frames: 512, epoch: 1 })
+    const resumed = await rpc({ type: 'play', playing: true })
+    channel.port2.postMessage({ type: 'need', frames: 512, epoch: started.audioEpoch })
+    channel.port2.postMessage({ type: 'need', frames: 512, epoch: paused.audioEpoch })
     await new Promise((resolve) => setTimeout(resolve, 60))
     const afterStale = await rpc({ type: 'inspect' })
     const staleResponses = received.length - beforeStale
     waiting = waitForSamples()
-    channel.port2.postMessage({ type: 'need', frames: 512, epoch: paused.audioEpoch })
+    channel.port2.postMessage({ type: 'need', frames: 512, epoch: resumed.audioEpoch })
     await waiting
     const afterFresh = await rpc({ type: 'inspect' })
     const summary = {
       firstFrames: received[0]!.samples.length / 2,
       firstEpoch: received[0]!.epoch,
+      startedEpoch: started.audioEpoch,
+      resumedEpoch: resumed.audioEpoch,
       firstCycles: afterFirst.cpu.totalTCycles - started.cpu.totalTCycles,
       staleResponses,
       pausedCycles: whilePaused.cpu.totalTCycles - paused.cpu.totalTCycles,
@@ -348,13 +358,14 @@ test('Worker entrega PCM por orçamento, mantém buffers válidos e descarta ger
   expect(result.firstFrames).toBeLessThanOrEqual(1537)
   expect(result.firstCycles).toBeGreaterThanOrEqual(Math.floor((1536 * 4_194_304) / 48_000))
   expect(result.firstCycles).toBeLessThan(Math.ceil((1536 * 4_194_304) / 48_000) + 48)
-  expect(result.firstEpoch).toBe(1)
+  expect(result.firstEpoch).toBe(result.startedEpoch)
   expect(result.staleResponses).toBe(0)
   expect(result.pausedCycles).toBe(0)
   expect(result.staleCycles).toBe(0)
   expect(result.freshFrames).toBeGreaterThanOrEqual(512)
   expect(result.freshFrames).toBeLessThanOrEqual(513)
-  expect(result.freshEpoch).toBe(2)
+  expect(result.freshEpoch).toBe(result.resumedEpoch)
+  expect(result.freshEpoch).toBeGreaterThan(result.firstEpoch)
   expect(result.freshCycles).toBeGreaterThan(0)
   expect(result.finite).toBe(true)
   expect(result.audible).toBe(true)

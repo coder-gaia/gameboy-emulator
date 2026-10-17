@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { createPortal } from 'react-dom'
+import { APP_VERSION } from './version'
 import {
   ArrowUpRight,
   CodeXml,
@@ -1038,6 +1039,7 @@ export function App() {
         </button>
         <p className={styles.tinyLabel}>PRAZER, POCKET LAB.</p>
         <h2 id="about-title">Uma ideia que cabe no bolso.</h2>
+        <p>Versão {APP_VERSION}. Candidata a lançamento, em validação.</p>
         <p>
           Um emulador de Game Boy feito para explorar a tecnologia por trás de um pequeno console e
           trazer suas histórias para o navegador.

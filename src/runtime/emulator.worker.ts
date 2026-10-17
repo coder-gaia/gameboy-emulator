@@ -8,6 +8,9 @@ import { audioBufferProfile } from '../platform/audio/protocol'
 import { parseCartridgeRtcState } from '../core/cartridge'
 import { captureHardwareDebug } from '../core/debug'
 import type { HardwareDebugSnapshot } from '../core/debug'
+import { runAudioVideoBudget } from './audio-video-capture'
+import type { CapturedAudioVideoFrame } from './audio-video-capture'
+import { VideoBufferPool } from './video-buffer-pool'
 
 interface WorkerEndpoint {
   onmessage: ((event: MessageEvent<EmulatorRequest>) => void) | null
@@ -32,6 +35,37 @@ let rewindHistory: RewindHistory | null = null
 let rewinding = false
 let rewindTimer: ReturnType<typeof setTimeout> | null = null
 let nextRewindCapture = 0
+let producedPcmFrames = 0
+const videoBuffers = new VideoBufferPool()
+
+function resetAudioTimeline(epoch = audioEpoch + 1): void {
+  audioEpoch = epoch
+  producedPcmFrames = 0
+}
+
+function publishVideoFrame(captured: CapturedAudioVideoFrame): void {
+  const lease = videoBuffers.lease(captured.framebuffer)
+  if (!lease) return
+  try {
+    endpoint.postMessage(
+      {
+        type: 'video-frame',
+        frame: {
+          epoch: audioEpoch,
+          slot: lease.slot,
+          token: lease.token,
+          frameId: captured.frameId,
+          pcmFrame: captured.pcmFrame,
+          framebuffer: lease.framebuffer,
+        },
+      },
+      [lease.framebuffer.buffer],
+    )
+  } catch (cause) {
+    videoBuffers.recycle(lease.slot, lease.token, lease.framebuffer.buffer)
+    throw cause
+  }
+}
 
 function checkpoint(): MachineCheckpoint {
   if (!device) throw new Error('O emulador ainda não está pronto.')
@@ -100,6 +134,7 @@ function snapshot(includeBattery = false): EmulatorSnapshot {
     batteryRevision: device.cartridge.batteryRevision,
     playing,
     audioEpoch,
+    audioDriven,
     romId: device.romId,
     rewind: {
       enabled: rewindHistory !== null,
@@ -149,6 +184,7 @@ function fail(cause: unknown): void {
   stopTimer()
   stopRewindTimer()
   rewinding = false
+  resetAudioTimeline()
   endpoint.postMessage({
     type: 'error',
     error: cause instanceof Error ? cause.message : String(cause),
@@ -196,9 +232,10 @@ function onAudio(event: MessageEvent<{ type: string; frames: number; epoch: numb
       throw new Error('O orçamento de áudio recebido é inválido.')
     const apu = device.bus.apu
     const maximum = Math.ceil((request.frames * DMG_CLOCK_HZ) / apu.sampleRate) + 24
-    device.runCycles(maximum)
+    runAudioVideoBudget(device, maximum, producedPcmFrames, publishVideoFrame)
     captureRewind()
     const samples = apu.drainSamples()
+    producedPcmFrames += samples.length / 2
     audioPort?.postMessage({ type: 'samples', samples, epoch: audioEpoch }, [samples.buffer])
     publishFrame()
   } catch (cause) {
@@ -211,12 +248,18 @@ endpoint.onmessage = ({ data: request }) => {
     let captured: MachineCheckpoint | undefined
     let hardware: HardwareDebugSnapshot | undefined
     const command = request.command
+    if (command.type === 'recycle-video') {
+      videoBuffers.recycle(command.slot, command.token, command.buffer)
+      if (request.id !== 0) endpoint.postMessage({ type: 'reply', id: request.id })
+      return
+    }
     if (command.type === 'init') {
       stopTimer()
       playing = false
       audioDriven = false
       audioSampleRate = null
       audioRequestLimit = 0
+      resetAudioTimeline()
       stopRewindTimer()
       rewinding = false
       rewindHistory = null
@@ -234,12 +277,13 @@ endpoint.onmessage = ({ data: request }) => {
             if (command.playing) throw new Error('Solte o rewind antes de iniciar a partida.')
             break
           }
+          if (playing === command.playing) break
           stopTimer()
           playing = command.playing
+          resetAudioTimeline()
           device.bus.apu.discardSamples()
           if (!playing) {
             device.releaseButtons()
-            audioEpoch += 1
           } else if (!audioDriven) clock()
           break
         case 'input':
@@ -286,14 +330,24 @@ endpoint.onmessage = ({ data: request }) => {
           resetRewindHistory()
           break
         }
-        case 'audio-port':
+        case 'audio-port': {
           if (rewinding) throw new Error('Solte o rewind antes de ativar o som.')
+          const minimumEpoch = stateInteger(
+            command.epoch,
+            0,
+            Number.MAX_SAFE_INTEGER,
+            'Geração de áudio',
+          )
+          // O Worker decide a geração depois de processar qualquer play em trânsito.
+          const epoch = Math.max(audioEpoch + 1, minimumEpoch)
+          stateInteger(epoch, 0, Number.MAX_SAFE_INTEGER, 'Geração de áudio')
+          const profile = audioBufferProfile(command.sampleRate)
           stopTimer()
           audioPort?.close()
           audioPort = command.port
-          audioEpoch = command.epoch
+          resetAudioTimeline(epoch)
           audioSampleRate = command.sampleRate
-          audioRequestLimit = audioBufferProfile(command.sampleRate).requestLimit
+          audioRequestLimit = profile.requestLimit
           {
             const changedRate = device.bus.apu.sampleRate !== command.sampleRate
             device.bus.apu.setSampleRate(command.sampleRate)
@@ -304,11 +358,12 @@ endpoint.onmessage = ({ data: request }) => {
           audioPort.onmessage = onAudio
           audioPort.start()
           break
+        }
         case 'audio-disable':
           audioDriven = false
           audioSampleRate = null
           audioRequestLimit = 0
-          audioEpoch += 1
+          resetAudioTimeline()
           audioPort?.close()
           audioPort = null
           device.bus.apu.discardSamples()
@@ -340,7 +395,7 @@ endpoint.onmessage = ({ data: request }) => {
             device.bus.apu.setSampleRate(audioSampleRate)
           serial = saved.serial
           device.releaseButtons()
-          audioEpoch += 1
+          resetAudioTimeline()
           publishedFrame = -1
           publishedBatteryRevision = -1
           resetRewindHistory()
@@ -363,7 +418,7 @@ endpoint.onmessage = ({ data: request }) => {
           playing = false
           device.releaseButtons()
           device.bus.apu.discardSamples()
-          audioEpoch += 1
+          resetAudioTimeline()
           rewinding = true
           restorePrevious()
           if (rewindHistory.stats.availableSeconds > 0)
@@ -375,7 +430,7 @@ endpoint.onmessage = ({ data: request }) => {
           playing = false
           device.releaseButtons()
           device.bus.apu.discardSamples()
-          audioEpoch += 1
+          resetAudioTimeline()
           scheduleRewindCapture()
           publishedBatteryRevision = -1
           break

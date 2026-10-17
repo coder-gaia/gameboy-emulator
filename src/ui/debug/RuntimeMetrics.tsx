@@ -4,6 +4,7 @@ import { measurePerformance } from '../../runtime/performance-sampler'
 import type { PerformanceInterval, PerformancePoint } from '../../runtime/performance-sampler'
 import type { AudioDiagnostics } from '../../platform/audio'
 import styles from './RuntimeMetrics.module.css'
+import { APP_VERSION } from '../../app/version'
 
 interface Measurement {
   started: PerformancePoint
@@ -12,6 +13,7 @@ interface Measurement {
 
 interface DiagnosticReport {
   version: 1
+  appVersion: string
   generatedAt: string
   browser: string
   viewport: { width: number; height: number; pixelRatio: number }
@@ -58,7 +60,7 @@ export function RuntimeMetrics({
     (): PerformancePoint => ({
       at: performance.now(),
       tCycles: device.inspection.cpu.totalTCycles,
-      frameId: device.frameId,
+      frameId: device.inspection.frameId,
       drawnFrames: device.drawnFrames,
       machineEpoch: device.inspection.audioEpoch,
       playing: device.inspection.playing,
@@ -78,6 +80,7 @@ export function RuntimeMetrics({
       setStatus(outcome)
       setReport({
         version: 1,
+        appVersion: APP_VERSION,
         generatedAt: new Date().toISOString(),
         browser: navigator.userAgent,
         viewport: { width: innerWidth, height: innerHeight, pixelRatio: devicePixelRatio },

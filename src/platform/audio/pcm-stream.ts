@@ -29,6 +29,18 @@ export class PcmStream {
     return this.epoch
   }
 
+  get playbackFrame(): number {
+    return this.queue.consumedFrames
+  }
+
+  get availablePlaybackFrame(): number {
+    return this.queue.consumedFrames + this.queue.queuedFrames
+  }
+
+  get playbackAdvancing(): boolean {
+    return this.active && this.primed && this.queue.queuedFrames > 0
+  }
+
   reset(epoch: number, active: boolean): void {
     if (!isAudioEpoch(epoch))
       throw new RangeError('A geração do áudio deve ser um inteiro não negativo.')

@@ -12,6 +12,22 @@ A M11 acrescenta rewind e o fundo creme. Seu build final passou pelos 14 testes 
 
 A M12 foi publicada em 17/10/2026 com CI aprovado e 14 testes de produção no endereço HTTPS real. HTML e os quatro assets principais coincidiram com os hashes do [relatório de áudio M12](performance-audio-mobile-results.json). O proprietário confirmou no Motorola música contínua e ausência de travadas, mas ainda percebe lentidão com som. Sem som, confirmou fluidez total. A publicação está validada; a homologação completa de desempenho no aparelho continua pendente.
 
+A M13 também teve CI aprovado, 31 arquivos públicos idênticos ao artefato congelado e 16 testes no endereço HTTPS real aprovados, incluindo inspeção de hardware e exportação do diagnóstico. A identificação da M14 fica visível em **Sobre o projeto**; confirme o deploy correspondente antes de testar a candidata.
+
+## Acompanhar seu deploy, passo a passo
+
+A conta e o projeto já foram conectados pelo proprietário. Para atualizar, basta o commit validado chegar à branch `main`; a integração Git dispara outro build automaticamente. Não é necessário criar outra conta, outro projeto ou enviar a pasta `dist`. [Fluxo oficial da integração Git](https://developers.cloudflare.com/pages/get-started/git-integration/).
+
+1. Entre no [painel Cloudflare](https://dash.cloudflare.com/) com a conta criada.
+2. Abra **Workers & Pages** e selecione o projeto cujo domínio é `gameboy-emulator-aox.pages.dev`.
+3. Em **Deployments**, abra a publicação de **Production** mais recente. Confira a branch `main` e o commit correspondente à milestone.
+4. Aguarde o estado de sucesso. Se falhar, abra o log do build e compartilhe a etapa e a mensagem. O endereço de produção continua no último deploy bem-sucedido.
+5. No GitHub, confira também o workflow **Quality** do mesmo commit. A pipeline da Cloudflare é independente.
+6. Abra [Pocket Lab](https://gameboy-emulator-aox.pages.dev/), recarregue a aba e consulte **Sobre o projeto**. A candidata M14 identifica **1.0.0-rc.1**.
+7. Siga o [roteiro M12 a M14](testing-m12-m14.md), mantendo o mesmo endereço para preservar os saves. Não limpe os dados do site para atualizar a página.
+
+O botão **Retry deployment**, quando oferecido no detalhe de um build com falha, repete aquela publicação. Não altere branch, comando ou diretório sem conferir a tabela abaixo. O projeto usa arquivos estáticos no plano Free, sem Functions.
+
 ## Validar o mesmo build que será publicado
 
 Na raiz do projeto, com as dependências instaladas:
@@ -90,4 +106,4 @@ try {
 }
 ```
 
-Com essa variável, a suíte usa o site remoto e não inicia um servidor local. Execute depois de confirmar o deploy do commit da M11: são 14 casos, incluindo rewind e áudio. Os dados criados pelos testes ficam nos perfis isolados do Playwright.
+Com essa variável, a suíte usa o site remoto e não inicia um servidor local. Execute depois de confirmar o deploy do commit atual: são 16 casos, incluindo rewind, áudio, inspeção e exportação do diagnóstico. Os dados criados pelos testes ficam nos perfis isolados do Playwright.

@@ -68,8 +68,8 @@ export function CpuInspector({
     <details className={styles.panel} onToggle={(event) => setOpen(event.currentTarget.open)}>
       <summary>Inspecionar CPU</summary>
       <p className={styles.explanation}>
-        Pause a execução para avançar instruções. Os registradores pertencem à máquina exibida na
-        tela.
+        Pause a execução para avançar instruções e comparar o mesmo instante. Durante a reprodução,
+        os registradores mostram o estado mais recente da máquina.
       </p>
       <dl className={styles.registers}>
         {Object.entries(registers).map(([name, value]) => (

@@ -18,6 +18,8 @@
 - Em 17/10/2026, o proprietário autorizou continuar M12 a M14. Incluir a correção do áudio mobile como prioridade da M12 e ampliar as setas de toque no mesmo lote, preservando o desktop aprovado. Incorporar o diagnóstico ao commit da milestone correspondente.
 - Não declarar desempenho mobile homologado apenas com viewport Pixel 7 ou CPU throttle da página. Validar áudio e velocidade no aparelho real; o Worker não foi desacelerado pelo throttle da página no experimento registrado.
 - Após o deploy da M12 em 17/10/2026, o proprietário confirmou Tobu sem travadas e música contínua no Motorola. Sem som fica 100% fluido; com som ainda percebe lentidão. O desktop continua perfeito. Medir velocidade emulada e frequência de apresentação na M13 antes de atribuir a diferença ao aparelho; a homologação completa segue pendente.
+- M12 e M13 foram enviadas ao GitHub e tiveram CI e publicação conferidos. A M14 prepara a candidata 1.0.0-rc.1 e separa captura de quadros e apresentação por cursor PCM. A pausa do grupo exige nova validação no Motorola, sem afirmar aceite do aparelho antes do retorno do proprietário.
+- Os textos de portfólio, LinkedIn e release são rascunhos locais para revisão. Não publicar em rede social nem criar release estável antes do aceite do grupo.
 - Como último passo deste grupo, ajustar o fundo para pastel/off-white confortável, preservando contraste e aparência do console, sem aplicar opacidade ou sobreposição ao Game Boy.
 
 ## Escrita

@@ -44,7 +44,7 @@ test.beforeEach(async ({ page }) => {
         const observation: RtcWorkerProbe = { worker: this, snapshot: null }
         target.__rtcWorkers.push(observation)
         this.addEventListener('message', ({ data }: MessageEvent<EmulatorMessage>) => {
-          if (data.type !== 'error' && data.snapshot)
+          if ('snapshot' in data && data.snapshot)
             observation.snapshot = {
               ...data.snapshot,
               batteryRam:
@@ -262,7 +262,7 @@ async function exportedCheckpoint(page: Page): Promise<MachineCheckpoint> {
 async function workerCommand(
   page: Page,
   command: EmulatorCommand,
-): Promise<Exclude<EmulatorMessage, { type: 'frame' } | { type: 'error' }>> {
+): Promise<Extract<EmulatorMessage, { type: 'reply' }>> {
   return page.evaluate(
     (command) =>
       new Promise((resolve, reject) => {

@@ -9,7 +9,9 @@ import type {
   EmulatorReplyPayload,
   MachineCheckpoint,
   RewindStatus,
+  EmulatorVideoFrame,
 } from './worker-protocol'
+import { VideoPresentation } from './video-presentation'
 
 const audioOwners = new WeakMap<AudioOutput, EmulatorClient>()
 let clientSequence = 0
@@ -36,6 +38,10 @@ export class EmulatorClient {
   private drawnFrameId: number | null = null
   private drawnFrameCount = 0
   private output: AudioOutput | null = null
+  private readonly displayed = new Uint8Array(160 * 144)
+  private displayedFrameId = 0
+  private displayRevision = 0
+  private readonly video = new VideoPresentation((frame) => this.recycleVideo(frame))
 
   private constructor() {
     if (typeof Worker === 'undefined')
@@ -44,6 +50,11 @@ export class EmulatorClient {
     this.worker.onmessage = ({ data }: MessageEvent<EmulatorMessage>) => {
       if (data.type === 'error') {
         this.reportError(new Error(data.error))
+        return
+      }
+      if (data.type === 'video-frame') {
+        if (this.current?.audioDriven && this.current.playing) this.video.push(data.frame)
+        else this.recycleVideo(data.frame)
         return
       }
       if (data.type === 'frame') {
@@ -79,10 +90,13 @@ export class EmulatorClient {
   }
 
   get framebuffer(): Uint8Array {
-    return this.current.framebuffer
+    return this.displayed
   }
   get frameId(): number {
-    return this.current.frameId
+    return this.displayedFrameId
+  }
+  get presentationRevision(): number {
+    return this.displayRevision
   }
   get inspection(): EmulatorSnapshot {
     return this.current
@@ -100,10 +114,24 @@ export class EmulatorClient {
   }
 
   /** Conta imagens distintas enviadas ao Canvas, sem afirmar FPS físico do monitor. */
-  noteFrameDrawn(frameId: number): void {
-    if (this.disposed || frameId === this.drawnFrameId) return
-    this.drawnFrameId = frameId
+  noteFrameDrawn(revision: number): void {
+    if (this.disposed || revision === this.drawnFrameId) return
+    this.drawnFrameId = revision
     this.drawnFrameCount += 1
+  }
+
+  /** Chamado pelo RAF; o relógio é o do PCM consumido, sem antecipar quadros futuros. */
+  presentAudioFrame(): void {
+    if (this.disposed || !this.current.audioDriven || !this.current.playing) return
+    const position = this.output?.getPlaybackFrame(this.current.audioEpoch) ?? null
+    if (position === null) return
+    const frame = this.video.takeDue(position)
+    if (!frame) return
+    this.displayed.set(frame.framebuffer)
+    this.displayedFrameId = frame.frameId
+    this.displayRevision += 1
+    this.recycleVideo(frame)
+    for (const listener of this.listeners) listener()
   }
 
   async inspectHardware(memoryStart = 0xc000): Promise<HardwareDebugSnapshot> {
@@ -212,11 +240,13 @@ export class EmulatorClient {
     const sampleRate = await output.prepare()
     const channel = new MessageChannel()
     try {
-      const epoch = this.current.audioEpoch + 1
-      await this.request({ type: 'audio-port', port: channel.port1, sampleRate, epoch }, [
-        channel.port1,
-      ])
+      const minimumEpoch = Math.max(this.current.audioEpoch, output.getDiagnostics().epoch) + 1
+      await this.request(
+        { type: 'audio-port', port: channel.port1, sampleRate, epoch: minimumEpoch },
+        [channel.port1],
+      )
       if (this.disposed) throw new Error('O cartucho foi fechado antes de ativar o som.')
+      const epoch = this.current.audioEpoch
       audioOwners.set(output, this)
       this.output = output
       output.connect(channel.port2, epoch)
@@ -242,6 +272,7 @@ export class EmulatorClient {
 
   dispose(): void {
     if (this.disposed) return
+    this.video.clear()
     this.disposed = true
     this.worker.terminate()
     for (const pending of this.pending.values()) {
@@ -256,6 +287,7 @@ export class EmulatorClient {
   }
 
   private update(snapshot: EmulatorSnapshot): void {
+    const previousSnapshot = this.current
     const previous = this.current?.rewind
     if (
       previous &&
@@ -265,6 +297,29 @@ export class EmulatorClient {
     )
       snapshot.rewind = previous
     this.current = snapshot
+    if (!previousSnapshot || previousSnapshot.audioEpoch !== snapshot.audioEpoch)
+      this.video.reset(snapshot.audioEpoch)
+    if (!snapshot.audioDriven || !snapshot.playing || snapshot.rewind.active) {
+      this.video.clear()
+      let changed = !previousSnapshot || this.displayedFrameId !== snapshot.frameId
+      if (!changed) {
+        for (let index = 0; index < this.displayed.length; index += 1) {
+          if (this.displayed[index] !== snapshot.framebuffer[index]) {
+            changed = true
+            break
+          }
+        }
+      }
+      this.displayed.set(snapshot.framebuffer)
+      this.displayedFrameId = snapshot.frameId
+      if (
+        changed ||
+        !previousSnapshot ||
+        previousSnapshot.audioEpoch !== snapshot.audioEpoch ||
+        previousSnapshot.playing !== snapshot.playing
+      )
+        this.displayRevision += 1
+    }
     if (snapshot.batteryRam !== undefined) this.battery = snapshot.batteryRam
     if (snapshot.batteryRtc !== undefined) this.rtc = snapshot.batteryRtc
     for (const listener of this.listeners) listener()
@@ -282,6 +337,22 @@ export class EmulatorClient {
 
   private post(command: EmulatorCommand): void {
     if (!this.disposed) this.worker.postMessage({ id: 0, command })
+  }
+
+  private recycleVideo(frame: EmulatorVideoFrame): void {
+    if (this.disposed) return
+    this.worker.postMessage(
+      {
+        id: 0,
+        command: {
+          type: 'recycle-video',
+          slot: frame.slot,
+          token: frame.token,
+          buffer: frame.framebuffer.buffer,
+        },
+      },
+      [frame.framebuffer.buffer],
+    )
   }
 
   private request(

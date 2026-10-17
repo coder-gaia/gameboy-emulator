@@ -32,7 +32,7 @@ O Worklet publica estatísticas periódicas e o painel coleta pontos aproximadam
 
 ## Arquivo local
 
-O JSON contém versão do formato, instante de geração, navegador, dimensões da viewport, SHA-256 do cartucho, resultado da medição, resumo e pontos amostrados. Cada ponto inclui tempo da página, contadores da máquina e do Canvas, geração, estado de reprodução e diagnósticos de áudio quando disponíveis.
+O JSON contém versão do formato e da aplicação, instante de geração, navegador, dimensões da viewport, SHA-256 do cartucho, resultado da medição, resumo e pontos amostrados. Cada ponto inclui tempo da página, contadores da máquina e do Canvas, geração, estado de reprodução e diagnósticos de áudio quando disponíveis. O frameId é o contador emulado mais recente; quadros desenhados contam a apresentação efetiva, que na M14 acompanha o cursor PCM.
 
 O arquivo não contém bytes da ROM, registradores, memória, framebuffer, saída serial, estados salvos ou progresso de bateria. O SHA-256 identifica o cartucho e não substitui seus bytes. A exportação baixa um arquivo local; compartilhá-lo continua sendo uma escolha do proprietário.
 

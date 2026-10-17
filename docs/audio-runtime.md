@@ -43,7 +43,23 @@ Se faltar PCM depois do primeiro priming, a saída recebe silêncio, contabiliza
 
 O protocolo inclui um identificador de geração, `epoch`. Pausa, reinício, troca de cartucho, carregamento de estado e reconexão limpam a fila e invalidam amostras anteriores. Isso impede que uma resposta atrasada reproduza um trecho de outra sessão. Ao pausar, a máquina e a saída de áudio são suspensas; ao retomar, uma nova reserva é preenchida. A aba oculta também pausa a execução.
 
+Ao conectar, o cliente solicita uma geração acima da máquina atual e da última geração conhecida do AudioOutput reutilizado. O Worker escolhe atomicamente o maior valor entre esse piso e sua geração mais um, depois de processar comandos de reprodução já em trânsito. A resposta informa a geração efetiva usada para conectar o Worklet. Isso evita colisões entre cartuchos e a corrida entre iniciar o jogo e ativar a conexão. Pedidos repetidos de reprodução no mesmo estado não reiniciam a timeline.
+
 Descartar PCM de apresentação preserva a fase de amostragem, o intervalo parcialmente acumulado e os capacitores do filtro da APU. Isso vale também para a execução sem som e os avanços manuais. Reiniciar a máquina ou mudar a taxa de áudio tem uma semântica própria de reinicialização do amostrador.
+
+## Apresentação de vídeo com áudio na M14
+
+Cada VBlank e cada mudança de ativação do LCD captura uma imagem no instante em que ocorre, mesmo quando um pedido PCM executa vários quadros. A posição da imagem é o total de PCM produzido na geração mais as amostras pendentes da APU. O observador da PPU é puro, opcional e não faz parte dos estados salvos. O orçamento de instruções e a sequência PCM permanecem os mesmos.
+
+O Worker empresta até 32 buffers de índices de 160 por 144 pixels, totalizando 720 KiB. Os empréstimos incluem mensagens em trânsito e continuam contabilizados ao mudar de geração. Cada slot tem um token; uma devolução antiga não substitui um empréstimo novo. Sem buffer livre, o Worker descarta a imagem e continua produzindo áudio. O cliente mantém uma cópia de 22,5 KiB da imagem apresentada e devolve os buffers por transferência após copiar ou descartar.
+
+O AudioWorklet informa a posição de PCM consumido e um instante do relógio do próprio AudioContext. Um cursor limitado ao PCM disponível orienta o requestAnimationFrame: a tela apresenta a imagem mais recente cujo instante já foi alcançado e guarda as futuras. Priming e rebuffer não avançam artificialmente o cursor. Os avisos leves de posição são independentes das estatísticas completas de 250 ms.
+
+Os avisos do Worklet descrevem a renderização no grafo de áudio. Quando disponível e válido, getOutputTimestamp correlaciona o tempo de áudio com performance.now para estimar o instante de apresentação, sem consultar ou alocar esse objeto em cada RAF. O delta pode ser negativo porque a saída está atrás do grafo. Na ausência dessa correlação, o cliente usa currentTime, cuja progressão pode ser irregular e reduzir a suavidade. [Definição dos relógios na especificação Web Audio](https://www.w3.org/TR/webaudio-1.0/#dom-audiocontext-getoutputtimestamp).
+
+A estimativa não comprova alinhamento acústico exato com caixas de som ou Bluetooth. Não soma arbitrariamente baseLatency e outputLatency. A reserva PCM continua introduzindo latência de resposta. Esta mudança procura preservar a frequência de apresentação, sem reduzir a reserva que protege a música.
+
+Pausa, estado, rewind e reconexão limpam as imagens futuras junto da geração de áudio. A imagem pausada mostra o estado atual da máquina, que pode estar adiantado pela reserva PCM. Durante reprodução, a inspeção também reflete esse estado mais recente; pause para comparar tela e registradores no mesmo instante. A frequência física do monitor pode limitar quantas imagens ficam visíveis.
 
 ## APU DMG
 

@@ -43,6 +43,8 @@ interface ProductionProbe {
   selectionStartedAt: number | null
   firstPresentedAt: number | null
   firstUiPresentedAt: number | null
+  canvasDraws: number
+  videoFrames: number
 }
 
 type ProbedWindow = Window & typeof globalThis & { __productionProbe: ProductionProbe }
@@ -74,8 +76,20 @@ export async function observeProduction(page: Page): Promise<void> {
       selectionStartedAt: null,
       firstPresentedAt: null,
       firstUiPresentedAt: null,
+      canvasDraws: 0,
+      videoFrames: 0,
     }
     ;(window as ProbedWindow).__productionProbe = probe
+    const nativePutImageData = CanvasRenderingContext2D.prototype.putImageData
+    CanvasRenderingContext2D.prototype.putImageData = function (
+      imageData: ImageData,
+      dx: number,
+      dy: number,
+      ...dirty: number[]
+    ) {
+      if (this.canvas.getAttribute('aria-label') === 'Tela do emulador') probe.canvasDraws += 1
+      Reflect.apply(nativePutImageData, this, [imageData, dx, dy, ...dirty])
+    }
     document.addEventListener('securitypolicyviolation', (event) => {
       probe.csp.push({ directive: event.violatedDirective, blocked: event.blockedURI })
     })
@@ -130,7 +144,8 @@ export async function observeProduction(page: Page): Promise<void> {
         }
         probe.workers.push(this.observation)
         this.addEventListener('message', ({ data }: MessageEvent<EmulatorMessage>) => {
-          if (data.type === 'error' || !data.snapshot) return
+          if (data.type === 'video-frame') probe.videoFrames += 1
+          if (!('snapshot' in data) || !data.snapshot) return
           const rewind = (data.snapshot as typeof data.snapshot & { rewind?: BrowserRewindState })
             .rewind
           if (
@@ -194,6 +209,8 @@ export async function readProductionProbe(page: Page) {
     const probe = (window as ProbedWindow).__productionProbe
     return {
       observedAt: performance.now(),
+      canvasDraws: probe.canvasDraws,
+      videoFrames: probe.videoFrames,
       workers: probe.workers.map((worker) => ({ ...worker })),
       contexts: probe.contexts.map((context) => ({
         state: context.state,

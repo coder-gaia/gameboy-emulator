@@ -65,7 +65,7 @@ async function instrument(page: Page): Promise<void> {
         super(url, options)
         probe.worker = this
         this.addEventListener('message', ({ data }: MessageEvent<EmulatorMessage>) => {
-          if (data.type !== 'error' && data.snapshot) probe.snapshot = data.snapshot
+          if ('snapshot' in data && data.snapshot) probe.snapshot = data.snapshot
           if (data.type === 'reply' && data.checkpoint) probe.checkpoint = data.checkpoint
         })
       }
@@ -143,10 +143,13 @@ test('estado com som ativo volta em pausa, limpa PCM antigo e retoma na nova ger
     .poll(async () => {
       const probe = await readProbe(page)
       const latest = probe.latest
-      return latest && latest.epoch === restored.epoch ? latest.renderedFrames : 0
+      return latest && latest.epoch === probe.epoch && latest.epoch > restored.epoch!
+        ? latest.renderedFrames
+        : 0
     })
     .toBeGreaterThan(8192)
   const resumed = await readProbe(page)
+  expect(resumed.epoch).toBeGreaterThan(restored.epoch!)
   expect(resumed.latest!.energy).toBeGreaterThan(0)
   expect(resumed.latest!.queuedFrames).toBeLessThanOrEqual(16_384)
   expect(resumed.frame).toBeGreaterThan(saved.savedFrame!)

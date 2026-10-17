@@ -62,6 +62,16 @@ export interface AudioStatsMessage {
   readonly diagnostics: AudioStreamDiagnostics
 }
 
+/** Cursor no relógio do AudioContext, independente dos diagnósticos completos. */
+export interface AudioPlaybackMessage {
+  readonly type: 'playback'
+  readonly epoch: number
+  readonly frame: number
+  readonly availableFrame: number
+  readonly contextTime: number
+  readonly advancing: boolean
+}
+
 export function isAudioEpoch(epoch: number): boolean {
   return Number.isSafeInteger(epoch) && epoch >= 0
 }

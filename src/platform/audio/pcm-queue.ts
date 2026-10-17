@@ -24,6 +24,10 @@ export class StereoPcmQueue {
     return this.frames
   }
 
+  get consumedFrames(): number {
+    return this.renderedFrames + this.droppedFrames
+  }
+
   push(samples: Float32Array): void {
     if (samples.length % 2 !== 0) throw new RangeError('O PCM estéreo exige pares de amostras.')
     const incoming = samples.length / 2

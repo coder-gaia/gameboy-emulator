@@ -116,17 +116,31 @@ O alvo continua limitado a aproximadamente 128 ms, mas não limita a ocupação 
 
 As setas de toque recebem alvos de 52 por 52 CSS px e ícones de 22 px em ponteiros coarse quando há espaço. Em 320 px, os alvos preservam o mínimo de 44 por 44 px e usam os ícones maiores. O desktop com ponteiro fino mantém 44 px e ícones de 18 px. O layout de tela cheia reserva espaço para o rodapé em duas linhas quando necessário. Os handlers de pressão, captura de ponteiro e fontes simultâneas foram preservados.
 
-### Resultado automatizado da correção definitiva
+### Resultado automatizado da correção de transporte M12
 
 A coleta isolada final passou nos seis cenários, com três segundos de aquecimento e janelas estáveis de 12 segundos. Velocidades: jardim 100,12%, Tobu 99,49% e 2048 99,30% no desktop; jardim 100,24%, Tobu 99,91% e 2048 99,98% no perfil Pixel 7 simulado. Todos tiveram zero frames PCM ausentes e zero descartados nessas janelas. A ponte nominal de 10 ms por sentido apresentou máximos observados de 72,8 a 99,0 ms; o maior RTT amostrado pelo Worklet foi 4.864 frames, cerca de 101,3 ms. A ocupação amostrada chegou a 8.320 frames, cerca de 173,3 ms, acima do alvo e dentro da arena física.
 
 O [relatório final](performance-audio-mobile-results.json) conserva dados, hashes, distribuições e limitações. Os relógios da ponte e do Worklet descrevem intervalos distintos e não são subtraídos entre si. As amostras de 250 ms podem perder picos. Houve uma coleta anterior com carga concorrente que apresentou cortes e conflito de limpeza de traces; ela não compõe o aceite isolado. Os traços determinísticos de jitter também passaram após a compensação por pico. Não se alteraram os critérios para transformar falha em sucesso.
 
-**Estado do aceite:** regressão automatizada de áudio aprovada no computador; teste de áudio e velocidade no Motorola Edge 40 Neo com Chrome ainda não executado nesta revisão. Não substituir essa pendência por resultados de viewport Pixel 7, CPU throttle da página ou atraso sintético no computador.
+**Estado do aceite:** regressão automatizada de áudio aprovada no computador. O retorno qualitativo do Motorola está registrado abaixo; as janelas quantitativas de velocidade e apresentação nos três cartuchos permanecem pendentes. Não substituir essa pendência por resultados de viewport Pixel 7, CPU throttle da página ou atraso sintético no computador.
 
 ## Retorno inicial no aparelho após M12
 
 Em 17/10/2026, após publicar a M12 e testar Tobu no Motorola Edge 40 Neo com Chrome, o proprietário relatou melhora clara, ausência de travadas e música contínua. A comparação seguinte confirmou execução 100% fluida antes de ativar o som e lentidão percebida depois de ativá-lo. O desktop continua perfeito. Esse retorno confirma melhora no uso real e não equivale ao aceite completo de velocidade, fluidez, latência e áudio nos três cartuchos. A M13 acrescenta contadores e medição local para separar velocidade emulada e frequência de apresentação, sem assumir que o aparelho chegou ao limite. Lotes maiores de PCM publicam apenas o último quadro, uma hipótese a medir para a diferença visual restante.
+
+## Apresentação de quadros investigada na M14
+
+A revisão do Worker confirmou que um pedido PCM podia avançar vários VBlanks e publicar somente a última imagem. Um lote de 6.144 frames em 48 kHz cobre aproximadamente 128 ms: publicar uma única imagem por lote limita o desenho a cerca de oito imagens por segundo, mesmo com CPU em velocidade correta e música contínua. A M14 captura cada VBlank e mudança de LCD, associa uma posição PCM e usa uma fila limitada de imagens futuras para apresentação no RAF.
+
+A primeira coleta com esse fluxo manteve CPU entre 99,91% e 100,31%, sem PCM ausente ou descartado, mas reprovou o mínimo de 55 desenhos/s. Jardim e 2048 ficaram entre 49,50 e 51,26 desenhos/s; Tobu entre 44,21 e 44,35 durante sua abertura. Nenhum desses resultados é apresentado como aceite.
+
+Um diagnóstico adicional do jardim observou RAF em 59,95 Hz e captura em 59,70 Hz, enquanto o Canvas ficou em 52,21 Hz. O currentTime do AudioContext avançou em saltos de aproximadamente 10,67 ou 21,33 ms entre RAFs, produzindo repetições e saltos de frameId. A correlação de getOutputTimestamp com performance.now permite estimar a progressão entre esses saltos, sem subtrair relógios sem relação. Sua aplicação e o resultado final devem ser avaliados separadamente da primeira coleta reprovada.
+
+A abertura de Tobu desliga o LCD deliberadamente em trocas de logos e carregamento de cena. Um runner determinístico confirmou 637 VBlanks e quatro mudanças de LCD entre os segundos 3 e 15, com 1,343602 segundo de LCD desligado: são 641 capturas legítimas, reproduzindo a primeira coleta. O teste de frequência passa a aguardar 900 VBlanks antes do aquecimento, preservando os limites de aprovação. A janela equivalente produz 713 imagens, ainda incluindo 88,82 ms de LCD desligado na chegada ao título. Os testes de transporte e a reprodução das aberturas continuam existindo.
+
+A coleta final da candidata aprovou os seis casos, com velocidade de 100,03% a 100,27%, Canvas entre 58,30 e 58,89 desenhos/s e nenhum frame PCM ausente ou descartado. O [relatório completo](performance-video-results.json) fixa hashes, ambiente e dados da execução final. A conexão também aloca gerações acima da saída reutilizada, de forma atômica no Worker, cobrindo ativação concorrente com o início e mensagens do cartucho anterior.
+
+Nada disso mede o Motorola físico. O [roteiro do grupo](testing-m12-m14.md) exige nova comparação no aparelho, incluindo resposta ao toque, música e velocidade. A reserva PCM continua podendo aumentar a latência de entrada.
 
 ## Biblioteca embutida
 

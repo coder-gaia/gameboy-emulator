@@ -1,161 +1,103 @@
 # Pocket Lab
 
-Um emulador de Game Boy DMG no navegador, com núcleo TypeScript independente da interface.
+[![Quality](https://github.com/coder-gaia/gameboy-emulator/actions/workflows/ci.yml/badge.svg)](https://github.com/coder-gaia/gameboy-emulator/actions/workflows/ci.yml)
 
-Experimente a [beta pública do Pocket Lab](https://gameboy-emulator-aox.pages.dev/), publicada no Cloudflare Pages.
+Um Game Boy DMG no navegador, escrito em TypeScript. Jogue, volte alguns segundos e explore o hardware que faz cada pixel acontecer.
 
-Projeto em desenvolvimento, com M00 a M13 implementadas. CPU, timer, DMA, vídeo, sprites, janela, controles, MBC1, saves de bateria, áudio, save states versionados e rewind já estão disponíveis. A M12 acrescenta MBC2, MBC3 com RTC, MBC5, setas maiores no toque e abastecimento adaptativo de áudio. A biblioteca oferece Tobu Tobu Girl e 2048; o jardim é uma ROM própria de diagnóstico. A homologação mobile no aparelho real continua pendente.
+**[Abrir Pocket Lab](https://gameboy-emulator-aox.pages.dev/)** · [Como testar](docs/testing-m12-m14.md) · [Milestones](docs/milestones.md)
 
-**Validação mobile pendente:** o proprietário relatou lentidão somente após ativar o som no Motorola Edge 40 Neo com Chrome. A M12 corrige a limitação de vazão reproduzida sob atraso controlado de mensagens. O teste automatizado em computador não homologa o aparelho real. Consulte [diagnóstico e implementação MB01](docs/mobile-audio-investigation.md) e o [roteiro M12 a M14](docs/testing-m12-m14.md).
+![Console Pocket Lab com o jardim original](docs/media/pocket-lab-desktop.png)
 
-## Desenvolvimento local
+Versão **1.0.0-rc.1**, candidata a lançamento. O desktop foi aprovado pelo proprietário. No Motorola Edge 40 Neo com Chrome, a M12 eliminou travadas e cortes da música, mas ainda houve lentidão percebida somente com som. A M14 trata a apresentação dos quadros intermediários. O aceite dessa mudança no aparelho real continua pendente; testes com viewport móvel em computador não o substituem.
 
-Requer Node.js 22.12 ou superior e npm.
+## Experimente
 
-```powershell
-npm.cmd ci
-npm.cmd run dev
-```
+Escolha **Tobu Tobu Girl** ou **2048** na biblioteca e comece sem arquivo. **Controles e créditos dos jogos** apresenta as ações, autores e licenças. **Explorar jardim** abre uma ROM original de diagnóstico, sem trilha sonora.
 
-Abra o endereço mostrado no terminal. Os exemplos usam `npm.cmd` para funcionar também no PowerShell com execução de scripts desabilitada. Em outros shells, use `npm`.
+Para jogar um cartucho próprio, use **Carregar cartucho** ou arraste um arquivo `.gb`. Arquivos `.gbc` precisam funcionar também no Game Boy original; extraia `.zip` antes. A ajuda **Quais arquivos posso usar?** explica os formatos perto do carregamento. Os bytes permanecem no dispositivo, sem upload, conta ou backend. Não é necessário fornecer BIOS ou boot ROM.
 
-```powershell
-npm.cmd run check
-npm.cmd run test:e2e
-npm.cmd run test:hardware
-```
+| Recurso           | Como usar                                                                                                        |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------- |
+| Teclado e toque   | Setas, Z para A, X para B, Enter para Start e Shift para Select. Remapeamento em **Controles e preferências**.   |
+| Áudio estéreo     | **Ativar som** após abrir um jogo. Exige AudioWorklet em HTTPS ou localhost. Volume e mute não pausam a máquina. |
+| Saves de bateria  | Progresso gravado pelo próprio jogo, salvo automaticamente neste navegador por SHA-256 do cartucho.              |
+| Save states       | Três slots por cartucho e arquivos `.pocketstate`. Salvar ou carregar pausa a máquina.                           |
+| Rewind            | Ative, jogue e segure R ou **Segure para voltar**. Histórico temporário de até 20 segundos, limitado a 8 MiB.    |
+| Inspeção          | CPU, desassemblador, memória, 384 tiles, 40 sprites, PPU, timer, DMA, interrupções e RTC.                        |
+| Diagnóstico local | **Desempenho e áudio**, medição de 60 segundos e JSON sem ROM, memória ou progresso.                             |
 
-Os testes de navegador precisam do Chromium do Playwright: `npx.cmd playwright install chromium`. O comando de hardware prepara as ROMs externas, confere seus hashes e executa as suítes de timing e a comparação gráfica.
+O jardim usa instruções SM83, tiles, mapas e OAM da máquina emulada. Setas movem o personagem, A alterna a aparência e B retorna ao início. Teclado, toque e gamepad padrão podem enviar as mesmas ações. A aba oculta pausa a execução.
+
+![Movimento real no jardim original](docs/media/pocket-lab-garden.gif)
+
+Saves e preferências pertencem ao navegador e à origem do site. Limpar seus dados os remove. Exporte estados como backup antes de trocar de dispositivo ou endereço. Não há sincronização em nuvem.
 
 ## Arquitetura
 
-Um repositório e um pacote npm, sem monorepo. React e Vite compõem a interface. O núcleo em `src/core` não conhece o navegador, trabalha em T-cycles e tem testes executados em Node.
+Um repositório e um pacote npm, **sem monorepo**. React, Vite e CSS Modules compõem a interface; o núcleo estrito em `src/core` roda em Node e não importa DOM, React, Web Audio ou armazenamento. Quatro T-cycles equivalem a um M-cycle.
 
-O Web Worker possui a máquina `GameBoy` e executa todas as instruções. A interface mantém cópias para apresentação no Canvas 2D de 160 por 144 pixels e para inspeção da CPU. Sem som, o Worker usa tempo monotônico e um orçamento de ciclos, independentemente da frequência do monitor. Com som, o AudioWorklet solicita PCM ao Worker por MessageChannel e controla a cadência. A implementação usa mensagens e buffers transferíveis, sem SharedArrayBuffer ou exigência de COOP/COEP.
+```mermaid
+flowchart LR
+  UI[React e controles] -->|comandos| Worker[Web Worker]
+  Worker --> Core[CPU, bus, PPU e APU]
+  Worker <-->|PCM e demanda| Audio[AudioWorklet]
+  Worker -->|quadros transferíveis| Canvas[Canvas 160 x 144]
+  Audio -->|cursor PCM| Canvas
+  UI --> Storage[IndexedDB e preferências locais]
+```
 
-A M10 acrescenta benchmarks reproduzíveis, avanço interno por T-cycle sem validações repetidas e recálculo do mixer quando a amplitude muda. Os formatos dos estados são preservados. A suíte de produção testa o build final sob CSP, incluindo Worker, áudio e arquivos locais. Consulte [desempenho e metodologia](docs/performance.md).
+Sem áudio, um relógio monotônico controla o orçamento de T-cycles. Com áudio, o Worklet solicita PCM na taxa real do dispositivo. A reserva se adapta ao atraso do transporte; quadros intermediários usam buffers limitados e são apresentados por requestAnimationFrame conforme o PCM avança. A solução usa MessageChannel e transferências, sem SharedArrayBuffer ou exigência de COOP/COEP.
 
-IndexedDB armazena a RAM de bateria e três slots de estado por cartucho, identificados pelo SHA-256 da ROM. Paleta, volume, mute e teclas usam preferências versionadas em localStorage, separadas desses saves. A publicação usa arquivos estáticos no Cloudflare Pages. Consulte a [arquitetura de áudio e execução](docs/audio-runtime.md), o [formato dos estados salvos](docs/save-states.md) e os [controles e preferências](docs/controls-and-preferences.md).
+[Áudio e apresentação](docs/audio-runtime.md), [estados salvos](docs/save-states.md), [rewind](docs/rewind.md), [inspeção](docs/debugger-core.md) e [métricas](docs/performance-metrics.md) detalham contratos e limites.
 
-O endereço público da M10 passou pelos dez testes de produção em desktop e perfil Pixel 7 simulado. Worker, áudio, demos, saves, arquivos locais, teclado e tela cheia funcionaram sob os cabeçalhos reais da Cloudflare, sem requisições a terceiros ou violações CSP. Os hashes de HTML, JavaScript, CSS, Worker e Worklet coincidiram com a build medida. O [guia de deploy](docs/deployment.md) registra a publicação e os comandos de validação. A hospedagem estática dispensa inicialização de um processo de servidor; rede e inicialização no navegador continuam existindo.
+## Compatibilidade e limites
 
-## Cartuchos e testes atuais
+| Cartucho | ROM máxima | RAM e particularidades                                                           |
+| -------- | ---------- | -------------------------------------------------------------------------------- |
+| ROM Only | 32 KiB     | Sem banking.                                                                     |
+| MBC1     | 2 MiB      | Fiação padrão: até 32 KiB de RAM para ROM até 512 KiB; até 8 KiB para ROM maior. |
+| MBC2     | 256 KiB    | 512 nibbles internos.                                                            |
+| MBC3     | 2 MiB      | Até 32 KiB de RAM; RTC quando declarado pelo cartucho.                           |
+| MBC5     | 8 MiB      | Até 128 KiB de RAM; variante rumble até 64 KiB, sem vibração física.             |
 
-Escolha **Tobu Tobu Girl** ou **2048** na biblioteca para começar sem arquivo. **Controles e créditos dos jogos** explica as ações e apresenta os autores e as licenças. Use **Explorar jardim** para abrir o diagnóstico visual. Para carregar um jogo próprio, selecione um arquivo `.gb` ou `.gbc`, ou arraste-o para a página. Os bytes são lidos localmente e não são enviados. A ajuda **Quais arquivos posso usar?** explica formatos, extração de `.zip` e compatibilidade.
+O tamanho de ROM deve ser potência de dois. A convenção homebrew de 2 KiB de RAM é aceita com aviso. MBC1M, MBC30, jogos exclusivos de Game Boy Color e link cable ficam fora do escopo. [Controladores e RTC](docs/cartridge-mappers.md).
 
-A execução aceita cartuchos **ROM Only de 32 KiB**, **MBC1 e MBC3 de até 2 MiB**, **MBC2 de até 256 KiB** e **MBC5 de até 8 MiB**, compatíveis com o Game Boy original. MBC2 possui 512 nibbles internos; MBC3 inclui RTC nos tipos que possuem relógio; MBC5 admite até 128 KiB de RAM. MBC1 usa fiação padrão: ROMs de até 512 KiB admitem até 32 KiB de RAM; ROMs maiores admitem até 8 KiB. A convenção homebrew de RAM de 2 KiB é aceita com aviso, incluindo o 2048. Consulte [controladores e limites](docs/cartridge-mappers.md).
+A PPU usa scanlines, sem pixel FIFO, mudanças dentro do modo 3 ou peculiaridades de WX 0 e 166. A inicialização pós boot não reproduz todas as revisões físicas. Os testes `dmg_sound` verificam comportamento observável pela CPU e não comprovam equivalência acústica integral. A reserva de áudio pode introduzir latência; navegador, carga e saída física também influenciam a experiência. Gamepad e leitores de tela físicos ainda precisam de revisão manual.
 
-Compilações **MBC1M** usam outra fiação e ficam fora do escopo atual. Não há autodetecção de MBC1M, cujo header também pode declarar MBC1. MBC30 e jogos exclusivos de Game Boy Color não são suportados. Arquivos `.gbc` precisam funcionar também no DMG. Rumble não produz vibração física. O tamanho de ROM precisa ser uma potência de dois, com limite de leitura de 8 MiB. Não é necessário fornecer BIOS ou boot ROM.
+## Executar e validar
 
-O bus implementa memória de trabalho, echo RAM, VRAM, OAM, HRAM, timer, DMA de OAM, interrupções, joypad, PPU e APU. A transferência serial interna leva 4096 T-cycles por byte. A PPU implementa fundo, tiles, scroll, modos, LY/LYC, STAT, sprites e janela. A APU implementa dois canais de pulso, wave e noise, com sweep, envelope, length, DACs, mixer estéreo e filtro passa-altas.
+Requer Node.js 22.12 ou superior e npm. O ambiente de build está fixado em `.node-version`.
 
-`npm.cmd test` executa os testes de núcleo, entrada, reprodução, áudio e persistência. `npm.cmd run test:hardware` executa 103 testes externos, com revisão e SHA-256 fixados. Consulte [procedência e protocolos](docs/test-roms.md). `npm.cmd run test:audio-flow` usa o build final para medir velocidade e abastecimento com atraso controlado de mensagens; não substitui um celular físico.
+```powershell
+npm.cmd ci
+npx.cmd playwright install chromium
+npm.cmd run dev
+```
 
-| Suíte                                        | Resultado atual |
-| -------------------------------------------- | --------------- |
-| Blargg cpu_instrs individuais                | 11 de 11        |
-| Blargg instr_timing                          | 1 de 1          |
-| Blargg mem_timing individuais                | 3 de 3          |
-| Mooneye, seleção DMG da M03                  | 27 de 27        |
-| Mooneye, acessos sincronizados ao LCD da M04 | 20 de 20        |
-| dmg-acid2, comparação gráfica DMG            | 1 de 1          |
-| Mooneye, MBC1 padrão da M06                  | 12 de 12        |
-| Blargg dmg_sound, perfil DMG da M07          | 12 de 12        |
-| Mooneye, MBC2, MBC5 e DMA da M12             | 16 de 16        |
+Abra o endereço exibido. Os exemplos usam `npm.cmd` para funcionar no PowerShell com scripts desabilitados; em outros shells, use `npm`.
 
-As ROMs Blargg são baixadas para uma pasta ignorada. O runner usa a mesma factory e os mesmos mappers da aplicação, preservando os binários originais. As 75 fixtures Mooneye preservam a licença MIT.
+```powershell
+npm.cmd run check
+npm.cmd run test:hardware
+npm.cmd run test:e2e
+npm.cmd run test:production
+npm.cmd run test:audio-flow
+```
 
-## Som
+`check` verifica regras, formatação, lint, testes locais, tipos e build. Hardware prepara fixtures com revisão e SHA-256 fixados e executa **103 casos externos** de Blargg, Mooneye e dmg-acid2. Produção aplica CSP ao artefato compilado. A regressão de transporte mede áudio, T-cycles e desenhos reais sob atraso controlado; não homologa celular físico.
 
-Escolha um jogo da biblioteca e clique em **Ativar som**. O navegador precisa dessa ação explícita para abrir a saída de áudio. Use **Volume** para ajustar o nível e **Silenciar** para mutar sem parar o jogo. Se a máquina estiver pausada, clique também em **Iniciar**. O jardim é um diagnóstico visual sem trilha sonora. O volume fica guardado neste navegador, mas abrir ou recarregar a página continua exigindo a ativação do som por gesto.
+[Procedência dos testes](docs/test-roms.md), [metodologia de desempenho](docs/performance.md) e [investigação mobile](docs/mobile-audio-investigation.md). Os resultados de cada entrega ficam no [acompanhamento](docs/milestones.md) e no GitHub Actions.
 
-Áudio exige um navegador com AudioWorklet em **HTTPS ou localhost**. Acesso por HTTP em um IP da rede local pode não oferecer AudioWorklet; nesse caso, a interface explica a indisponibilidade e o jogo continua sem som. O Worker usa a taxa real do AudioContext, e as filas são limpas ao pausar ou reiniciar para evitar reproduzir trechos antigos.
+## Publicação e apresentação
 
-Os 12 testes `dmg_sound` validam o comportamento que a CPU consegue observar, incluindo registradores, length, sweep e wave RAM. Eles não comprovam equivalência acústica completa com um console físico. Consulte [funcionamento e limites do áudio](docs/audio-runtime.md).
+O site é estático no **Cloudflare Pages Free**, conectado ao GitHub. Um push em `main` dispara o deploy, sem servidor para inicializar na visita. Download e inicialização no navegador continuam existindo. O [guia de deploy](docs/deployment.md) explica o painel, a configuração e a conferência da publicação.
 
-## Saves de bateria
+[Notas da candidata](docs/release-notes.md), [estudo para portfólio](docs/portfolio.md) e [rascunho para LinkedIn](docs/linkedin.md) apresentam o projeto e seus limites. Os textos são materiais para revisão do proprietário, sem publicação automática.
 
-O progresso que o próprio jogo grava na RAM de bateria é salvo automaticamente em IndexedDB. A chave usa o SHA-256 dos bytes da ROM, portanto renomear o mesmo arquivo não cria outro save. Jogos diferentes mantêm dados separados. A interface informa quando recupera o progresso ou quando o armazenamento está indisponível.
-
-As gravações ocorrem em lotes periódicos quando a RAM muda e nos checkpoints de pausa, troca de cartucho e saída da aba. Reiniciar a máquina preserva a bateria. Os dados pertencem ao navegador e à origem do site; limpar os dados do site ou mudar de origem não mantém esses saves. Não há conta nem sincronização em nuvem.
-
-Cartuchos MBC3 com RTC salvam RAM e relógio juntos, inclusive quando não possuem RAM externa. O relógio avança em T-cycles durante a emulação e congela na pausa. Ao reabrir a bateria, o adaptador acrescenta os segundos inteiros transcorridos desde o último checkpoint entregue ao armazenamento, respeitando o halt do cartucho. A precisão offline é de segundos e depende do relógio do dispositivo; encerrar a aba abruptamente pode impedir a última gravação. Save states e rewind recuperam o instante exato sem compensação offline. O envelope RTC v2 preserva a leitura dos saves de RAM v1.
-
-Esse recurso preserva os dados de progresso que cada jogo decide gravar. Não garante retornar à posição exata em que a partida foi interrompida. Para guardar esse ponto, use um estado salvo.
-
-## Estados salvos
-
-O painel **Um ponto para voltar.** oferece três slots por cartucho. Selecione um slot e use **Salvar estado** para guardar a máquina no ponto atual, substituindo o conteúdo anterior desse slot. A operação pausa o jogo. **Carregar estado** restaura o ponto e mantém a máquina em pausa; use **Iniciar** para continuar.
-
-**Exportar estado** baixa o ponto atual em um arquivo `.pocketstate`, mesmo sem um slot gravado. **Importar estado** valida o arquivo para o cartucho aberto, restaura a máquina em pausa e grava no slot selecionado. O arquivo não contém a ROM; mantenha o mesmo cartucho para usá-lo. Exportações servem de backup porque os slots pertencem ao navegador e à origem do site.
-
-O formato tem limite de 1 MiB, versão, modelo DMG-CPU-B, hash da ROM e checksum SHA-256. Arquivos corrompidos ou incompatíveis são rejeitados sem substituir o estado da máquina. A migração para IndexedDB v2 preserva os saves de bateria anteriores. Consulte [conteúdo, validação e limites dos estados](docs/save-states.md).
-
-## Controles e preferências
-
-Abra **Controles e preferências** para remapear o teclado. Clique no campo de uma ação e pressione a substituta. Tab navega entre campos; Esc sai do campo. Conflitos entre ações e teclas reservadas geram uma mensagem e preservam o mapa anterior. **Restaurar teclado padrão** recupera as setas, Z, X, Enter e Shift. Abrir o painel pausa a partida; use **Iniciar** para retomar.
-
-Paleta, volume, mute e teclado são guardados em localStorage. Se o navegador bloquear esse armazenamento, os ajustes continuam funcionando na sessão e a interface informa a limitação. Isso não altera os slots ou a RAM de bateria em IndexedDB.
-
-Controles USB ou Bluetooth reconhecidos com `mapping="standard"` usam direcional ou analógico esquerdo, botões A/B e Select/Start. Pressione um botão do controle para o navegador reconhecer a conexão. Teclado, toque e múltiplos controles mantêm fontes independentes. A integração foi verificada com entradas simuladas; o teste de um controle físico ainda depende do proprietário.
-
-**Tela cheia** usa o recurso nativo do navegador. Se estiver indisponível ou for recusado, a interface informa o motivo e mantém a página utilizável. O primeiro link ao navegar por Tab, **Ir para o console**, permite saltar o cabeçalho. Consulte [configuração, suporte e roteiro de conferência](docs/controls-and-preferences.md).
-
-## Rewind
-
-O painel **Um instante atrás.** oferece **Ativar rewind**. Depois de ativar e jogar um pouco, segure **R** com a tela em foco ou o botão **Segure para voltar**. Soltar escolhe o ponto atual e retoma somente se a partida estava em execução. Se já estava pausada, permanece assim. Perder foco, ocultar a aba ou cancelar o gesto encerra em pausa. R continua disponível para uma ação do jogo quando estiver remapeado.
-
-O Worker guarda até 20 segundos de tempo emulado, com capturas de aproximadamente 10 Hz e uma arena de buffers limitada a 8 MiB. O histórico é temporário, fica nesta aba e é descartado ao desativar, carregar outro estado ou trocar o cartucho. Voltar também restaura a RAM do jogo; a bateria recebe o ponto final escolhido, sem gravar os pontos intermediários. Consulte [funcionamento e limites](docs/rewind.md) e [medição de custo e restauração](docs/performance.md#rewind-na-m11).
-
-## Testar as milestones
-
-A M13 está em validação. **Inspecionar CPU** inclui o **Painel técnico**, com desassemblador, tiles, OAM, páginas de memória e registradores. O painel independente **Desempenho e áudio** separa velocidade emulada e imagens desenhadas. Ambos começam fechados. A medição local de 60 segundos permite exportar um JSON sem ROM, memória ou progresso do jogo. O [contrato da inspeção](docs/debugger-core.md) explica as leituras sem alteração da máquina.
-
-O [roteiro M06 a M08](docs/testing-m06-m08.md) registra os testes do grupo aprovado. O [roteiro M09 a M11](docs/testing-m09-m11.md) preserva a revisão anterior. O [roteiro M12 a M14](docs/testing-m12-m14.md) acompanha o grupo atual. A validação da M12 inclui 103 testes externos, 156 cenários de interface e 14 testes de produção. Dois casos de interface foram repetidos após corrigir a expectativa da fixture de mapper incompatível, agora 0x22. A regressão isolada de áudio passou nos seis cenários, com velocidade de 99,30% a 100,24% e zero frames ausentes ou descartados nas janelas estáveis. Veja [dados e escopo](docs/performance-audio-mobile-results.json). A cobertura automatizada não representa aceite do Motorola.
-
-## Testar o primeiro grupo de milestones
-
-1. Execute `npm.cmd run dev` e abra o endereço exibido.
-2. Troque entre DMG, Pocket e Light e confira o layout no desktop e celular.
-3. Clique em **Experimentar cartucho de diagnóstico**. O header deve mostrar POCKET TEST, ROM Only, 32 KiB de ROM e 0 KiB de RAM.
-4. Abra **Inspecionar CPU**. Uma instrução muda PC de 0100 para 0150.
-5. Clique em **Até 1000 instruções**. A ROM própria termina em HALT, com PC 017D e saída serial OK.
-6. Clique em **Reiniciar CPU**. PC volta a 0100, ciclos a zero e a serial é limpa.
-7. Opcionalmente, selecione ou arraste um arquivo `.gb` próprio. Cartuchos truncados geram erro e controladores futuros são identificados.
-
-A CPU implementa todas as instruções base válidas e as 256 instruções CB, com testes de aritmética, flags, saltos, pilha, ordem de acessos e snapshots. Os opcodes inválidos geram diagnóstico em vez de serem tratados como NOP.
-
-Os registradores da CPU usam inicialização pós boot DMG, incluindo F dependente do checksum do header. A inicialização completa de todas as revisões de hardware permanece fora da validação atual. STOP suspende o clock, redefine o divisor e retoma após uma borda de entrada do joypad.
-
-A M03 corrige `EI;HALT` com interrupção pendente e a resseleção de interrupção quando a pilha escreve sobre IE. Os testes externos não representam aprovação de todos os comportamentos de todas as revisões do hardware.
-
-Os grupos M00 a M02, M03 a M05 e M06 a M08 foram aprovados pelo proprietário. Os roteiros de teste [M03 a M05](docs/testing-m03-m05.md) e [M06 a M08](docs/testing-m06-m08.md) permanecem como referências das entregas anteriores. M09 a M11 foram revisadas, com desktop aprovado e MB01 identificado no mobile. O grupo M12 a M14 está em andamento, autorizado em 17/10/2026.
-
-## Vídeo e reprodução
-
-Clique em **Explorar jardim** para abrir POCKET GARDEN. O cenário de quatro tons permanece parado. Um personagem original de 8 por 16 pixels pode passear pelo jardim; a legenda inferior usa a janela do Game Boy. Tudo é produzido por instruções SM83, tiles, mapas e OAM reais.
-
-| Entrada                        | Efeito no jardim                                         |
-| ------------------------------ | -------------------------------------------------------- |
-| Setas ou direcional do console | Move o personagem, inclusive em diagonal                 |
-| Z ou botão A                   | Alterna a aparência uma vez por pressionamento           |
-| X ou botão B                   | Volta à posição inicial                                  |
-| Enter e Shift                  | Enviam Start e Select; o jardim não atribui ações a eles |
-
-As teclas da tabela são o mapa padrão e podem ser alteradas em **Controles e preferências**. O direcional e o analógico esquerdo de um controle padrão enviam as mesmas ações.
-
-Os botões do console funcionam por toque ou ponteiro. **Pausar** congela a máquina; **Iniciar** retoma; **Reiniciar** volta ao começo em pausa. Trocar a paleta altera a tela sem reiniciar o cartucho. Abrir a ajuda também pausa a reprodução.
-
-A execução pausa quando a aba fica oculta. O botão Iniciar retoma sem tentar recuperar todo o tempo acumulado. O painel de CPU e o Canvas apresentam dados da mesma máquina no Worker; comandos manuais exigem pausa.
-
-A PPU usa renderização por scanline e não modela pixel FIFO, alterações de registradores dentro do modo 3 ou as peculiaridades de janela em WX 0 e 166. dmg-acid2 coincide com os 23.040 pixels oficiais, mas isso não comprova precisão completa do PPU. A escala considera pixels físicos e a densidade da tela, com suavização desabilitada.
-
-## Planejamento
-
-O [plano original](plano-emulador-gameboy.md) preserva a proposta inicial. O [roteiro de milestones](docs/milestones.md) registra o plano aprovado e o estado real.
+O [plano original](plano-emulador-gameboy.md) permanece preservado. Os roteiros [M00 a M02](docs/testing-m00-m02.md), [M03 a M05](docs/testing-m03-m05.md), [M06 a M08](docs/testing-m06-m08.md) e [M09 a M11](docs/testing-m09-m11.md) registram os grupos anteriores. O teste atual está em [M12 a M14](docs/testing-m12-m14.md).
 
 ## Conteúdo de terceiros
 
-Não há jogo comercial ou boot ROM distribuídos. Tobu Tobu Girl e 2048 são homebrews com redistribuição autorizada; os binários originais e seus créditos acompanham o site. Consulte [origem, controles e licenças dos jogos](docs/demo-games.md).
+Não há jogo comercial ou boot ROM original distribuído. Tobu Tobu Girl e 2048 são homebrews com redistribuição autorizada, binários originais e créditos no site. [Jogos e licenças](docs/demo-games.md).
 
-POCKET TEST e POCKET GARDEN, incluindo cenário, personagem e letras, são criações próprias. As ROMs externas ficam restritas aos testes. As fontes DM Sans e Space Mono são fornecidas localmente pelos pacotes Fontsource. Consulte [créditos e licenças](docs/third-party.md).
+POCKET TEST e POCKET GARDEN, incluindo cenário, personagem e letras, são criações próprias. As ROMs externas ficam restritas aos testes. DM Sans e Space Mono são fornecidas localmente por Fontsource. [Créditos de terceiros](docs/third-party.md).

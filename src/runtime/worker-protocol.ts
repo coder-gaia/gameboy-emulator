@@ -26,6 +26,15 @@ export interface RewindStatus {
   maxBytes: number
 }
 
+export interface EmulatorVideoFrame {
+  epoch: number
+  slot: number
+  token: number
+  frameId: number
+  pcmFrame: number
+  framebuffer: Uint8Array
+}
+
 export interface EmulatorSnapshot {
   framebuffer: Uint8Array
   frameId: number
@@ -37,6 +46,7 @@ export interface EmulatorSnapshot {
   batteryRtc?: CartridgeRtcState | null
   playing: boolean
   audioEpoch: number
+  audioDriven: boolean
   romId: string
   rewind: RewindStatus
 }
@@ -49,6 +59,7 @@ export type EmulatorCommand =
   | { type: 'step'; count: number }
   | { type: 'inspect' }
   | { type: 'inspect-hardware'; memoryStart: number }
+  | { type: 'recycle-video'; slot: number; token: number; buffer: ArrayBuffer }
   | { type: 'import-battery'; bytes: Uint8Array }
   | {
       type: 'import-battery-state'
@@ -56,6 +67,7 @@ export type EmulatorCommand =
       rtc: CartridgeRtcState
       elapsedSeconds: number
     }
+  // epoch é o piso solicitado; a resposta informa a geração alocada pelo Worker.
   | { type: 'audio-port'; port: MessagePort; sampleRate: number; epoch: number }
   | { type: 'audio-disable' }
   | { type: 'capture-state' }
@@ -77,4 +89,5 @@ export type EmulatorMessage =
       error?: string
     } & EmulatorReplyPayload)
   | { type: 'frame'; snapshot: EmulatorSnapshot }
+  | { type: 'video-frame'; frame: EmulatorVideoFrame }
   | { type: 'error'; error: string }

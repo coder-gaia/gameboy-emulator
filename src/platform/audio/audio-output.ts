@@ -1,6 +1,11 @@
 import workletUrl from './pcm-worklet.ts?worker&url'
-import { AUDIO_PROCESSOR_NAME, isAudioEpoch } from './protocol'
-import type { AudioControlMessage, AudioStatsMessage, AudioStreamDiagnostics } from './protocol'
+import { AUDIO_MAX_FRAMES, AUDIO_PROCESSOR_NAME, isAudioEpoch } from './protocol'
+import type {
+  AudioControlMessage,
+  AudioPlaybackMessage,
+  AudioStatsMessage,
+  AudioStreamDiagnostics,
+} from './protocol'
 
 export interface AudioDiagnostics extends AudioStreamDiagnostics {
   readonly sampleRate: number
@@ -58,6 +63,12 @@ export class AudioOutput {
   private failure: string | null = null
   private stats = emptyStats()
   private contextTransitions = 0
+  private playbackEpoch: number | null = null
+  private playbackFrame = 0
+  private availablePlaybackFrame = 0
+  private playbackContextTime = 0
+  private playbackPerformanceTime: number | null = null
+  private playbackAdvancing = false
 
   constructor(private readonly options: AudioOutputOptions = {}) {}
 
@@ -83,6 +94,7 @@ export class AudioOutput {
     this.active = false
     this.epoch = epoch
     this.stats = emptyStats(epoch)
+    this.clearPlayback()
     this.updateGain()
     this.post({ type: 'connect', port, epoch }, [port])
   }
@@ -91,10 +103,12 @@ export class AudioOutput {
     const context = this.requireReady()
     this.validateEpoch(epoch)
     if (!this.connected) throw new Error('Conecte o emulador antes de ativar o áudio.')
+    if (this.active && this.epoch === epoch) return
     this.epoch = epoch
     this.active = true
     this.failure = null
     this.stats = emptyStats(epoch, true)
+    this.clearPlayback()
     this.post({ type: 'reset', epoch, active: true })
     this.updateGain()
     this.contextTransitions += 1
@@ -103,6 +117,7 @@ export class AudioOutput {
     } catch (cause) {
       if (!this.disposed && epoch === this.epoch) {
         this.active = false
+        this.clearPlayback()
         this.updateGain()
         throw new Error('Não foi possível ativar o áudio. Tente novamente pelo botão de som.', {
           cause,
@@ -118,6 +133,7 @@ export class AudioOutput {
     this.epoch = epoch
     this.active = false
     this.stats = emptyStats(epoch)
+    this.clearPlayback()
     this.updateGain()
     this.post({ type: 'reset', epoch, active: false })
     const context = this.context
@@ -142,6 +158,34 @@ export class AudioOutput {
   setMuted(muted: boolean): void {
     this.muted = muted
     this.updateGain()
+  }
+
+  /** Posição PCM estimada na saída, limitada às amostras já recebidas. */
+  getPlaybackFrame(epoch: number): number | null {
+    const context = this.context
+    if (
+      this.disposed ||
+      !this.active ||
+      !this.connected ||
+      !this.node ||
+      !context ||
+      context.state !== 'running' ||
+      epoch !== this.epoch ||
+      epoch !== this.playbackEpoch ||
+      !Number.isFinite(context.currentTime) ||
+      context.currentTime < 0
+    )
+      return null
+    if (!this.playbackAdvancing) return this.playbackFrame
+    const now = this.playbackPerformanceTime === null ? null : performance.now()
+    const elapsed =
+      now !== null && now >= 0 && Number.isFinite(now) && this.playbackPerformanceTime !== null
+        ? (now - this.playbackPerformanceTime) / 1000
+        : Math.max(0, context.currentTime - this.playbackContextTime)
+    return Math.max(
+      0,
+      Math.min(this.availablePlaybackFrame, this.playbackFrame + elapsed * context.sampleRate),
+    )
   }
 
   getDiagnostics(): AudioDiagnostics {
@@ -173,6 +217,7 @@ export class AudioOutput {
     this.active = false
     this.connected = false
     this.stats = emptyStats(this.epoch)
+    this.clearPlayback()
     this.updateGain()
     this.post({ type: 'dispose' })
     this.node?.disconnect()
@@ -213,9 +258,11 @@ export class AudioOutput {
         new AudioWorkletNode(context, AUDIO_PROCESSOR_NAME, nodeOptions)
       this.node = node
       this.gain = context.createGain()
-      node.port.onmessage = (event: MessageEvent<AudioStatsMessage>) => {
-        if (event.data?.type === 'stats' && event.data.diagnostics.epoch === this.epoch)
-          this.stats = event.data.diagnostics
+      node.port.onmessage = (event: MessageEvent<AudioStatsMessage | AudioPlaybackMessage>) => {
+        const message = event.data
+        if (message?.type === 'stats' && message.diagnostics.epoch === this.epoch)
+          this.stats = message.diagnostics
+        else if (message?.type === 'playback') this.receivePlayback(message)
       }
       node.onprocessorerror = () => {
         const error = new Error(
@@ -223,6 +270,7 @@ export class AudioOutput {
         )
         this.failure = error.message
         this.active = false
+        this.clearPlayback()
         this.updateGain()
         this.options.onError?.(error)
       }
@@ -244,6 +292,7 @@ export class AudioOutput {
         this.failure = error.message
         this.active = false
         this.stats = emptyStats(this.epoch)
+        this.clearPlayback()
         this.post({ type: 'reset', epoch: this.epoch, active: false })
         this.updateGain()
         this.options.onError?.(error)
@@ -256,6 +305,7 @@ export class AudioOutput {
       this.gain?.disconnect()
       this.node = null
       this.gain = null
+      this.clearPlayback()
       if (this.context === context) this.context = null
       if (context) context.onstatechange = null
       if (context && context.state !== 'closed') await context.close().catch(() => {})
@@ -274,6 +324,64 @@ export class AudioOutput {
     if (this.disposed || !this.context || !this.node)
       throw new Error('Prepare a saída de áudio antes de usá-la.')
     return this.context
+  }
+
+  private receivePlayback(message: AudioPlaybackMessage): void {
+    if (
+      !this.active ||
+      message.epoch !== this.epoch ||
+      !Number.isSafeInteger(message.frame) ||
+      message.frame < 0 ||
+      !Number.isSafeInteger(message.availableFrame) ||
+      message.availableFrame < message.frame ||
+      message.availableFrame - message.frame > AUDIO_MAX_FRAMES ||
+      !Number.isFinite(message.contextTime) ||
+      message.contextTime < 0 ||
+      typeof message.advancing !== 'boolean' ||
+      (this.playbackEpoch === message.epoch &&
+        (message.frame < this.playbackFrame ||
+          message.availableFrame < this.availablePlaybackFrame ||
+          message.contextTime < this.playbackContextTime))
+    )
+      return
+    this.playbackEpoch = message.epoch
+    this.playbackFrame = message.frame
+    this.availablePlaybackFrame = message.availableFrame
+    this.playbackContextTime = message.contextTime
+    this.playbackAdvancing = message.advancing
+    this.correlatePlaybackClock()
+  }
+
+  private correlatePlaybackClock(): void {
+    this.playbackPerformanceTime = null
+    const context = this.context
+    if (!context || typeof context.getOutputTimestamp !== 'function') return
+    try {
+      const timestamp = context.getOutputTimestamp()
+      if (
+        typeof timestamp.contextTime !== 'number' ||
+        !Number.isFinite(timestamp.contextTime) ||
+        timestamp.contextTime <= 0 ||
+        typeof timestamp.performanceTime !== 'number' ||
+        !Number.isFinite(timestamp.performanceTime) ||
+        timestamp.performanceTime <= 0
+      )
+        return
+      const anchor =
+        timestamp.performanceTime + (this.playbackContextTime - timestamp.contextTime) * 1000
+      if (Number.isFinite(anchor)) this.playbackPerformanceTime = anchor
+    } catch {
+      // A ausência de uma estimativa de saída conserva o relógio do grafo.
+    }
+  }
+
+  private clearPlayback(): void {
+    this.playbackEpoch = null
+    this.playbackFrame = 0
+    this.availablePlaybackFrame = 0
+    this.playbackContextTime = 0
+    this.playbackPerformanceTime = null
+    this.playbackAdvancing = false
   }
 
   private validateEpoch(epoch: number): void {

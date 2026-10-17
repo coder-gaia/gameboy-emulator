@@ -29,6 +29,16 @@ for (const game of GAMES) {
       .poll(async () => (await readProductionProbe(page)).latestAudio?.renderedFrames ?? 0)
       .toBeGreaterThan(8192)
 
+    // A abertura de Tobu desliga o LCD durante as trocas de logos e de cena.
+    // Aguarda o avanço da abertura antes do aquecimento; mudanças de LCD ainda são contadas.
+    if (game.name === 'Tobu Tobu Girl') {
+      await expect
+        .poll(async () => (await readProductionProbe(page)).workers.at(-1)?.frameId ?? 0, {
+          timeout: 25_000,
+        })
+        .toBeGreaterThan(900)
+    }
+
     // O priming e a adaptação inicial ficam fora da janela sustentada.
     await page.waitForTimeout(3000)
     const before = await readProductionProbe(page)
@@ -48,6 +58,8 @@ for (const game of GAMES) {
         'Chromium no computador com atraso controlado; não homologa o Motorola Edge 40 Neo.',
       seconds,
       speedPercent: speed * 100,
+      canvasFramesPerSecond: (after.canvasDraws - before.canvasDraws) / seconds,
+      capturedVideoFrames: after.videoFrames - before.videoFrames,
       sampleRate: after.contexts.at(-1)!.sampleRate,
       renderedFrames: lastAudio.renderedFrames - firstAudio.renderedFrames,
       underrunFrames: lastAudio.underrunFrames - firstAudio.underrunFrames,
@@ -69,6 +81,9 @@ for (const game of GAMES) {
     expect(result.underrunFrames).toBe(0)
     expect(result.droppedFrames).toBe(0)
     expect(result.renderedFrames).toBeGreaterThan(result.sampleRate * 11)
+    expect(result.canvasFramesPerSecond).toBeGreaterThanOrEqual(55)
+    expect(result.canvasFramesPerSecond).toBeLessThanOrEqual(61)
+    expect(result.capturedVideoFrames).toBeGreaterThan(650)
     expect(lastAudio.queuedFrames).toBeLessThanOrEqual(16_384)
     expect(lastAudio.pendingFrames).toBeLessThanOrEqual(16_256)
     expect(lastWorker.playing).toBe(true)

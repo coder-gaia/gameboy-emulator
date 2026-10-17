@@ -2,6 +2,16 @@
 
 O Pocket Lab executa a máquina em um Web Worker e apresenta vídeo e controles na página. O AudioWorklet solicita PCM diretamente ao Worker quando o som está ativo. Sem som, a execução usa tempo monotônico com orçamento limitado. A aplicação não depende de um processo de servidor para emular o console.
 
+## Áudio e vídeo na M14
+
+A regressão isolada atual usa `npm.cmd run test:audio-flow` sobre um build congelado, com um único worker de testes e atraso nominal de 10 ms em cada sentido do transporte PCM. Após o aquecimento, mede janelas de 12 segundos nos três cartuchos, em desktop e perfil móvel emulado. Tobu aguarda mais de 900 VBlanks antes do aquecimento para separar as longas transições iniciais de LCD; ainda inclui a chegada ao título.
+
+Os seis casos finais passaram: velocidade de 100,03% a 100,27%, entre 58,30 e 58,89 chamadas de desenho por segundo, zero frames PCM ausentes e zero descartados. Cada janela recebeu entre 718 e 721 imagens capturadas. Os limites preservados exigem velocidade de 98% a 102%, pelo menos 55 desenhos/s, mais de 650 capturas e continuidade do PCM. O teste também confere pausa, retomada e geração nova.
+
+A primeira implementação de captura intermediária reprovou a frequência de desenho, apesar de CPU e PCM corretos. A observação dos relógios identificou currentTime avançando em saltos. A correção correlaciona o cursor com getOutputTimestamp quando disponível. O [relatório final com hashes e dados completos](performance-video-results.json) registra a execução aprovada, o diagnóstico anterior e os limites do comparativo com M12. Os FPS antigos por tamanho de lote são inferidos; a coleta M12 não instrumentava Canvas.
+
+Esses números pertencem ao Chromium no computador. Não medem o Motorola físico, o FPS do monitor ou equivalência acústica. A reserva PCM e a saída de áudio ainda introduzem latência. O [roteiro manual](testing-m12-m14.md) mantém o aceite do aparelho separado da regressão automatizada.
+
 ## Reproduzir as medições
 
 Com as dependências instaladas:
@@ -19,7 +29,7 @@ O benchmark de navegador usa o build estático servido com os mesmos cabeçalhos
 
 O projeto `desktop` usa Chromium no computador de teste. O projeto `mobile` usa viewport e entrada do Pixel 7, com redução de CPU 4x pelo CDP na página. Isso é uma simulação relativa ao computador, não uma medição em um Pixel 7 físico. O alcance da redução sobre o Worker não é presumido. A rede é local, sem representar latência, compressão ou distribuição geográfica do CDN. [Limites da simulação](https://developer.chrome.com/docs/devtools/performance/reference), [comando de redução de CPU](https://chromedevtools.github.io/devtools-protocol/tot/Emulation/#method-setCPUThrottlingRate).
 
-**Retorno do aparelho real:** o proprietário confirmou desktop fluido e, no Motorola Edge 40 Neo com Chrome, lentidão somente depois de ativar o som. O aceite mobile está pendente. Um experimento posterior confirmou que o throttle da página não desacelera o DedicatedWorker neste Chromium; outro reproduziu velocidade próxima de 33% e falta de PCM ao atrasar a entrega de mensagens de áudio, mantendo velocidade normal sem áudio. Isso sustenta a investigação da cadência, sem confirmar a causa específica no telefone. Os testes funcionais existentes também não exigem velocidade mínima ou ausência de underruns. Consulte [diagnóstico MB01](mobile-audio-investigation.md) e [resultados controlados](mobile-audio-diagnosis-results.json). Os números históricos abaixo descrevem o ambiente original e não constituem homologação nesse aparelho.
+**Retorno do aparelho real:** o proprietário confirmou desktop fluido e, no Motorola Edge 40 Neo com Chrome, lentidão somente depois de ativar o som. O aceite mobile está pendente. Um experimento posterior confirmou que o throttle da página não desacelera o DedicatedWorker neste Chromium; outro reproduziu velocidade próxima de 33% e falta de PCM ao atrasar a entrega de mensagens de áudio, mantendo velocidade normal sem áudio. Isso sustenta a investigação da cadência, sem confirmar a causa específica no telefone. Os testes funcionais originais não exigiam velocidade mínima ou ausência de underruns; a regressão isolada M12 e M14 acrescenta esses limites. Consulte [diagnóstico MB01](mobile-audio-investigation.md) e [resultados controlados](mobile-audio-diagnosis-results.json). Os números históricos abaixo descrevem o ambiente original e não constituem homologação nesse aparelho.
 
 Os relatórios de navegador são anexados aos resultados em `.work/benchmark-browser`. Eles registram ambiente, perfil, T-cycles, tempo, quadros observados e estatísticas PCM. Execute benchmarks sem outras tarefas intensivas de CPU; não use o tempo de execução de uma suíte concorrente como resultado de desempenho.
 

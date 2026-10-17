@@ -240,6 +240,7 @@ describe('abastecimento PCM com atraso e callbacks em rajadas', () => {
       },
     )
     vi.stubGlobal('sampleRate', 48_000)
+    vi.stubGlobal('currentTime', 0)
     vi.stubGlobal('registerProcessor', (_name: string, registered: new () => ProcessorStub) => {
       Processor = registered
     })
