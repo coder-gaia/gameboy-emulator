@@ -24,6 +24,7 @@
 - O proprietário escolheu MIT para o código próprio, com autoria de Alexandre Gaia no LICENSE e README. Preservar licenças e créditos separados dos componentes de terceiros.
 - Não publicar em rede social nem criar release estável antes do aceite do grupo. Rascunhos históricos de divulgação permanecem no Git.
 - Preservar o fundo pastel/off-white confortável e o contraste e aparência do console, sem aplicar opacidade ou sobreposição ao Game Boy.
+- Big2Small e modo escuro ficam para a próxima versão. Não implementar nesta rodada de ajustes do README. O modo escuro terá toggle claro/escuro, com posição a discutir e tons escuros que harmonizem com o console, evitando preto intenso.
 
 ## Escrita
 
