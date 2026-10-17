@@ -8,7 +8,7 @@ Um Game Boy DMG no navegador, escrito em TypeScript. Jogue, volte alguns segundo
 
 ![Console Pocket Lab com o jardim original](docs/media/pocket-lab-desktop.png)
 
-Versão **1.0.0-rc.2**, candidata a lançamento. Esta revisão corrige a continuidade do vídeo durante reposição de áudio e amplia a margem da reserva PCM para entregas demoradas. O aceite no Motorola Edge 40 Neo com Chrome continua pendente; testes com viewport móvel e relógios simulados no computador não substituem o aparelho real.
+Versão **1.0.0-rc.3**, candidata a lançamento. Esta revisão separa o avanço do jogo da reprodução sonora para reduzir a demora entre toque e imagem. A rc.2 melhorou a continuidade, mas o proprietário ainda reportou atraso nos controles do Motorola Edge 40 Neo com Chrome. O aceite no aparelho real continua pendente; testes no computador não o substituem.
 
 ## Experimente
 
@@ -42,11 +42,11 @@ flowchart LR
   Worker --> Core[CPU, bus, PPU e APU]
   Worker <-->|PCM e demanda| Audio[AudioWorklet]
   Worker -->|quadros transferíveis| Canvas[Canvas 160 x 144]
-  Audio -->|cursor PCM| Canvas
+  Audio -->|cursor PCM| Metrics[Diagnóstico local]
   UI --> Storage[IndexedDB e preferências locais]
 ```
 
-Sem áudio, um relógio monotônico controla o orçamento de T-cycles. Com áudio, o Worklet solicita PCM na taxa real do dispositivo. A reserva se adapta ao atraso do transporte; quadros intermediários usam buffers limitados e são apresentados por requestAnimationFrame conforme o PCM avança. A solução usa MessageChannel e transferências, sem SharedArrayBuffer ou exigência de COOP/COEP.
+Um relógio monotônico controla o orçamento de T-cycles em passos curtos, com ou sem som. O Worklet consome PCM já produzido, mantido em filas limitadas, e a tela é atualizada ao receber os quadros atuais do jogo. O cursor audível é consultado apenas para diagnóstico. A reserva e a saída sonora podem atrasar o áudio em relação à imagem; os controles não aguardam o alto-falante. MessageChannel e transferências dispensam SharedArrayBuffer e COOP/COEP.
 
 [Decisões de arquitetura](docs/architecture.md) reúne os contratos de execução, áudio, vídeo, persistência e inspeção.
 
@@ -62,7 +62,7 @@ Sem áudio, um relógio monotônico controla o orçamento de T-cycles. Com áudi
 
 O tamanho de ROM deve ser potência de dois. A convenção homebrew de 2 KiB de RAM é aceita com aviso. MBC1M, MBC30, jogos exclusivos de Game Boy Color e link cable ficam fora do escopo. [Formatos de cartucho e RTC](docs/cartridges.md).
 
-A PPU usa scanlines, sem pixel FIFO, mudanças dentro do modo 3 ou peculiaridades de WX 0 e 166. A inicialização pós boot não reproduz todas as revisões físicas. Os testes `dmg_sound` verificam comportamento observável pela CPU e não comprovam equivalência acústica integral. A reserva de áudio pode introduzir latência; navegador, carga e saída física também influenciam a experiência. Gamepad e leitores de tela físicos ainda precisam de revisão manual.
+A PPU usa scanlines, sem pixel FIFO, mudanças dentro do modo 3 ou peculiaridades de WX 0 e 166. A inicialização pós boot não reproduz todas as revisões físicas. Os testes `dmg_sound` verificam comportamento observável pela CPU e não comprovam equivalência acústica integral. A reserva introduz latência sonora; navegador, carga e saída física também influenciam a experiência. Não há promessa de sincronismo acústico exato. Gamepad e leitores de tela físicos ainda precisam de revisão manual.
 
 ## Executar e validar
 

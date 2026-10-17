@@ -46,9 +46,19 @@ export interface EmulatorSnapshot {
   batteryRtc?: CartridgeRtcState | null
   playing: boolean
   audioEpoch: number
+  /** Indica transporte PCM ativo, sem transferir a ele a cadência da CPU. */
   audioDriven: boolean
+  audioProducer?: AudioProducerDiagnostics | null
   romId: string
   rewind: RewindStatus
+}
+
+export interface AudioProducerDiagnostics {
+  queuedFrames: number
+  producedFrames: number
+  sentFrames: number
+  droppedFrames: number
+  pendingFrames: number
 }
 
 export type EmulatorCommand =

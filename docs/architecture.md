@@ -10,18 +10,22 @@ O V1 usa um repositório e um pacote npm, sem monorepo. React, Vite e CSS Module
 
 A máquina roda em Web Worker para liberar a interface. React envia comandos e exibe cópias dos dados. Arrays tipados, buffers reutilizados e filas limitadas controlam o uso de memória; evitar alocações no caminho quente continua sendo uma regra de implementação.
 
-| Decisão                                      | Motivo e consequência                                                                                                          |
-| -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| Sem áudio, orçamento por relógio monotônico  | Mantém o avanço da máquina independente da renderização React.                                                                 |
-| Com áudio, AudioWorklet solicita PCM estéreo | A taxa real da saída controla a cadência, evitando dois relógios concorrentes.                                                 |
-| MessageChannel e buffers transferíveis       | Dispensa SharedArrayBuffer e COOP/COEP. Worker e Worklet usam filas limitadas.                                                 |
-| Reserva PCM adaptativa                       | Repõe o déficit e prevê consumo durante o transporte. Protege a música sob jitter, com custo de latência de entrada.           |
-| Captura no VBlank e em mudanças do LCD       | Preserva imagens intermediárias mesmo quando um lote de áudio executa vários quadros.                                          |
-| Apresentação pelo cursor PCM                 | O requestAnimationFrame mostra a imagem mais recente cujo instante foi alcançado pelo áudio. Imagens futuras aguardam na fila. |
+| Decisão                                | Motivo e consequência                                                                                   |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| Relógio monotônico com e sem áudio     | O Worker usa passos de aproximadamente 8 ms; pedidos PCM não executam T-cycles adicionais.              |
+| AudioWorklet consome PCM já produzido  | O produtor responde parcialmente ou aguarda o próximo tick, sem bloquear entrada ou antecipar o jogo.   |
+| MessageChannel e buffers transferíveis | Dispensa SharedArrayBuffer e COOP/COEP. Worker e Worklet usam filas limitadas.                          |
+| Reserva PCM adaptativa                 | Protege a música sob jitter; a latência fica no som, sem reter a apresentação visual.                   |
+| Captura no VBlank e em mudanças do LCD | Mantém as imagens e transições do núcleo observáveis sem alterar seu comportamento.                     |
+| Apresentação interativa                | O Canvas recebe cada quadro atual assim que ele chega; o RAF consulta o cursor audível sem reter vídeo. |
 
-O transporte PCM admite uma demanda pendente e tem capacidade de 32.768 frames estéreo, em uma arena fixa de 256 KiB. A reserva começa em aproximadamente 64 ms e pode adaptar-se até 384 ms, respeitando a capacidade física. Cada pedido continua limitado a 16.256 frames, para preservar a fila de 16.384 frames da APU. O espaço adicional permite manter reserva e resposta em trânsito sem disputar o mesmo crédito. O pool de vídeo possui 64 buffers indexados de 160 por 144 pixels, totalizando 1.440 KiB, incluindo transferências em trânsito. Essa margem cobre a reserva PCM e imagens que ainda aguardam uma saída atrasada. Esgotar o pool descarta uma imagem, sem interromper a produção de PCM. Slot e token validam a devolução dos buffers.
+O produtor e o consumidor possuem, cada um, uma arena fixa de 32.768 frames estéreo, ou 256 KiB. O produtor drena a APU após cada orçamento curto e guarda PCM já emulado. Uma demanda pendente devolve até 16.256 frames disponíveis; sem amostras, aguarda o próximo tick. Cada resposta pode ser parcial, sem preenchimento artificial com silêncio. Overflow no produtor descarta as amostras mais antigas e contabiliza a perda no diagnóstico.
 
-Quando disponível, `getOutputTimestamp()` correlaciona os relógios de áudio e apresentação. O cliente usa `performance.now()` para consultar um histórico limitado de trechos de avanço e silêncio no instante estimado da saída. Assim, esvaziamento e reposição preservam o movimento que ainda está a caminho do alto-falante. A última correlação válida sobrevive a falhas temporárias. Timestamps iniciais zerados aguardam até um segundo; o fallback usa `AudioContext.currentTime` e preserva a escolha nessa geração após avançar. O cursor permanece monotônico por geração e limitado ao PCM disponível. A estimativa não comprova sincronismo acústico exato, especialmente com Bluetooth. Não se somam arbitrariamente `baseLatency` e `outputLatency`.
+A reserva do consumidor começa em aproximadamente 64 ms e pode adaptar-se até aproximadamente 384 ms, respeitando sua capacidade física. Ela cobre jitter e consumo durante o transporte sem obrigar a máquina a calcular o futuro. O pool de vídeo possui 64 buffers indexados de 160 por 144 pixels, totalizando 1.440 KiB, incluindo transferências em trânsito. Ele absorve atrasos da interface; as imagens já recebidas não aguardam o alto-falante. Esgotar o pool descarta uma imagem sem interromper a produção PCM. Slot e token validam a devolução.
+
+Quando disponível, `getOutputTimestamp()` estima o cursor audível para diagnóstico, sem comandar a tela. `performance.now()` consulta um histórico limitado de trechos de avanço e silêncio no instante estimado da saída. A última correlação válida sobrevive a falhas temporárias. Timestamps iniciais zerados aguardam até um segundo apenas nessa estimativa; o fallback usa `AudioContext.currentTime` e preserva a escolha nessa geração após avançar. O cursor permanece monotônico por geração e limitado ao PCM disponível. Não se somam arbitrariamente `baseLatency` e `outputLatency`.
+
+A saída física e a reserva podem fazer o som chegar depois da imagem. A rc.2 também atrasava a imagem para acompanhar o áudio e antecipava o estado da máquina em lotes; o teste físico mostrou resposta inviável ao toque. A decisão da rc.3 prioriza o instante interativo do jogo e mantém o cursor de saída como informação. Não há promessa de sincronismo acústico exato nem de latência física uniforme entre dispositivos.
 
 Gerações monotônicas de áudio invalidam mensagens antigas, inclusive ao reutilizar uma saída para outro cartucho. Conexão e escolha da geração ocorrem atomicamente no Worker. Pausa, carregamento de estado e rewind descartam imagens futuras e PCM antigo. Silenciar muda o ganho e mantém o caminho de áudio ativo. Ativação exige gesto do usuário e AudioWorklet em HTTPS ou localhost.
 
@@ -37,11 +41,11 @@ O RTC avança por T-cycles no núcleo. Tempo offline é calculado pelo adaptador
 
 ## Inspeção, controles e diagnóstico
 
-A inspeção lê CPU, desassemblador, memória, tiles, OAM e registradores sem avançar a máquina ou consumir serial e PCM. Consultas são limitadas e só ocorrem com o painel aberto e a página visível. Durante reprodução com áudio, o núcleo pode estar adiantado em relação à tela pela reserva PCM; pause para comparar ambos no mesmo instante.
+A inspeção lê CPU, desassemblador, memória, tiles, OAM e registradores sem avançar a máquina ou consumir serial e PCM. Consultas são limitadas e só ocorrem com o painel aberto e a página visível. Tela e inspeção chegam por mensagens independentes; pause para comparar ambas no mesmo instante.
 
 Teclado, toque e gamepad mantêm fontes de entrada independentes. Pausa, perda de foco e página oculta liberam entradas; a aba oculta pausa o jogo. Foco visível, contraste, movimento reduzido e alvos de toque fazem parte do contrato da interface.
 
-O diagnóstico separa T-cycles executados de imagens realmente desenhadas e mede janelas de 60 segundos. Registra também imagens recebidas e pendentes, cursor PCM, referência de relógio, correlação de saída e intervalos entre desenhos; pausas e novas gerações reiniciam a cadência observada. O JSON exportado contém métricas, sem ROM, memória ou progresso. Mudanças de geração, pausa e rewind interrompem janelas incompatíveis. Consulte [validação técnica](test-roms.md).
+O diagnóstico separa T-cycles executados de imagens realmente desenhadas e mede janelas de 60 segundos. Registra filas e perdas do produtor e consumidor PCM, imagens recebidas e pendentes, cursor audível, referência de relógio, correlação de saída e intervalos entre desenhos. Essas amostras são periódicas e não comprovam latência entre toque e pixel. Pausas e novas gerações reiniciam a cadência observada; pausa e rewind interrompem janelas incompatíveis. O JSON contém métricas, sem ROM, memória ou progresso. Consulte [validação técnica](test-roms.md).
 
 ## Limites e publicação
 

@@ -7,7 +7,7 @@ Produção: **[gameboy-emulator-aox.pages.dev](https://gameboy-emulator-aox.page
 1. Entre no [painel Cloudflare](https://dash.cloudflare.com/), abra **Workers & Pages** e selecione o projeto desse domínio.
 2. Em **Deployments**, abra a publicação de **Production** mais recente. Confira a branch `main`, o commit e o resultado do build.
 3. Confira também o workflow **Quality** do mesmo commit no GitHub. A pipeline da Cloudflare é independente dos checks.
-4. Abra o site, recarregue a aba e confira a versão em **Sobre o projeto**. A candidata desta revisão é **1.0.0-rc.2**.
+4. Abra o site, recarregue a aba e confira a versão em **Sobre o projeto**. A candidata desta revisão é **1.0.0-rc.3**.
 
 Um push em `main` dispara o deploy pela integração existente. Não precisa criar outro projeto nem enviar `dist` manualmente. Se o build falhar, consulte o log da etapa; a produção permanece na última publicação bem-sucedida. [Integração Git oficial](https://developers.cloudflare.com/pages/get-started/git-integration/).
 

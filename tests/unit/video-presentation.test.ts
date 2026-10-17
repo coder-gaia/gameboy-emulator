@@ -23,7 +23,46 @@ function setup() {
   return { queue, recycled }
 }
 
-describe('apresentação guiada pelo PCM consumido', () => {
+describe('fila de apresentação limitada por geração', () => {
+  it('entrega o último quadro em tempo real sem aguardar a posição PCM', () => {
+    const { queue, recycled } = setup()
+    const first = frame(1, 800)
+    const second = frame(2, 1600)
+    const latest = frame(3, 1_000_000)
+    queue.push(first)
+    queue.push(second)
+    queue.push(latest)
+    expect(queue.takeLatest()).toBe(latest)
+    expect(queue.size).toBe(0)
+    expect(recycled).toEqual([first, second])
+    expect(queue.takeLatest()).toBeNull()
+    expect(recycled).toEqual([first, second])
+  })
+
+  it('o último estado do LCD prevalece mesmo com frameId e PCM iguais', () => {
+    const { queue, recycled } = setup()
+    const first = frame(1, 800)
+    const blank = { ...frame(2, 800), frameId: first.frameId }
+    queue.push(first)
+    queue.push(blank)
+    expect(queue.takeLatest()).toBe(blank)
+    expect(recycled).toEqual([first])
+  })
+
+  it('último quadro ainda exige a geração atual e devolve todas as referências antigas', () => {
+    const { queue, recycled } = setup()
+    const old = frame(1, 800)
+    queue.push(old)
+    queue.reset(2)
+    const delayed = frame(2, 1600)
+    queue.push(delayed)
+    const fresh = frame(3, 100, 2)
+    queue.push(fresh)
+    expect(queue.takeLatest()).toBe(fresh)
+    expect(recycled).toEqual([old, delayed])
+    expect(queue.takeLatest()).toBeNull()
+  })
+
   it('preserva imagens futuras até o instante correspondente, incluindo o limite exato', () => {
     const { queue, recycled } = setup()
     const first = frame(1, 800)
@@ -89,7 +128,7 @@ describe('apresentação guiada pelo PCM consumido', () => {
       expect(queue.size).toBeLessThanOrEqual(VIDEO_PRESENTATION_CAPACITY)
     }
     expect(recycled.length).toBe(1000 - VIDEO_PRESENTATION_CAPACITY)
-    const latest = queue.takeDue(1_000_000)
+    const latest = queue.takeLatest()
     expect(latest?.token).toBe(999)
     expect(recycled.length).toBe(999)
     expect(new Set(recycled.map((image) => image.token)).size).toBe(999)

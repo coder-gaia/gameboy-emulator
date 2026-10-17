@@ -11,6 +11,7 @@ import type { HardwareDebugSnapshot } from '../core/debug'
 import { runAudioVideoBudget } from './audio-video-capture'
 import type { CapturedAudioVideoFrame } from './audio-video-capture'
 import { VideoBufferPool } from './video-buffer-pool'
+import { AudioReservoir } from './audio-reservoir'
 
 interface WorkerEndpoint {
   onmessage: ((event: MessageEvent<EmulatorRequest>) => void) | null
@@ -20,7 +21,7 @@ const endpoint = globalThis as unknown as WorkerEndpoint
 let device: GameBoy | null = null
 let playing = false
 let timer: ReturnType<typeof setTimeout> | null = null
-let previous = 0
+let previous: number | null = null
 let debt = 0
 let serial = ''
 let publishedFrame = -1
@@ -37,10 +38,14 @@ let rewindTimer: ReturnType<typeof setTimeout> | null = null
 let nextRewindCapture = 0
 let producedPcmFrames = 0
 const videoBuffers = new VideoBufferPool()
+const audioReservoir = new AudioReservoir()
+let pendingAudioFrames = 0
 
 function resetAudioTimeline(epoch = audioEpoch + 1): void {
   audioEpoch = epoch
   producedPcmFrames = 0
+  pendingAudioFrames = 0
+  audioReservoir.clear()
 }
 
 function publishVideoFrame(captured: CapturedAudioVideoFrame): void {
@@ -135,6 +140,15 @@ function snapshot(includeBattery = false): EmulatorSnapshot {
     playing,
     audioEpoch,
     audioDriven,
+    audioProducer: audioDriven
+      ? {
+          queuedFrames: audioReservoir.queuedFrames,
+          producedFrames: audioReservoir.producedFrames,
+          sentFrames: audioReservoir.sentFrames,
+          droppedFrames: audioReservoir.droppedFrames,
+          pendingFrames: pendingAudioFrames,
+        }
+      : null,
     romId: device.romId,
     rewind: {
       enabled: rewindHistory !== null,
@@ -166,7 +180,12 @@ function transfers(state: EmulatorSnapshot): Transferable[] {
 }
 
 function publishFrame(): void {
-  if (!device || (device.frameId === publishedFrame && performance.now() - publishedAt < 100))
+  // Com vídeo transferido separadamente, snapshots completos servem à inspeção
+  // e à persistência; não precisam duplicar a imagem a cada VBlank.
+  if (
+    !device ||
+    ((audioDriven || device.frameId === publishedFrame) && performance.now() - publishedAt < 100)
+  )
     return
   const state = snapshot()
   endpoint.postMessage({ type: 'frame', snapshot: state }, transfers(state))
@@ -175,7 +194,7 @@ function publishFrame(): void {
 function stopTimer(): void {
   if (timer !== null) clearTimeout(timer)
   timer = null
-  previous = 0
+  previous = null
   debt = 0
 }
 
@@ -193,17 +212,34 @@ function fail(cause: unknown): void {
 
 function clock(): void {
   timer = null
-  if (!device || !playing || audioDriven) return
+  if (!device || !playing) return
   try {
     const now = performance.now()
-    if (previous) {
+    if (previous !== null) {
       debt = Math.min(
         debt + (Math.min(now - previous, 100) * DMG_CLOCK_HZ) / 1000,
         DMG_FRAME_T_CYCLES * 4,
       )
-      if (debt >= 1) debt -= device.runCycles(Math.floor(debt))
+      if (debt >= 1) {
+        // O jogo segue o tempo real em passos curtos. A saída sonora nunca
+        // antecipa a máquina nem impede que a próxima entrada seja processada.
+        if (audioDriven) {
+          debt -= runAudioVideoBudget(
+            device,
+            Math.floor(debt),
+            producedPcmFrames,
+            publishVideoFrame,
+          )
+          const samples = device.bus.apu.drainSamples()
+          producedPcmFrames += samples.length / 2
+          audioReservoir.push(samples)
+          flushAudio()
+        } else {
+          debt -= device.runCycles(Math.floor(debt))
+          device.bus.apu.discardSamples()
+        }
+      }
       captureRewind()
-      device.bus.apu.discardSamples()
       publishFrame()
     }
     previous = now
@@ -211,6 +247,15 @@ function clock(): void {
   } catch (cause) {
     fail(cause)
   }
+}
+
+/** Entrega somente o passado já emulado; uma demanda vazia aguarda o próximo tick. */
+function flushAudio(): void {
+  if (!playing || !audioDriven || !audioPort || !pendingAudioFrames || !audioReservoir.queuedFrames)
+    return
+  const samples = audioReservoir.take(pendingAudioFrames)
+  pendingAudioFrames = 0
+  audioPort.postMessage({ type: 'samples', samples, epoch: audioEpoch }, [samples.buffer])
 }
 
 function onAudio(event: MessageEvent<{ type: string; frames: number; epoch: number }>): void {
@@ -230,14 +275,11 @@ function onAudio(event: MessageEvent<{ type: string; frames: number; epoch: numb
       request.frames > audioRequestLimit
     )
       throw new Error('O orçamento de áudio recebido é inválido.')
-    const apu = device.bus.apu
-    const maximum = Math.ceil((request.frames * DMG_CLOCK_HZ) / apu.sampleRate) + 24
-    runAudioVideoBudget(device, maximum, producedPcmFrames, publishVideoFrame)
-    captureRewind()
-    const samples = apu.drainSamples()
-    producedPcmFrames += samples.length / 2
-    audioPort?.postMessage({ type: 'samples', samples, epoch: audioEpoch }, [samples.buffer])
-    publishFrame()
+    // O Worklet mantém no máximo um pedido em voo. Repetições não criam
+    // tarefas de emulação nem respostas concorrentes para o mesmo crédito.
+    if (pendingAudioFrames !== 0) return
+    pendingAudioFrames = request.frames
+    flushAudio()
   } catch (cause) {
     fail(cause)
   }
@@ -284,7 +326,7 @@ endpoint.onmessage = ({ data: request }) => {
           device.bus.apu.discardSamples()
           if (!playing) {
             device.releaseButtons()
-          } else if (!audioDriven) clock()
+          } else clock()
           break
         case 'input':
           device.setButton(command.button, playing && command.pressed)
@@ -357,6 +399,7 @@ endpoint.onmessage = ({ data: request }) => {
           audioDriven = true
           audioPort.onmessage = onAudio
           audioPort.start()
+          if (playing) clock()
           break
         }
         case 'audio-disable':

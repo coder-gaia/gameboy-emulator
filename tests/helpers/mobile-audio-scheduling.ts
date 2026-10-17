@@ -10,9 +10,11 @@ import type {
 import { VideoBufferPool, VIDEO_FRAME_BYTES } from '../../src/runtime/video-buffer-pool'
 import { VideoPresentation } from '../../src/runtime/video-presentation'
 import type { EmulatorVideoFrame } from '../../src/runtime/worker-protocol'
+import { AudioReservoir } from '../../src/runtime/audio-reservoir'
 
 const SAMPLE_RATE = 48_000
 const QUANTUM = 128
+const PRODUCER_FRAMES = 384
 const FRAME_PCM = (SAMPLE_RATE * 70_224) / 4_194_304
 const CLOCK_ORIGIN_SECONDS = 10
 
@@ -72,10 +74,18 @@ export interface SchedulingOptions {
 
 export interface SchedulingSample {
   readonly atMs: number
+  readonly wallclockPcmFrames: number
   readonly cursor: number | null
   readonly audibleFrame: number
   readonly presentedFrame: number | null
   readonly renderedPcmFrames: number
+  readonly producedPcmFrames: number
+  readonly displayedPcmFrame: number | null
+  readonly workerQueuedFrames: number
+  readonly workletQueuedFrames: number
+  readonly audioInventoryFrames: number
+  readonly producerDroppedFrames: number
+  readonly consumerDroppedFrames: number
 }
 
 export interface SchedulingResult {
@@ -88,10 +98,15 @@ export interface SchedulingResult {
   readonly largestVideoLeaseCount: number
   readonly largestRequest: number
   readonly requests: number
+  readonly partialResponses: number
+  readonly requestsWaitingForProducer: number
+  readonly producerDroppedFrames: number
 }
 
 /**
- * Executa Worklet, AudioOutput e filas reais, com entrega de mensagens em lotes.
+ * Produtor de 8 ms, AudioReservoir, Worklet, AudioOutput e vídeo usam fontes reais.
+ * A demanda entrega somente PCM já produzido, sem antecipar o relógio da máquina.
+ * O atraso afeta a porta sonora; vídeo usa o quadro wallclock mais recente.
  * A forma de onda é constante: cada amostra não nula comprova PCM efetivamente consumido.
  * O relógio de saída é sintético e atrasado; não representa uma medição do Motorola.
  */
@@ -107,6 +122,7 @@ export async function simulateMobileAudioScheduling(
   )
   const stallForFrames = Math.round(((options.stallForMs ?? 0) * SAMPLE_RATE) / 1000)
   vi.stubGlobal('currentTime', CLOCK_ORIGIN_SECONDS)
+  const workletScope = globalThis as typeof globalThis & { currentTime: number }
   const processor = new Processor()
   const workerPort = new SchedulingPort()
   const mainMessages: (AudioPlaybackMessage | AudioStatsMessage)[] = []
@@ -114,23 +130,31 @@ export async function simulateMobileAudioScheduling(
   const samples: SchedulingSample[] = []
   const audioHistory: SchedulingResult['audioHistory'][number][] = []
   const pending: { value: PendingResponse | null } = { value: null }
+  const reservoir = new AudioReservoir()
   const pool = new VideoBufferPool()
   const video = new VideoPresentation((frame) => recycle(frame))
   const pixels = new Uint8Array(VIDEO_FRAME_BYTES)
   const left = new Float32Array(QUANTUM)
   const right = new Float32Array(QUANTUM)
+  const production = new Float32Array(PRODUCER_FRAMES * 2).fill(0.25)
   let nowFrame = 0
   let nextNativeFrame = 0
   let nextUiFrame = 0
   let nextBatchFrame = batchFrames
+  let nextProducerFrame = PRODUCER_FRAMES
   let nextVideoFrame = 1
-  let producedFrames = 0
   let renderedFrames = 0
   let missingFrames = 0
   let droppedVideoFrames = 0
   let largestVideoLeaseCount = 0
   let largestRequest = 0
   let requests = 0
+  let partialResponses = 0
+  let requestsWaitingForProducer = 0
+  let pendingWorkerFrames = 0
+  let consumerDroppedFrames = 0
+  let displayedPcmFrame: number | null = null
+  let processingQuantum = false
   let stallInjected = false
   let playbackStarted = false
 
@@ -211,14 +235,61 @@ export async function simulateMobileAudioScheduling(
     )
   }
 
+  function markerFrames(): number {
+    let frames = 0
+    for (let index = 0; index < QUANTUM; index += 1) {
+      if (left[index] === 0.25 && right[index] === 0.25) frames += 1
+      else if (left[index] !== 0 || right[index] !== 0)
+        throw new Error('O Worklet alterou a forma de onda usada como marcador de consumo.')
+    }
+    return frames
+  }
+
+  function flushWorkerSamples(): void {
+    if (pendingWorkerFrames === 0 || reservoir.queuedFrames === 0) return
+    const requested = pendingWorkerFrames
+    const samples = reservoir.take(requested)
+    pendingWorkerFrames = 0
+    if (samples.length / 2 < requested) partialResponses += 1
+    workerPort.onmessage?.({ data: { type: 'samples', samples, epoch: 1 } })
+  }
+
+  function produce(): void {
+    reservoir.push(production)
+    while (nextVideoFrame * FRAME_PCM <= reservoir.producedFrames) {
+      const lease = pool.lease(pixels)
+      if (lease)
+        video.push({
+          ...lease,
+          epoch: 1,
+          frameId: nextVideoFrame,
+          pcmFrame: Math.round(nextVideoFrame * FRAME_PCM),
+        })
+      else droppedVideoFrames += 1
+      nextVideoFrame += 1
+    }
+    largestVideoLeaseCount = Math.max(largestVideoLeaseCount, pool.leasedBuffers)
+    flushWorkerSamples()
+  }
+
   processor.port.send = (message) => {
     const typed = message as AudioPlaybackMessage | AudioStatsMessage
+    if (typed.type === 'stats') {
+      const consumed = renderedFrames + (processingQuantum ? markerFrames() : 0)
+      consumerDroppedFrames = typed.diagnostics.droppedFrames
+      if (
+        typed.diagnostics.renderedFrames !== consumed ||
+        typed.diagnostics.queuedFrames !== reservoir.sentFrames - consumed - consumerDroppedFrames
+      )
+        throw new Error('O inventário real do Worklet divergiu do PCM efetivamente emitido.')
+    }
     if (typed.type === 'playback' || typed.type === 'stats') mainMessages.push(typed)
   }
   workerPort.send = (message) => {
     const request = message as AudioNeedMessage
     if (request.type !== 'need') return
-    if (pending.value) throw new Error('Houve mais de uma demanda PCM em voo.')
+    if (pending.value || pendingWorkerFrames !== 0)
+      throw new Error('Houve mais de uma demanda PCM em voo.')
     let deliveryFrame = (Math.floor(nowFrame / batchFrames) + 1) * batchFrames
     if (!stallInjected && nowFrame >= stallAtFrame) {
       stallInjected = true
@@ -236,47 +307,36 @@ export async function simulateMobileAudioScheduling(
     await output.resume(1)
     flushMainMessages()
     while (nowFrame < finishFrame) {
-      nowFrame = Math.min(nextNativeFrame, nextUiFrame, nextBatchFrame)
+      nowFrame = Math.min(
+        nextNativeFrame,
+        nextUiFrame,
+        nextBatchFrame,
+        nextProducerFrame,
+        finishFrame,
+      )
       context.currentTime = CLOCK_ORIGIN_SECONDS + nowFrame / SAMPLE_RATE
+      if (nowFrame === nextProducerFrame) {
+        produce()
+        nextProducerFrame += PRODUCER_FRAMES
+      }
       if (nowFrame === nextBatchFrame) {
         if (pending.value && pending.value.deliveryFrame <= nowFrame) {
           const { request } = pending.value
           pending.value = null
-          producedFrames += request.frames
-          while (nextVideoFrame * FRAME_PCM <= producedFrames) {
-            const lease = pool.lease(pixels)
-            if (lease)
-              video.push({
-                ...lease,
-                epoch: 1,
-                frameId: nextVideoFrame,
-                pcmFrame: Math.round(nextVideoFrame * FRAME_PCM),
-              })
-            else droppedVideoFrames += 1
-            nextVideoFrame += 1
-          }
-          largestVideoLeaseCount = Math.max(largestVideoLeaseCount, pool.leasedBuffers)
-          workerPort.onmessage?.({
-            data: {
-              type: 'samples',
-              samples: new Float32Array(request.frames * 2).fill(0.25),
-              epoch: 1,
-            },
-          })
+          pendingWorkerFrames = request.frames
+          if (reservoir.queuedFrames === 0) requestsWaitingForProducer += 1
+          flushWorkerSamples()
         }
         flushMainMessages()
         nextBatchFrame += batchFrames
       }
       if (nowFrame === nextNativeFrame) {
-        vi.stubGlobal('currentTime', context.currentTime)
+        workletScope.currentTime = context.currentTime
         const pcmStartFrame = renderedFrames
+        processingQuantum = true
         processor.process([], [[left, right]])
-        let pcmFrames = 0
-        for (let index = 0; index < QUANTUM; index += 1) {
-          if (left[index] === 0.25 && right[index] === 0.25) pcmFrames += 1
-          else if (left[index] !== 0 || right[index] !== 0)
-            throw new Error('O Worklet alterou a forma de onda usada como marcador de consumo.')
-        }
+        processingQuantum = false
+        const pcmFrames = markerFrames()
         if (pcmFrames > 0) playbackStarted = true
         if (playbackStarted) missingFrames += QUANTUM - pcmFrames
         renderedFrames += pcmFrames
@@ -285,13 +345,23 @@ export async function simulateMobileAudioScheduling(
       }
       if (nowFrame === nextUiFrame) {
         const cursor = output.getPlaybackFrame(1)
-        const frame = cursor === null ? null : video.takeDue(cursor)
+        const frame = video.takeLatest()
+        if (frame) displayedPcmFrame = frame.pcmFrame
+        const workletQueuedFrames = reservoir.sentFrames - renderedFrames - consumerDroppedFrames
         samples.push({
           atMs: (nowFrame / SAMPLE_RATE) * 1000,
+          wallclockPcmFrames: nowFrame,
           cursor,
           audibleFrame: audiblePosition(),
           presentedFrame: frame?.frameId ?? null,
           renderedPcmFrames: renderedFrames,
+          producedPcmFrames: reservoir.producedFrames,
+          displayedPcmFrame,
+          workerQueuedFrames: reservoir.queuedFrames,
+          workletQueuedFrames,
+          audioInventoryFrames: reservoir.queuedFrames + workletQueuedFrames,
+          producerDroppedFrames: reservoir.droppedFrames,
+          consumerDroppedFrames,
         })
         if (frame) recycle(frame)
         nextUiFrame += SAMPLE_RATE / 60
@@ -301,13 +371,16 @@ export async function simulateMobileAudioScheduling(
     return {
       samples,
       audioHistory,
-      producedFrames,
+      producedFrames: reservoir.producedFrames,
       renderedFrames,
       missingFrames,
       droppedVideoFrames,
       largestVideoLeaseCount,
       largestRequest,
       requests,
+      partialResponses,
+      requestsWaitingForProducer,
+      producerDroppedFrames: reservoir.droppedFrames,
     }
   } finally {
     video.clear()

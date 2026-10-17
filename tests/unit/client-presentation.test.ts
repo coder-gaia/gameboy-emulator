@@ -163,36 +163,51 @@ describe('cliente de apresentação entre mensagens e gerações', () => {
     return image
   }
 
-  it('não apresenta o snapshot futuro nem quadros à frente do cursor PCM', async () => {
+  it('mostra cada quadro ao chegar, antes do RAF ou do primeiro cursor audível', async () => {
     await audio()
     video(1, 800)
+    expect(client.frameId).toBe(1)
     video(2, 1600)
+    expect(client.frameId).toBe(2)
     worker.state.frameId = 3
     worker.state.framebuffer.fill(3)
     worker.publish()
     expect(client.inspection.frameId).toBe(3)
-    expect(client.frameId).toBe(0)
-    client.presentAudioFrame()
-    expect(client.frameId).toBe(0)
-    setPlayback(799)
-    client.presentAudioFrame()
-    expect(client.frameId).toBe(0)
-    setPlayback(800)
-    client.presentAudioFrame()
-    expect(client.frameId).toBe(1)
-    expect(client.framebuffer[0]).toBe(1)
-    expect(worker.recycled.map((image) => image.token)).toEqual([1])
-    setPlayback(1599)
-    client.presentAudioFrame()
-    expect(client.frameId).toBe(1)
-    setPlayback(1600)
+    expect(client.frameId).toBe(2)
+    const revision = client.presentationRevision
     client.presentAudioFrame()
     expect(client.frameId).toBe(2)
+    expect(client.presentationRevision).toBe(revision)
+    expect(client.framebuffer[0]).toBe(2)
+    expect(client.getPresentationDiagnostics().pcmCursorFrame).toBeNull()
+    expect(worker.recycled.map((image) => image.token)).toEqual([1, 2])
+    video(4, 2400)
+    expect(client.frameId).toBe(4)
+    setPlayback(799)
+    client.presentAudioFrame()
+    expect(client.frameId).toBe(4)
+    expect(client.getPresentationDiagnostics().pcmCursorFrame).toBe(799)
+    expect(worker.recycled.map((image) => image.token)).toEqual([1, 2, 4])
+  })
+
+  it('cursor parado em priming continua apenas diagnóstico enquanto a máquina responde', async () => {
+    await audio()
+    setPlayback(0)
+    for (let id = 1; id <= 5; id += 1) {
+      video(id, id * 800)
+      expect(client.frameId).toBe(id)
+      client.presentAudioFrame()
+      expect(client.frameId).toBe(id)
+      expect(client.getPresentationDiagnostics().pcmCursorFrame).toBe(0)
+    }
+    expect(worker.recycled.map((image) => image.token)).toEqual([1, 2, 3, 4, 5])
   })
 
   it('copia a imagem apresentada antes de devolver e destacar o buffer emprestado', async () => {
     await audio()
     const image = video(1, 800)
+    expect(image.framebuffer.byteLength).toBe(0)
+    expect(client.framebuffer[0]).toBe(1)
     setPlayback(800)
     client.presentAudioFrame()
     expect(image.framebuffer.byteLength).toBe(0)
@@ -200,6 +215,24 @@ describe('cliente de apresentação entre mensagens e gerações', () => {
     expect(client.framebuffer[0]).toBe(1)
     new Uint8Array(worker.recycled[0]!.buffer).fill(3)
     expect(client.framebuffer[0]).toBe(1)
+  })
+
+  it('apresentação imediata continua rejeitando posição antiga e geração incorreta', async () => {
+    await audio()
+    video(1, 1600)
+    const revision = client.presentationRevision
+    const late = video(2, 800)
+    const oldEpoch = video(3, 2400, client.inspection.audioEpoch - 1)
+    expect(late.framebuffer.byteLength).toBe(0)
+    expect(oldEpoch.framebuffer.byteLength).toBe(0)
+    expect(client.frameId).toBe(1)
+    expect(client.presentationRevision).toBe(revision)
+    client.presentAudioFrame()
+    expect(client.frameId).toBe(1)
+    expect(client.presentationRevision).toBe(revision)
+    video(4, 2400)
+    expect(client.frameId).toBe(4)
+    expect(worker.recycled.map((image) => image.token)).toEqual([1, 2, 3, 4])
   })
 
   it('a pausa mostra o estado atual e impede que imagens atrasadas reapareçam', async () => {
@@ -230,11 +263,36 @@ describe('cliente de apresentação entre mensagens e gerações', () => {
     video(3, 700)
     setPlayback(10_000, oldEpoch)
     client.presentAudioFrame()
-    expect(client.frameId).toBe(0)
-    expect(worker.recycled.map((image) => image.token)).toEqual([1, 2])
+    expect(client.frameId).toBe(3)
+    expect(client.getPresentationDiagnostics().pcmCursorFrame).toBeNull()
+    expect(worker.recycled.map((image) => image.token)).toEqual([1, 2, 3])
     setPlayback(800)
     client.presentAudioFrame()
     expect(client.frameId).toBe(3)
+    expect(worker.recycled.map((image) => image.token)).toEqual([1, 2, 3])
+  })
+
+  it('rewind mostra o estado atual e rejeita vídeo até retomar uma geração nova', async () => {
+    await audio()
+    video(1, 800)
+    worker.state.rewind.active = true
+    worker.state.frameId = 9
+    worker.state.framebuffer.fill(3)
+    worker.publish()
+    const delayed = video(2, 1600)
+    client.presentAudioFrame()
+    expect(client.frameId).toBe(9)
+    expect(client.framebuffer[0]).toBe(3)
+    expect(delayed.framebuffer.byteLength).toBe(0)
+    expect(worker.recycled.map((image) => image.token)).toEqual([1, 2])
+
+    worker.state.rewind.active = false
+    worker.state.audioEpoch += 1
+    worker.publish()
+    video(3, 100)
+    client.presentAudioFrame()
+    expect(client.frameId).toBe(3)
+    expect(client.getPresentationDiagnostics().pcmCursorFrame).toBeNull()
     expect(worker.recycled.map((image) => image.token)).toEqual([1, 2, 3])
   })
 
@@ -252,11 +310,14 @@ describe('cliente de apresentação entre mensagens e gerações', () => {
     expect(currentEpoch).toBeGreaterThan(previousEpoch)
 
     const pending = video(1, 800)
+    expect(client.frameId).toBe(1)
+    expect(pending.framebuffer.byteLength).toBe(0)
     setPlayback(10_000, previousEpoch)
     client.presentAudioFrame()
-    expect(client.frameId).toBe(0)
-    expect(pending.framebuffer.byteLength).toBe(160 * 144)
-    expect(worker.recycled).toEqual([])
+    expect(client.frameId).toBe(1)
+    expect(client.getPresentationDiagnostics().pcmCursorFrame).toBeNull()
+    expect(pending.framebuffer.byteLength).toBe(0)
+    expect(worker.recycled.map((image) => image.token)).toEqual([1])
 
     setPlayback(800, currentEpoch)
     client.presentAudioFrame()
@@ -305,11 +366,9 @@ describe('cliente de apresentação entre mensagens e gerações', () => {
       framebuffer: new Uint8Array(160 * 144),
     }
     worker.emit({ type: 'video-frame', frame: blank })
+    expect(client.framebuffer[0]).toBe(0)
+    expect(client.presentationRevision).toBeGreaterThan(revision)
     setPlayback(1599)
-    client.presentAudioFrame()
-    expect(client.presentationRevision).toBe(revision)
-    expect(client.framebuffer[0]).toBe(1)
-    setPlayback(1600)
     client.presentAudioFrame()
     expect(client.frameId).toBe(first.frameId)
     expect(client.presentationRevision).toBeGreaterThan(revision)
@@ -318,19 +377,34 @@ describe('cliente de apresentação entre mensagens e gerações', () => {
     expect(worker.recycled.map((image) => image.token)).toEqual([1, 2])
   })
 
-  it('conta desenhos distintos e limpa todos os empréstimos no descarte', async () => {
+  it('notifica desenhos reais imediatamente sem contar outra vez no RAF ou no descarte', async () => {
     await audio()
+    const received: number[] = []
+    const unsubscribe = client.subscribe(() => {
+      received.push(client.frameId)
+      client.noteFrameDrawn(client.presentationRevision)
+    })
     video(1, 800)
     video(2, 1600)
+    expect(client.drawnFrames).toBe(2)
+    expect(received).toEqual([1, 2])
     setPlayback(800)
     client.presentAudioFrame()
     const revision = client.presentationRevision
     client.noteFrameDrawn(revision)
     client.noteFrameDrawn(revision)
-    expect(client.drawnFrames).toBe(1)
+    expect(client.drawnFrames).toBe(2)
+    expect(received).toEqual([1, 2])
+    video(3, 2400)
+    expect(client.drawnFrames).toBe(3)
     client.dispose()
+    video(4, 3200)
+    client.presentAudioFrame()
+    expect(client.frameId).toBe(3)
+    expect(client.drawnFrames).toBe(3)
     expect(worker.terminated).toBe(true)
-    expect(worker.recycled.map((image) => image.token)).toEqual([1, 2])
+    expect(worker.recycled.map((image) => image.token)).toEqual([1, 2, 3])
+    unsubscribe()
   })
 
   it('registra intervalos reais de desenho e limpa a cadência ao mudar de geração', async () => {
@@ -338,13 +412,13 @@ describe('cliente de apresentação entre mensagens e gerações', () => {
     try {
       await audio()
       video(1, 800)
-      video(2, 1600)
       setPlayback(800)
       client.presentAudioFrame()
       now.mockReturnValue(1000)
       client.noteFrameDrawn(client.presentationRevision)
       now.mockReturnValue(1100)
       client.noteFrameDrawn(client.presentationRevision)
+      video(2, 1600)
       setPlayback(1600)
       client.presentAudioFrame()
       now.mockReturnValue(1130)

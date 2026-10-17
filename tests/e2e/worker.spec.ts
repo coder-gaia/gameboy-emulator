@@ -242,7 +242,7 @@ test('LCD desligado continua publicando CPU, serial e bateria sem depender de qu
   await expect(page.getByRole('alert')).toHaveCount(0)
 })
 
-test('Worker entrega PCM por orçamento, mantém buffers válidos e descarta gerações antigas', async ({
+test('Worker entrega PCM já produzido, mantém o relógio interativo e descarta gerações antigas', async ({
   page,
 }) => {
   await observeWorkers(page)
@@ -354,19 +354,19 @@ test('Worker entrega PCM por orçamento, mantém buffers válidos e descarta ger
     channel.port2.close()
     return summary
   })
-  expect(result.firstFrames).toBeGreaterThanOrEqual(1536)
-  expect(result.firstFrames).toBeLessThanOrEqual(1537)
-  expect(result.firstCycles).toBeGreaterThanOrEqual(Math.floor((1536 * 4_194_304) / 48_000))
-  expect(result.firstCycles).toBeLessThan(Math.ceil((1536 * 4_194_304) / 48_000) + 48)
+  expect(result.firstFrames).toBeGreaterThan(0)
+  expect(result.firstFrames).toBeLessThanOrEqual(1536)
+  expect(result.firstCycles).toBeGreaterThan(0)
   expect(result.firstEpoch).toBe(result.startedEpoch)
   expect(result.staleResponses).toBe(0)
   expect(result.pausedCycles).toBe(0)
-  expect(result.staleCycles).toBe(0)
-  expect(result.freshFrames).toBeGreaterThanOrEqual(512)
-  expect(result.freshFrames).toBeLessThanOrEqual(513)
+  // A demanda não comanda o relógio da máquina: jogar continua sem pedidos válidos.
+  expect(result.staleCycles).toBeGreaterThan(0)
+  expect(result.freshFrames).toBeGreaterThan(0)
+  expect(result.freshFrames).toBeLessThanOrEqual(512)
   expect(result.freshEpoch).toBe(result.resumedEpoch)
   expect(result.freshEpoch).toBeGreaterThan(result.firstEpoch)
-  expect(result.freshCycles).toBeGreaterThan(0)
+  expect(result.freshCycles).toBeGreaterThanOrEqual(0)
   expect(result.finite).toBe(true)
   expect(result.audible).toBe(true)
 })

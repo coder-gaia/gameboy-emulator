@@ -1,6 +1,7 @@
 import { DMG_CLOCK_HZ } from '../core/model'
 import type { AudioDiagnostics } from '../platform/audio/audio-output'
 import type { PresentationDiagnostics } from './emulator-client'
+import type { AudioProducerDiagnostics } from './worker-protocol'
 
 export interface PerformancePoint {
   at: number
@@ -12,6 +13,7 @@ export interface PerformancePoint {
   rewinding: boolean
   audio: AudioDiagnostics | null
   presentation?: PresentationDiagnostics
+  audioProducer?: AudioProducerDiagnostics | null
 }
 
 export interface PerformanceInterval {
@@ -40,6 +42,17 @@ export function measurePerformance(
     (after.audio.renderedFrames < before.audio.renderedFrames ||
       after.audio.underrunFrames < before.audio.underrunFrames ||
       after.audio.droppedFrames < before.audio.droppedFrames)
+  const producerReset =
+    Boolean(before.audioProducer) !== Boolean(after.audioProducer) ||
+    [before.audioProducer, after.audioProducer].some(
+      (producer) =>
+        producer && (!Number.isSafeInteger(producer.droppedFrames) || producer.droppedFrames < 0),
+    ) ||
+    Boolean(
+      before.audioProducer &&
+      after.audioProducer &&
+      after.audioProducer.droppedFrames < before.audioProducer.droppedFrames,
+    )
   const interrupted =
     !validCounters ||
     !Number.isFinite(elapsedSeconds) ||
@@ -53,6 +66,7 @@ export function measurePerformance(
     after.drawnFrames < before.drawnFrames ||
     after.machineEpoch !== before.machineEpoch ||
     Boolean(audioReset) ||
+    producerReset ||
     before.audio?.epoch !== after.audio?.epoch ||
     before.audio?.connected !== after.audio?.connected
   const sameAudio =
@@ -78,6 +92,10 @@ export function measurePerformance(
       ? null
       : (after.drawnFrames - before.drawnFrames) / elapsedSeconds,
     underrunFrames: sameAudio ? after.audio!.underrunFrames - before.audio!.underrunFrames : null,
-    droppedFrames: sameAudio ? after.audio!.droppedFrames - before.audio!.droppedFrames : null,
+    droppedFrames: sameAudio
+      ? after.audio!.droppedFrames -
+        before.audio!.droppedFrames +
+        ((after.audioProducer?.droppedFrames ?? 0) - (before.audioProducer?.droppedFrames ?? 0))
+      : null,
   }
 }

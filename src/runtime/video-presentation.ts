@@ -3,7 +3,7 @@ import { VIDEO_BUFFER_COUNT } from './video-buffer-pool'
 
 export const VIDEO_PRESENTATION_CAPACITY = VIDEO_BUFFER_COUNT
 
-/** Guarda imagens futuras, com o mesmo limite de buffers cedidos pelo Worker. */
+/** Fila limitada de imagens por geração; o consumidor escolhe a política de apresentação. */
 export class VideoPresentation {
   private readonly frames: (EmulatorVideoFrame | undefined)[] = Array.from({
     length: VIDEO_PRESENTATION_CAPACITY,
@@ -41,6 +41,16 @@ export class VideoPresentation {
     if (!Number.isFinite(pcmFrame) || pcmFrame < 0) return null
     let selected: EmulatorVideoFrame | null = null
     while (this.count > 0 && this.frames[this.head]!.pcmFrame <= pcmFrame) {
+      if (selected) this.recycle(selected)
+      selected = this.shift()!
+    }
+    return selected
+  }
+
+  /** Vídeo interativo usa o último quadro produzido pelo relógio da máquina. */
+  takeLatest(): EmulatorVideoFrame | null {
+    let selected: EmulatorVideoFrame | null = null
+    while (this.count > 0) {
       if (selected) this.recycle(selected)
       selected = this.shift()!
     }

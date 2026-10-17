@@ -114,6 +114,7 @@ for (const profile of PROFILES) {
           roundTripFrames: lastAudio.roundTripFrames,
           peakRoundTripFrames: lastAudio.peakRoundTripFrames,
           queuedFrames: lastAudio.queuedFrames,
+          audioProducer: lastWorker.audioProducer,
           measuredFrom: before.observedAt,
           measuredUntil: after.observedAt,
           audioHistory: after.audioHistory,
@@ -129,6 +130,8 @@ for (const profile of PROFILES) {
         expect(result.speedPercent).toBeLessThanOrEqual(102)
         expect(result.underrunFrames).toBe(0)
         expect(result.droppedFrames).toBe(0)
+        expect(result.audioProducer).not.toBeNull()
+        expect(result.audioProducer!.droppedFrames).toBe(0)
         expect(result.renderedFrames).toBeGreaterThan(result.sampleRate * 11)
         expect(result.canvasFramesPerSecond).toBeGreaterThanOrEqual(55)
         expect(result.canvasFramesPerSecond).toBeLessThanOrEqual(61)

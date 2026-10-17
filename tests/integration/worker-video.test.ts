@@ -58,6 +58,7 @@ function requestPcm(port: AudioPortProbe, epoch: number): void {
 
 describe('protocolo de vídeo do Worker com transporte determinístico', () => {
   beforeEach(async () => {
+    vi.useFakeTimers()
     messages = []
     sequence = 0
     vi.resetModules()
@@ -75,6 +76,7 @@ describe('protocolo de vídeo do Worker com transporte determinístico', () => {
       command({ type: 'audio-disable' })
     }
     vi.unstubAllGlobals()
+    vi.useRealTimers()
   })
 
   it('aloca a conexão após play em trânsito e respeita o piso da saída reutilizada', () => {
@@ -98,6 +100,8 @@ describe('protocolo de vídeo do Worker com transporte determinístico', () => {
     requestPcm(port, playing.audioEpoch)
     expect(port.postMessage).not.toHaveBeenCalled()
     requestPcm(port, connected.snapshot!.audioEpoch)
+    expect(port.postMessage).not.toHaveBeenCalled()
+    vi.advanceTimersByTime(8)
     expect(port.postMessage).toHaveBeenCalledOnce()
 
     const reusedFloor = connected.snapshot!.audioEpoch + 100
@@ -134,6 +138,7 @@ describe('protocolo de vídeo do Worker com transporte determinístico', () => {
     const port = connectAudio()
     const epoch = command({ type: 'inspect' }).snapshot!.audioEpoch
     requestPcm(port, epoch)
+    vi.advanceTimersByTime(128)
     const first = messages
       .filter((message) => message.type === 'video-frame')
       .map((message) => message.frame)
@@ -144,6 +149,7 @@ describe('protocolo de vídeo do Worker com transporte determinístico', () => {
     const firstEnd = first.at(-1)!.pcmFrame
     const nextStart = messages.length
     requestPcm(port, epoch)
+    vi.advanceTimersByTime(128)
     const next = messages
       .slice(nextStart)
       .filter((message) => message.type === 'video-frame')
@@ -161,6 +167,7 @@ describe('protocolo de vídeo do Worker com transporte determinístico', () => {
     expect(resumed.audioEpoch).toBeGreaterThan(paused.audioEpoch)
     const resumedStart = messages.length
     requestPcm(port, resumed.audioEpoch)
+    vi.advanceTimersByTime(128)
     const resumedFrames = messages
       .slice(resumedStart)
       .filter((message) => message.type === 'video-frame')
@@ -174,7 +181,10 @@ describe('protocolo de vídeo do Worker com transporte determinístico', () => {
   it('limita empréstimos em trânsito e aceita devolução de época anterior sem snapshot adicional', () => {
     const port = connectAudio()
     const epoch = command({ type: 'inspect' }).snapshot!.audioEpoch
-    for (let batch = 0; batch < 10; batch += 1) requestPcm(port, epoch)
+    for (let batch = 0; batch < 10; batch += 1) {
+      requestPcm(port, epoch)
+      vi.advanceTimersByTime(128)
+    }
     const leased = messages
       .filter((message) => message.type === 'video-frame')
       .map((message) => message.frame)
@@ -194,6 +204,7 @@ describe('protocolo de vídeo do Worker com transporte determinístico', () => {
     expect(returned.error).toBeUndefined()
     const newStart = messages.length
     requestPcm(port, resumed.audioEpoch)
+    vi.advanceTimersByTime(128)
     const replacement = messages
       .slice(newStart)
       .filter((message) => message.type === 'video-frame')
@@ -209,9 +220,74 @@ describe('protocolo de vídeo do Worker com transporte determinístico', () => {
     })
     const staleStart = messages.length
     requestPcm(port, resumed.audioEpoch)
+    vi.advanceTimersByTime(128)
     expect(
       messages.slice(staleStart).filter((message) => message.type === 'video-frame'),
     ).toHaveLength(0)
     expect(port.postMessage).toHaveBeenCalledTimes(12)
+  })
+
+  it('avança no tempo real mesmo sem demanda PCM e não antecipa a CPU ao pedir áudio', () => {
+    const port = connectAudio()
+    const initial = command({ type: 'inspect' }).snapshot!
+    vi.advanceTimersByTime(128)
+    const elapsed = command({ type: 'inspect' }).snapshot!
+    expect(elapsed.cpu.totalTCycles - initial.cpu.totalTCycles).toBeGreaterThan(500_000)
+    expect(elapsed.cpu.totalTCycles - initial.cpu.totalTCycles).toBeLessThan(540_000)
+    expect(elapsed.audioProducer!.producedFrames).toBeGreaterThan(6000)
+    expect(port.postMessage).not.toHaveBeenCalled()
+    requestPcm(port, elapsed.audioEpoch)
+    const afterDemand = command({ type: 'inspect' }).snapshot!
+    expect(afterDemand.cpu.totalTCycles).toBe(elapsed.cpu.totalTCycles)
+    expect(afterDemand.frameId).toBe(elapsed.frameId)
+    expect(port.postMessage).toHaveBeenCalledOnce()
+    expect(afterDemand.audioProducer!.sentFrames).toBeGreaterThan(0)
+    expect(afterDemand.audioProducer!.droppedFrames).toBe(0)
+  })
+
+  it('entrega PCM parcial e aceita entrada enquanto um pedido vazio aguarda o próximo tick', () => {
+    const port = connectAudio()
+    const initial = command({ type: 'inspect' }).snapshot!
+    requestPcm(port, initial.audioEpoch)
+    requestPcm(port, initial.audioEpoch)
+    const pressed = command({ type: 'input', button: 'a', pressed: true })
+    expect(pressed.error).toBeUndefined()
+    expect(pressed.snapshot!.cpu.totalTCycles).toBe(initial.cpu.totalTCycles)
+    expect(pressed.snapshot!.audioProducer!.pendingFrames).toBe(6144)
+    expect(port.postMessage).not.toHaveBeenCalled()
+    vi.advanceTimersByTime(8)
+    expect(port.postMessage).toHaveBeenCalledOnce()
+    const samples = port.postMessage.mock.calls[0]![0].samples as Float32Array
+    expect(samples.length / 2).toBeGreaterThan(380)
+    expect(samples.length / 2).toBeLessThan(400)
+    expect(command({ type: 'inspect' }).snapshot!.audioProducer!.pendingFrames).toBe(0)
+  })
+
+  it('limpa o pedido pendente na pausa e contabiliza retenção e descarte no produtor limitado', () => {
+    const port = connectAudio()
+    const initial = command({ type: 'inspect' }).snapshot!
+    requestPcm(port, initial.audioEpoch)
+    const paused = command({ type: 'play', playing: false }).snapshot!
+    expect(paused.audioProducer!.pendingFrames).toBe(0)
+    vi.advanceTimersByTime(1000)
+    expect(port.postMessage).not.toHaveBeenCalled()
+    const resumed = command({ type: 'play', playing: true }).snapshot!
+    vi.advanceTimersByTime(1000)
+    const withheld = command({ type: 'inspect' }).snapshot!
+    expect(withheld.audioProducer!.queuedFrames).toBe(32768)
+    expect(withheld.audioProducer!.droppedFrames).toBeGreaterThan(0)
+    expect(withheld.audioProducer!.producedFrames).toBe(
+      withheld.audioProducer!.queuedFrames + withheld.audioProducer!.droppedFrames,
+    )
+    expect(port.postMessage).not.toHaveBeenCalled()
+    requestPcm(port, initial.audioEpoch)
+    expect(port.postMessage).not.toHaveBeenCalled()
+    requestPcm(port, resumed.audioEpoch)
+    expect(port.postMessage).toHaveBeenCalledOnce()
+    command({ type: 'audio-disable' })
+    vi.advanceTimersByTime(32)
+    const detached = command({ type: 'inspect' }).snapshot!
+    expect(detached.audioProducer).toBeNull()
+    expect(detached.cpu.totalTCycles).toBeGreaterThan(withheld.cpu.totalTCycles)
   })
 })

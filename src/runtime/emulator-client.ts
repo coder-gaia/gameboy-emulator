@@ -63,14 +63,17 @@ export class EmulatorClient {
       throw new Error('Seu navegador não disponibilizou a execução do emulador.')
     this.worker = new Worker(new URL('./emulator.worker.ts', import.meta.url), { type: 'module' })
     this.worker.onmessage = ({ data }: MessageEvent<EmulatorMessage>) => {
+      if (this.disposed) return
       if (data.type === 'error') {
         this.reportError(new Error(data.error))
         return
       }
       if (data.type === 'video-frame') {
         this.receivedVideoFrames += 1
-        if (this.current?.audioDriven && this.current.playing) this.video.push(data.frame)
-        else this.recycleVideo(data.frame)
+        if (this.current?.audioDriven && this.current.playing && !this.current.rewind.active) {
+          this.video.push(data.frame)
+          this.presentLatestVideoFrame()
+        } else this.recycleVideo(data.frame)
         return
       }
       if (data.type === 'frame') {
@@ -154,13 +157,23 @@ export class EmulatorClient {
     }
   }
 
-  /** Chamado pelo RAF; o relógio é o do PCM consumido, sem antecipar quadros futuros. */
+  /** RAF coleta o cursor audível para diagnóstico e recupera alguma imagem ainda pendente. */
   presentAudioFrame(): void {
-    if (this.disposed || !this.current.audioDriven || !this.current.playing) return
+    if (
+      this.disposed ||
+      !this.current.audioDriven ||
+      !this.current.playing ||
+      this.current.rewind.active
+    )
+      return
     const position = this.output?.getPlaybackFrame(this.current.audioEpoch) ?? null
     this.pcmCursorFrame = position
-    if (position === null) return
-    const frame = this.video.takeDue(position)
+    this.presentLatestVideoFrame()
+  }
+
+  /** Como nos snapshots sem som, cada quadro real notifica o Canvas ao chegar. */
+  private presentLatestVideoFrame(): void {
+    const frame = this.video.takeLatest()
     if (!frame) return
     this.displayed.set(frame.framebuffer)
     this.displayedFrameId = frame.frameId

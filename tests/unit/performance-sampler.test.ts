@@ -73,6 +73,47 @@ function expectInterrupted(before: PerformancePoint, current: PerformancePoint):
 }
 
 describe('amostragem de desempenho por contadores locais', () => {
+  it('soma perdas do produtor e consumidor sem ocultar overflow antes do Worklet', () => {
+    const producer = {
+      queuedFrames: 1024,
+      producedFrames: 48_000,
+      sentFrames: 46_960,
+      droppedFrames: 16,
+      pendingFrames: 0,
+    }
+    const result = measurePerformance(
+      point({ audio: audio(), audioProducer: producer }),
+      after({
+        audio: audio({ droppedFrames: 32 }),
+        audioProducer: { ...producer, producedFrames: 96_000, droppedFrames: 48 },
+      }),
+    )
+    expect(result.interrupted).toBe(false)
+    expect(result.droppedFrames).toBe(48)
+  })
+
+  it.each([null, -1, NaN, 15])(
+    'interrompe perda ou regressão do contador do produtor: %s',
+    (dropped) => {
+      const producer = {
+        queuedFrames: 1024,
+        producedFrames: 48_000,
+        sentFrames: 46_960,
+        droppedFrames: 16,
+        pendingFrames: 0,
+      }
+      const result = measurePerformance(
+        point({ audio: audio(), audioProducer: producer }),
+        after({
+          audio: audio(),
+          audioProducer: dropped === null ? null : { ...producer, droppedFrames: dropped },
+        }),
+      )
+      expect(result.interrupted).toBe(true)
+      expect(result.droppedFrames).toBeNull()
+    },
+  )
+
   it('mede 60 segundos de clock DMG e conta Canvas separado de quadros emulados', () => {
     expect(measurePerformance(point(), after())).toEqual({
       elapsedSeconds: 60,

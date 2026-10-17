@@ -1,7 +1,7 @@
 import { expect } from '@playwright/test'
 import type { Page } from '@playwright/test'
 import type { AudioStreamDiagnostics } from '../../src/platform/audio/protocol'
-import type { EmulatorMessage } from '../../src/runtime/worker-protocol'
+import type { AudioProducerDiagnostics, EmulatorMessage } from '../../src/runtime/worker-protocol'
 
 interface WorkerObservation {
   url: string
@@ -16,6 +16,7 @@ interface WorkerObservation {
   rewindRestores: number
   minimumRewindTCycles: number | null
   batteryFirstByte: number | null
+  audioProducer: AudioProducerDiagnostics | null
 }
 
 export interface BrowserRewindState {
@@ -252,6 +253,7 @@ export async function observeProduction(page: Page): Promise<void> {
           rewindRestores: 0,
           minimumRewindTCycles: null,
           batteryFirstByte: null,
+          audioProducer: null,
         }
         probe.workers.push(this.observation)
         this.addEventListener('message', ({ data }: MessageEvent<EmulatorMessage>) => {
@@ -287,6 +289,7 @@ export async function observeProduction(page: Page): Promise<void> {
             receivedAt: performance.now(),
             rewind: rewind ? { ...rewind } : null,
             batteryFirstByte: data.snapshot.batteryRam?.[0] ?? this.observation.batteryFirstByte,
+            audioProducer: data.snapshot.audioProducer ?? null,
           })
         })
       }

@@ -210,7 +210,8 @@ test('Worker adapta estado de outra taxa de áudio ao contexto conectado', async
     }
     await rpc({ type: 'load-state', checkpoint: matching })
     const loaded = (await rpc({ type: 'capture-state' })).checkpoint!
-    // O contexto está suspenso e audioDriven não usa timer: play isolado não avança CPU.
+    // Play usa o relógio interativo mesmo com contexto suspenso. Compara a fase
+    // considerando exatamente os T-cycles que transcorreram entre as mensagens.
     await rpc({ type: 'play', playing: true })
     await rpc({ type: 'play', playing: false })
     const resumed = (await rpc({ type: 'capture-state' })).checkpoint!
@@ -221,10 +222,17 @@ test('Worker adapta estado de outra taxa de áudio ao contexto conectado', async
       expectedSampling: matching.core.bus.apu.sampling,
       loadedSampling: loaded.core.bus.apu.sampling,
       resumedSampling: resumed.core.bus.apu.sampling,
+      loadedTCycles: loaded.core.bus.tCycles,
+      resumedTCycles: resumed.core.bus.tCycles,
     }
   })
   expect(result.foreignRate).not.toBe(result.contextRate)
   expect(result.restoredRate).toBe(result.contextRate)
   expect(result.loadedSampling).toEqual(result.expectedSampling)
-  expect(result.resumedSampling).toEqual(result.expectedSampling)
+  expect(result.resumedSampling.rate).toBe(result.contextRate)
+  const advancedTCycles = result.resumedTCycles - result.loadedTCycles
+  expect(advancedTCycles).toBeGreaterThanOrEqual(0)
+  expect(result.resumedSampling.phase).toBe(
+    (result.expectedSampling.phase + advancedTCycles * result.contextRate) % 4_194_304,
+  )
 })
