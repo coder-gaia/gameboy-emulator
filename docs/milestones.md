@@ -20,6 +20,8 @@ Um pacote npm, sem monorepo. Revisão **1.0.0-rc.3**, candidata em validação p
 | M13   | Inspeção de hardware e diagnóstico local           | Concluída |
 | M14   | Apresentação de vídeo e candidata a lançamento     | Concluída |
 
+Próxima versão, ainda sem implementação: [plano de Big2Small e modo escuro](next-version-plan.md), organizado em M15 a M17.
+
 ## Aceite atual
 
 Os grupos M00 a M02, M03 a M05 e M06 a M08 foram aprovados pelo proprietário. No grupo M09 a M11, o desktop foi aprovado; o Motorola Edge 40 Neo com Chrome apresentou lentidão somente após ativar som.
