@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { EmulatorClient } from '../../runtime/emulator-client'
 import styles from './CpuInspector.module.css'
+import { HardwareInspector } from './HardwareInspector'
 
 function hex(value: number, length = 4) {
   return value.toString(16).padStart(length, '0').toUpperCase()
@@ -124,6 +125,7 @@ export function CpuInspector({
         <span>SAÍDA SERIAL</span>
         <pre aria-label="Saída serial">{serial || 'Aguardando saída...'}</pre>
       </div>
+      <HardwareInspector device={device} disabled={disabled || !open} />
     </details>
   )
 }

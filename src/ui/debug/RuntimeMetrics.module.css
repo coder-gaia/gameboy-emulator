@@ -1,0 +1,66 @@
+.panel {
+  border-top: 1px solid #d4d2c8;
+  margin: 16px 0;
+}
+.panel summary {
+  cursor: pointer;
+  min-height: 48px;
+  padding: 16px 0;
+  font-size: 12px;
+  font-weight: 600;
+}
+.hint {
+  color: #626659;
+  font-size: 11px;
+  line-height: 1.65;
+  overflow-wrap: anywhere;
+}
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+.metrics div {
+  min-width: 0;
+}
+.metrics dt {
+  color: #626659;
+  font-size: 10px;
+  margin-bottom: 4px;
+}
+.metrics dd {
+  margin: 0;
+  font: 11px/1.6 var(--font-mono);
+  overflow-wrap: anywhere;
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 16px 0;
+}
+.actions button {
+  min-height: 44px;
+  border: 1px solid #c8c5bb;
+  border-radius: 5px;
+  background: #faf8f2;
+  padding: 8px 10px;
+  font-size: 11px;
+}
+.actions button:hover:not(:disabled) {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+.actions button:disabled {
+  opacity: 0.5;
+}
+.panel progress {
+  display: block;
+  width: 100%;
+  accent-color: var(--color-accent);
+}
+@media (max-width: 360px) {
+  .metrics {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

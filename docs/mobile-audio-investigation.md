@@ -124,6 +124,10 @@ O [relatório final](performance-audio-mobile-results.json) conserva dados, hash
 
 **Estado do aceite:** regressão automatizada de áudio aprovada no computador; teste de áudio e velocidade no Motorola Edge 40 Neo com Chrome ainda não executado nesta revisão. Não substituir essa pendência por resultados de viewport Pixel 7, CPU throttle da página ou atraso sintético no computador.
 
+## Retorno inicial no aparelho após M12
+
+Em 17/10/2026, após publicar a M12 e testar Tobu no Motorola Edge 40 Neo com Chrome, o proprietário relatou melhora clara, ausência de travadas e música contínua. A comparação seguinte confirmou execução 100% fluida antes de ativar o som e lentidão percebida depois de ativá-lo. O desktop continua perfeito. Esse retorno confirma melhora no uso real e não equivale ao aceite completo de velocidade, fluidez, latência e áudio nos três cartuchos. A M13 acrescenta contadores e medição local para separar velocidade emulada e frequência de apresentação, sem assumir que o aparelho chegou ao limite. Lotes maiores de PCM publicam apenas o último quadro, uma hipótese a medir para a diferença visual restante.
+
 ## Biblioteca embutida
 
 O V1 atualmente inclui Tobu Tobu Girl e 2048, além do jardim próprio de diagnóstico. O catálogo é extensível; esses dois não constituem um limite técnico permanente. Novas demos dependem de escolha de escopo, permissão clara de distribuição e registro de origem, licença, créditos e hashes. Esta investigação não acrescenta jogos ao catálogo.

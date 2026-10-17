@@ -4,6 +4,8 @@ import type { AudioControlMessage, AudioStatsMessage, AudioStreamDiagnostics } f
 
 export interface AudioDiagnostics extends AudioStreamDiagnostics {
   readonly sampleRate: number
+  readonly baseLatencySeconds: number | null
+  readonly outputLatencySeconds: number | null
   readonly contextState: string
   readonly connected: boolean
   readonly volume: number
@@ -148,6 +150,15 @@ export class AudioOutput {
       active: this.active,
       epoch: this.epoch,
       sampleRate: this.context?.sampleRate ?? 0,
+      baseLatencySeconds:
+        typeof this.context?.baseLatency === 'number' && Number.isFinite(this.context.baseLatency)
+          ? this.context.baseLatency
+          : null,
+      outputLatencySeconds:
+        typeof this.context?.outputLatency === 'number' &&
+        Number.isFinite(this.context.outputLatency)
+          ? this.context.outputLatency
+          : null,
       contextState: this.context?.state ?? (this.disposed ? 'closed' : 'unprepared'),
       connected: this.connected,
       volume: this.volume,

@@ -1,12 +1,12 @@
 # Testar M12, M13 e M14
 
-**Roteiro em andamento, iniciado em 17 de outubro de 2026.** A M12 implementa o abastecimento adaptativo de áudio, setas maiores e os controladores MBC2, MBC3 com RTC e MBC5. M13 e M14 aguardam implementação. Este documento não declara as três milestones concluídas nem o Motorola homologado.
+**Roteiro em andamento, iniciado em 17 de outubro de 2026.** A M12 está publicada e a M13 implementa inspeção de hardware e métricas. A M14 prepara o fechamento do projeto. Este documento não declara o Motorola homologado.
 
-| Marco | Situação deste roteiro                                                                                                                      |
-| ----- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| M12   | Implementada e verificada no computador. Aguardar confirmação do deploy e testar áudio e toque no Motorola real.                            |
-| M13   | Painel técnico aguardando implementação. O roteiro específico será acrescentado após a entrega.                                             |
-| M14   | Release, README, portfólio e material para LinkedIn aguardando implementação. O roteiro final depende das entregas e do aceite mobile real. |
+| Marco | Situação deste roteiro                                                                                                                                    |
+| ----- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| M12   | Publicada, CI aprovado e 14 testes públicos aprovados. No Motorola, a música ficou contínua e não há travadas, mas ainda há lentidão percebida com áudio. |
+| M13   | Painel técnico e métricas concluídos: 1.395 testes locais, 103 externos, 176 de interface e 16 de produção aprovados.                                     |
+| M14   | Release, README, portfólio e material para LinkedIn aguardando implementação. O roteiro final depende das entregas e do aceite mobile real.               |
 
 O desktop foi aprovado no grupo anterior. O problema relatado no Motorola Edge 40 Neo com Chrome aparece somente depois de ativar o som, nos três cartuchos. O [diagnóstico MB01](mobile-audio-investigation.md) preserva as evidências históricas, a implementação preparada e os critérios de aceite.
 
@@ -18,7 +18,7 @@ Para acompanhar, entre no painel da Cloudflare, abra **Workers & Pages**, seleci
 
 Depois da confirmação, abra a URL estável e recarregue normalmente a página no Chrome. Se a aba já estava aberta durante a publicação, recarregue antes do teste. HTML é revalidado e os assets têm nomes com hash; não é necessário limpar dados do site. Limpar esses dados também remove saves e preferências. Use a mesma origem para conferir persistência: previews, localhost e o endereço público possuem armazenamentos separados.
 
-Enquanto o deploy da M12 não estiver confirmado, o site pode continuar entregando a M11. Nesse caso, a lentidão conhecida ainda pode ser reproduzida e não representa avaliação da correção nova.
+A publicação M12 foi confirmada com HTML e quatro assets idênticos aos hashes medidos, CI aprovado e 14 testes públicos de produção aprovados. A cada nova milestone, aguarde a confirmação do deploy correspondente antes de testar os recursos novos.
 
 ## Preparar o teste no Motorola real
 
@@ -45,13 +45,13 @@ Faça a sequência abaixo separadamente para **jardim**, **Tobu Tobu Girl** e **
 
 O comportamento sem áudio observado em 16 de outubro é a referência histórica. Este roteiro mede a build nova antes e depois da ativação; não exige reinstalar uma versão antiga ou substituir a publicação atual.
 
-Para uma conferência numérica provisória, abra **Inspecionar CPU** e anote **T-cycles executados** no começo e no fim de cada janela, sem pausar. Com o tempo real transcorrido, calcule:
+Para uma conferência numérica, use **Desempenho e áudio** e **Medir por 60 segundos**. O painel não exige abrir a inspeção de CPU. O cálculo também pode ser conferido manualmente a partir de T-cycles e tempo real:
 
 ```text
 velocidade (%) = (T-cycles finais - T-cycles iniciais) / 4.194.304 / segundos reais * 100
 ```
 
-Leituras manuais têm atraso e não substituem a coleta técnica. M13 ainda não entregou o painel completo. Na validação técnica, também devem ser coletados `sampleRate`, `baseLatency` e `outputLatency` disponíveis, alvo e ocupação da fila, `roundTripFrames`, frames ausentes e descartados, além de amostras por segundo. Não é necessário procurar esses campos no painel atual da interface.
+Leituras manuais têm atraso. O painel M13 coleta amostras aproximadamente a cada segundo e exporta um JSON com taxa e latências de áudio disponíveis, fila, alvo, RTT atual e máximo, frames ausentes e descartados, velocidade e imagens desenhadas. O arquivo não contém ROM ou memória do jogo. Consulte [interpretação das métricas](performance-metrics.md). Quadros desenhados não comprovam a frequência física do monitor.
 
 Critério proposto para a janela estável: velocidade entre 98% e 102%, sem cortes audíveis, sem crescimento de frames PCM ausentes ou descartados e sem queda sustentada depois de ativar o áudio. Esses valores são metas de aceite, não resultados já obtidos no Motorola. O priming inicial deve ser registrado separadamente do período estável.
 
@@ -89,9 +89,24 @@ Os novos controladores não acrescentam automaticamente jogos à biblioteca. Tob
 
 Depois do fechamento da M12, quem já possui um cartucho próprio autorizado MBC2, MBC3 ou MBC5 pode usar **Carregar cartucho** e seguir a ajuda **Quais arquivos posso usar?**. O arquivo permanece local. Confira início, troca de cenários, progresso salvo pelo próprio jogo e restauração de slots. RTC só se aplica a variantes MBC3 que realmente possuem relógio; rumble não produz vibração. Os limites e resultados técnicos serão registrados com a entrega, sem exigir que o proprietário obtenha uma ROM adicional para testar áudio e toque.
 
-## M13, M14 e fechamento do grupo
+## Painel técnico da M13
 
-M13 aguarda a implementação do painel técnico. M14 aguarda a implementação e revisão da release, documentação final e materiais de portfólio. Seus passos de teste devem ser incluídos aqui quando esses fluxos existirem.
+1. Abra o jardim e pause. Em **Inspecionar CPU**, abra **Painel técnico**. Devem aparecer a página de memória, 12 instruções a partir do PC, os 384 tiles, os 40 sprites, os registradores de vídeo, timer, DMA e interrupções, além dos dados do cartucho.
+2. Compare os T-cycles antes e depois de aguardar alguns segundos com a máquina pausada. Consultar dados não pode avançar a máquina. Use **Uma instrução** para observar PC, bytes e desassemblador acompanhando o mesmo ponto.
+3. Em **Endereço hexadecimal**, consulte `8000`, `C000` e `FF00`. A última página inclui IE em `FFFF`. **Página anterior** e **Próxima página** respeitam os limites. `C001`, `XYZ` ou um valor fora da faixa devem gerar uma mensagem útil e preservar a página válida.
+4. Confira que tiles e prévia de OAM usam tons neutros. A prévia mostra padrões, espelhamento e altura dos objetos; não recompõe posições, prioridades ou paletas da tela. O dump é uma leitura dos dados internos, mesmo quando a CPU teria o acesso bloqueado.
+5. Navegue com Tab e Shift+Tab. As tabelas largas possuem rolagem própria e foco visível; em 320 px a página inteira não deve ganhar rolagem horizontal. Fechar **Painel técnico** ou **Inspecionar CPU** interrompe as consultas. Ocultar a aba também suspende a inspeção.
+
+## Medição da M13 e lentidão restante
+
+1. Recarregue a beta no Motorola e abra Tobu sem ativar o som. Abra **Desempenho e áudio**, aguarde a primeira amostra e escolha **Medir por 60 segundos**. Jogue com a página visível, sem pausar nem ocultar a aba. Ao final, anote velocidade média e quadros desenhados/s; exporte o diagnóstico se desejar guardá-lo.
+2. Ative o som, aguarde dez segundos de aquecimento e repita a janela. Compare velocidade, quadros desenhados, frames ausentes e descartados. Música contínua com velocidade próxima de 100% e menos imagens desenhadas sugere um problema de apresentação; velocidade menor pede investigação da cadência de execução. Esses sinais orientam a análise e não substituem a percepção no aparelho.
+3. Inicie outra medição e pause. O relatório deve informar interrupção e permitir exportar a janela parcial. Retome e comece uma nova janela, sem misturar gerações. Fechar somente **Inspecionar CPU** não encerra o painel independente de métricas; fechar **Desempenho e áudio** encerra a coleta.
+4. Confira que carregar um estado no mesmo cartucho preserva um relatório já concluído. Uma medição ativa é interrompida por mudança de sessão, rewind ou página oculta. Trocar ou reiniciar o cartucho inicia outra instância e não mantém um relatório da máquina anterior.
+
+## M14 e fechamento do grupo
+
+M14 aguarda a revisão da release, documentação final e materiais de portfólio. A diferença visual restante com áudio no Motorola deve ser tratada no fechamento, preservando o desktop. Os passos finais serão incluídos quando essas entregas existirem.
 
 Ao finalizar o grupo, o roteiro deve registrar os checks executados, a versão realmente publicada, os resultados dos três marcos e as pendências. O teste no Motorola continua necessário antes de afirmar desempenho mobile homologado ou apresentar essa correção como validada no aparelho.
 

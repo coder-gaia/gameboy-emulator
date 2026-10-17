@@ -38,7 +38,10 @@ export function GameScreen({
       onError(cause instanceof Error ? cause : new Error(String(cause)))
       return
     }
-    const draw = () => renderer.draw(device.framebuffer, device.frameId)
+    const draw = () => {
+      renderer.draw(device.framebuffer, device.frameId)
+      device.noteFrameDrawn(device.frameId)
+    }
     const unsubscribe = device.subscribe(draw)
     const unsubscribeError = device.subscribeError(onError)
     const resize = () => {

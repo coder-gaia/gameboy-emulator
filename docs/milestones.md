@@ -17,7 +17,7 @@ Stack aprovada: TypeScript estrito, React, Vite, CSS Modules, Canvas 2D, Worker,
 | M10   | Desempenho e beta pública                           | Concluída |
 | M11   | Rewind com memória limitada                         | Concluída |
 | M12   | Correção mobile, setas maiores, MBC2, MBC3 e MBC5   | Concluída |
-| M13   | Painel técnico completo                             | Pendente  |
+| M13   | Painel técnico completo                             | Concluída |
 | M14   | Release, README, portfólio e material para LinkedIn | Pendente  |
 
 ## Pontos de revisão
@@ -58,7 +58,11 @@ A M12 implementa reposição PCM pelo déficit completo e consumo previsto em vo
 
 O fechamento automatizado da M12 aprovou `npm run check`, com 777 testes locais e build, 103 testes de hardware, 156 cenários de interface e 14 testes de produção sob CSP. Depois do ajuste final do áudio, os 32 cenários pertinentes de áudio, estados e rewind passaram novamente. A regressão isolada de transporte aprovou os seis cenários, com velocidade de 99,30% a 100,24% e zero frames ausentes ou descartados nas janelas estáveis; o [relatório](performance-audio-mobile-results.json) fixa os hashes e o escopo. A regressão de interface teve dois casos repetidos depois de ajustar a expectativa da fixture incompatível: MBC3 e MBC5 agora são suportados; 0x22 permanece recusado. Os testes de RTC incluem bateria sem RAM, migração v1, offline, halt, importação atômica e preservação de slots. A homologação no Motorola permanece pendente.
 
-A M13 mantém o painel técnico e a M14 mantém release, portfólio e material para LinkedIn. O lançamento depende do aceite com áudio no aparelho real, além da regressão desktop. O [roteiro do grupo](testing-m12-m14.md) separa validações automatizadas e testes manuais pendentes. Preservar o grupo de três milestones e o commit por milestone.
+A M13 implementa o desassemblador SM83 completo, atlas dos 384 tiles, prévia e tabela dos 40 sprites, páginas de memória de 256 bytes e registradores de PPU, timer, DMA, interrupções e RTC. A captura não avança a máquina nem drena serial ou PCM. O Worker responde somente com dados de inspeção e buffers limitados; o painel fechado, desabilitado ou oculto não mantém consultas. O painel independente de desempenho separa T-cycles e imagens desenhadas, registra janelas locais de 60 segundos e exporta um JSON sem ROM, memória ou progresso. Pausa, estados, rewind e mudanças de geração interrompem janelas incompatíveis. Consulte [captura de hardware](debugger-core.md) e [interpretação das métricas](performance-metrics.md).
+
+Depois da M12, o proprietário confirmou música contínua e ausência de travadas no Motorola, mas ainda percebe lentidão apenas com som. Sem áudio, confirmou fluidez total; o desktop continua perfeito. A M13 fornece os contadores para distinguir velocidade e apresentação. O código publica somente a última imagem de cada lote PCM, uma causa plausível de movimento em saltos com música contínua. O fechamento da M14 inclui tratar essa apresentação, além de release, portfólio e material para LinkedIn. Não atribuir a diferença ao aparelho sem medi-la.
+
+O lançamento depende do aceite com áudio no aparelho real, além da regressão desktop. O [roteiro do grupo](testing-m12-m14.md) separa validações automatizadas e testes manuais pendentes. Preservar o grupo de três milestones e o commit por milestone.
 
 ## Critérios de qualidade
 
@@ -71,7 +75,7 @@ A M13 mantém o painel técnico e a M14 mantém release, portfólio e material p
 
 ## Escopo e metas
 
-A beta pública da M10 inclui demos, áudio, toque, teclado, gamepad, paletas, bateria e save states. A M11 acrescenta rewind; M12 amplia cartuchos e fluxo de áudio. O painel técnico completo continua na M13.
+A beta pública da M10 inclui demos, áudio, toque, teclado, gamepad, paletas, bateria e save states. A M11 acrescenta rewind; M12 amplia cartuchos e fluxo de áudio. A M13 acrescenta o painel técnico completo e o diagnóstico local de desempenho.
 
 A aplicação executa ROM Only de 32 KiB, MBC1 e MBC3 de até 2 MiB, MBC2 de até 256 KiB e MBC5 de até 8 MiB em potência de dois. MBC1 mantém a fiação padrão, com até 32 KiB de RAM para ROMs de até 512 KiB e até 8 KiB para ROMs maiores. MBC2 usa 512 nibbles internos, MBC3 até 32 KiB de RAM e RTC quando presente, MBC5 até 128 KiB de RAM. A convenção homebrew de RAM de 2 KiB é aceita com aviso. MBC1M e MBC30 não são implementados; não há autodetecção de MBC1M. Rumble não gera vibração física.
 
@@ -82,3 +86,5 @@ Meta de demo pronta em três segundos em perfil de teste documentado. Medir velo
 Direção visual: bancada de cartuchos, papel quente, grafite, cinza mineral e violeta fechado apenas em ações e foco. Interface responsiva, contraste, teclado, áreas de toque confortáveis e movimento reduzido.
 
 Previsão inicial: 10 a 16 semanas para beta e 16 a 24 para escopo completo, com 10 a 15 horas semanais. Reavaliar após CPU e timing. GBC, contas, backend, multiplayer e sincronização em nuvem ficam fora do V1.
+
+A M13 concluiu o check completo com 1.395 testes locais, os 103 testes externos, os 176 cenários de interface e os 16 testes de produção. Dois testes de relógio sintético foram repetidos após trocar o avanço contínuo de 60 segundos por 60 saltos de um segundo, preservando os asserts e o timeout original de 30 segundos. Os outros 174 cenários passaram na execução completa. O artefato de produção foi congelado e seus hashes registrados antes do envio.

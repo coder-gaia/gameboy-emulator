@@ -6,6 +6,8 @@ import { stateInteger, stateRecord } from '../core/state/validation'
 import { RewindHistory, REWIND_CAPTURE_HZ, REWIND_MAX_BYTES, REWIND_MAX_SECONDS } from './rewind'
 import { audioBufferProfile } from '../platform/audio/protocol'
 import { parseCartridgeRtcState } from '../core/cartridge'
+import { captureHardwareDebug } from '../core/debug'
+import type { HardwareDebugSnapshot } from '../core/debug'
 
 interface WorkerEndpoint {
   onmessage: ((event: MessageEvent<EmulatorRequest>) => void) | null
@@ -207,6 +209,7 @@ function onAudio(event: MessageEvent<{ type: string; frames: number; epoch: numb
 endpoint.onmessage = ({ data: request }) => {
   try {
     let captured: MachineCheckpoint | undefined
+    let hardware: HardwareDebugSnapshot | undefined
     const command = request.command
     if (command.type === 'init') {
       stopTimer()
@@ -314,6 +317,9 @@ endpoint.onmessage = ({ data: request }) => {
           break
         case 'inspect':
           break
+        case 'inspect-hardware':
+          hardware = captureHardwareDebug(device, command.memoryStart)
+          break
         case 'capture-state':
           if (playing || rewinding) throw new Error('Pause a reprodução antes de salvar um estado.')
           captured = checkpoint()
@@ -376,9 +382,17 @@ endpoint.onmessage = ({ data: request }) => {
       }
     }
     if (request.id === 0) return
+    if (hardware) {
+      endpoint.postMessage({ type: 'reply', id: request.id, hardware }, [
+        hardware.vram.buffer,
+        hardware.oam.buffer,
+        hardware.memory.bytes.buffer,
+      ])
+      return
+    }
     const state = snapshot(request.command.type === 'init')
     endpoint.postMessage(
-      { type: 'reply', id: request.id, snapshot: state, checkpoint: captured },
+      { type: 'reply', id: request.id, snapshot: state, checkpoint: captured, hardware },
       transfers(state),
     )
   } catch (cause) {

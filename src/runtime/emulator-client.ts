@@ -1,10 +1,12 @@
 import type { JoypadButton } from '../core/joypad'
 import type { AudioOutput } from '../platform/audio'
 import type { CartridgeRtcState } from '../core/cartridge'
+import type { HardwareDebugSnapshot } from '../core/debug'
 import type {
   EmulatorCommand,
   EmulatorMessage,
   EmulatorSnapshot,
+  EmulatorReplyPayload,
   MachineCheckpoint,
   RewindStatus,
 } from './worker-protocol'
@@ -13,7 +15,7 @@ const audioOwners = new WeakMap<AudioOutput, EmulatorClient>()
 let clientSequence = 0
 
 interface PendingRequest {
-  resolve: (checkpoint: MachineCheckpoint | undefined) => void
+  resolve: (reply: EmulatorReplyPayload) => void
   reject: (error: Error) => void
   timeout: ReturnType<typeof setTimeout>
 }
@@ -31,6 +33,8 @@ export class EmulatorClient {
   private current!: EmulatorSnapshot
   private battery: Uint8Array | null = null
   private rtc: CartridgeRtcState | null = null
+  private drawnFrameId: number | null = null
+  private drawnFrameCount = 0
   private output: AudioOutput | null = null
 
   private constructor() {
@@ -53,7 +57,7 @@ export class EmulatorClient {
       if (data.error) pending.reject(new Error(data.error))
       else {
         if (data.snapshot) this.update(data.snapshot)
-        pending.resolve(data.checkpoint)
+        pending.resolve({ checkpoint: data.checkpoint, hardware: data.hardware })
       }
     }
     this.worker.onerror = () =>
@@ -91,6 +95,23 @@ export class EmulatorClient {
     return this.current.romId
   }
 
+  get drawnFrames(): number {
+    return this.drawnFrameCount
+  }
+
+  /** Conta imagens distintas enviadas ao Canvas, sem afirmar FPS físico do monitor. */
+  noteFrameDrawn(frameId: number): void {
+    if (this.disposed || frameId === this.drawnFrameId) return
+    this.drawnFrameId = frameId
+    this.drawnFrameCount += 1
+  }
+
+  async inspectHardware(memoryStart = 0xc000): Promise<HardwareDebugSnapshot> {
+    const { hardware } = await this.request({ type: 'inspect-hardware', memoryStart })
+    if (!hardware) throw new Error('O emulador não entregou os dados de inspeção.')
+    return hardware
+  }
+
   get rewind(): RewindStatus {
     return this.current.rewind
   }
@@ -117,7 +138,7 @@ export class EmulatorClient {
   }
 
   async captureState(): Promise<MachineCheckpoint> {
-    const checkpoint = await this.request({ type: 'capture-state' })
+    const { checkpoint } = await this.request({ type: 'capture-state' })
     if (!checkpoint) throw new Error('O emulador não entregou o estado solicitado.')
     return checkpoint
   }
@@ -266,7 +287,7 @@ export class EmulatorClient {
   private request(
     command: EmulatorCommand,
     transfer: Transferable[] = [],
-  ): Promise<MachineCheckpoint | undefined> {
+  ): Promise<EmulatorReplyPayload> {
     if (this.disposed) return Promise.reject(new Error('O cartucho foi fechado.'))
     const id = ++this.sequence
     return new Promise((resolve, reject) => {

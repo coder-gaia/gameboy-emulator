@@ -20,6 +20,7 @@ import { loadCartridgeFile } from '../platform/files/load-cartridge'
 import type { LoadedCartridge } from '../platform/files/load-cartridge'
 import { CartridgeDetails } from '../ui/cartridge/CartridgeDetails'
 import { CpuInspector } from '../ui/debug/CpuInspector'
+import { RuntimeMetrics } from '../ui/debug/RuntimeMetrics'
 import { createDiagnosticRom } from '../core/diagnostics/cartridge'
 import { parseCartridgeHeader } from '../core/cartridge'
 import { createVisualDiagnosticRom } from '../core/diagnostics/visual-cartridge'
@@ -146,6 +147,7 @@ export function App() {
   const [volume, setVolume] = useState(initialPreferences.preferences.volume)
   const [audioNotice, setAudioNotice] = useState('')
   const audioOutput = useRef<AudioOutput | null>(null)
+  const getAudioDiagnostics = useCallback(() => audioOutput.current?.getDiagnostics() ?? null, [])
   const liveDevice = useRef<EmulatorClient | null>(null)
   const batterySession = useRef<BatterySession | null>(null)
   const batteryRepository = useMemo(() => new BatteryRepository(), [])
@@ -899,14 +901,23 @@ export function App() {
               Quais arquivos posso usar?
             </button>
             {device && (
-              <CpuInspector
-                key={cartridgeRevision}
-                device={device}
-                playing={playing}
-                disabled={controlsBusy}
-                onAdvance={refreshScreen}
-                onReset={() => void restart()}
-              />
+              <>
+                <CpuInspector
+                  key={`cpu-${cartridgeRevision}`}
+                  device={device}
+                  playing={playing}
+                  disabled={controlsBusy}
+                  onAdvance={refreshScreen}
+                  onReset={() => void restart()}
+                />
+                <RuntimeMetrics
+                  key={`metrics-${device.instanceId}`}
+                  device={device}
+                  active={true}
+                  disabled={controlsBusy}
+                  getAudio={getAudioDiagnostics}
+                />
+              </>
             )}
           </div>
 

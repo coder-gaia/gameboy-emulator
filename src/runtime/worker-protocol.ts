@@ -2,6 +2,12 @@ import type { CpuSnapshot } from '../core/cpu'
 import type { JoypadButton } from '../core/joypad'
 import type { GameBoyState } from '../core/gameboy'
 import type { CartridgeRtcState } from '../core/cartridge'
+import type { HardwareDebugSnapshot } from '../core/debug'
+
+export interface EmulatorReplyPayload {
+  checkpoint?: MachineCheckpoint
+  hardware?: HardwareDebugSnapshot
+}
 
 export interface MachineCheckpoint {
   version: 1
@@ -42,6 +48,7 @@ export type EmulatorCommand =
   | { type: 'release-input' }
   | { type: 'step'; count: number }
   | { type: 'inspect' }
+  | { type: 'inspect-hardware'; memoryStart: number }
   | { type: 'import-battery'; bytes: Uint8Array }
   | {
       type: 'import-battery-state'
@@ -63,12 +70,11 @@ export interface EmulatorRequest {
 }
 
 export type EmulatorMessage =
-  | {
+  | ({
       type: 'reply'
       id: number
       snapshot?: EmulatorSnapshot
-      checkpoint?: MachineCheckpoint
       error?: string
-    }
+    } & EmulatorReplyPayload)
   | { type: 'frame'; snapshot: EmulatorSnapshot }
   | { type: 'error'; error: string }

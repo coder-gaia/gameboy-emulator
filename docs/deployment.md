@@ -10,6 +10,8 @@ O visitante não precisa de conta. ROMs próprias, bateria e estados ficam no na
 
 A M11 acrescenta rewind e o fundo creme. Seu build final passou pelos 14 testes de produção locais, incluindo volta da imagem e da CPU, suspensão do áudio durante o gesto e retomada de PCM real sob CSP. Os nomes dos assets mudam com o conteúdo; a lista acima registra a publicação inicial da M10, e não deve ser usada como identificação fixa das próximas versões.
 
+A M12 foi publicada em 17/10/2026 com CI aprovado e 14 testes de produção no endereço HTTPS real. HTML e os quatro assets principais coincidiram com os hashes do [relatório de áudio M12](performance-audio-mobile-results.json). O proprietário confirmou no Motorola música contínua e ausência de travadas, mas ainda percebe lentidão com som. Sem som, confirmou fluidez total. A publicação está validada; a homologação completa de desempenho no aparelho continua pendente.
+
 ## Validar o mesmo build que será publicado
 
 Na raiz do projeto, com as dependências instaladas:

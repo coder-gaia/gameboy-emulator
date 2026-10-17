@@ -4,7 +4,7 @@ Um emulador de Game Boy DMG no navegador, com núcleo TypeScript independente da
 
 Experimente a [beta pública do Pocket Lab](https://gameboy-emulator-aox.pages.dev/), publicada no Cloudflare Pages.
 
-Projeto em desenvolvimento, com M00 a M12 implementadas. CPU, timer, DMA, vídeo, sprites, janela, controles, MBC1, saves de bateria, áudio, save states versionados e rewind já estão disponíveis. A M12 acrescenta MBC2, MBC3 com RTC, MBC5, setas maiores no toque e abastecimento adaptativo de áudio. A biblioteca oferece Tobu Tobu Girl e 2048; o jardim é uma ROM própria de diagnóstico. A homologação mobile no aparelho real continua pendente.
+Projeto em desenvolvimento, com M00 a M13 implementadas. CPU, timer, DMA, vídeo, sprites, janela, controles, MBC1, saves de bateria, áudio, save states versionados e rewind já estão disponíveis. A M12 acrescenta MBC2, MBC3 com RTC, MBC5, setas maiores no toque e abastecimento adaptativo de áudio. A biblioteca oferece Tobu Tobu Girl e 2048; o jardim é uma ROM própria de diagnóstico. A homologação mobile no aparelho real continua pendente.
 
 **Validação mobile pendente:** o proprietário relatou lentidão somente após ativar o som no Motorola Edge 40 Neo com Chrome. A M12 corrige a limitação de vazão reproduzida sob atraso controlado de mensagens. O teste automatizado em computador não homologa o aparelho real. Consulte [diagnóstico e implementação MB01](docs/mobile-audio-investigation.md) e o [roteiro M12 a M14](docs/testing-m12-m14.md).
 
@@ -108,6 +108,8 @@ O painel **Um instante atrás.** oferece **Ativar rewind**. Depois de ativar e j
 O Worker guarda até 20 segundos de tempo emulado, com capturas de aproximadamente 10 Hz e uma arena de buffers limitada a 8 MiB. O histórico é temporário, fica nesta aba e é descartado ao desativar, carregar outro estado ou trocar o cartucho. Voltar também restaura a RAM do jogo; a bateria recebe o ponto final escolhido, sem gravar os pontos intermediários. Consulte [funcionamento e limites](docs/rewind.md) e [medição de custo e restauração](docs/performance.md#rewind-na-m11).
 
 ## Testar as milestones
+
+A M13 está em validação. **Inspecionar CPU** inclui o **Painel técnico**, com desassemblador, tiles, OAM, páginas de memória e registradores. O painel independente **Desempenho e áudio** separa velocidade emulada e imagens desenhadas. Ambos começam fechados. A medição local de 60 segundos permite exportar um JSON sem ROM, memória ou progresso do jogo. O [contrato da inspeção](docs/debugger-core.md) explica as leituras sem alteração da máquina.
 
 O [roteiro M06 a M08](docs/testing-m06-m08.md) registra os testes do grupo aprovado. O [roteiro M09 a M11](docs/testing-m09-m11.md) preserva a revisão anterior. O [roteiro M12 a M14](docs/testing-m12-m14.md) acompanha o grupo atual. A validação da M12 inclui 103 testes externos, 156 cenários de interface e 14 testes de produção. Dois casos de interface foram repetidos após corrigir a expectativa da fixture de mapper incompatível, agora 0x22. A regressão isolada de áudio passou nos seis cenários, com velocidade de 99,30% a 100,24% e zero frames ausentes ou descartados nas janelas estáveis. Veja [dados e escopo](docs/performance-audio-mobile-results.json). A cobertura automatizada não representa aceite do Motorola.
 
