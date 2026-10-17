@@ -5,6 +5,9 @@ import {
   RomOnlyCartridge,
   createCartridge,
   Mbc1Cartridge,
+  Mbc2Cartridge,
+  Mbc3Cartridge,
+  Mbc5Cartridge,
 } from '../../src/core/cartridge'
 import { buildTestRom, updateTestHeaderChecksum } from '../fixtures/rom'
 
@@ -57,11 +60,17 @@ describe('cabeçalho do cartucho', () => {
       expect(parseCartridgeHeader(rom)).toMatchObject({
         mapper,
         hasBattery: battery,
-        isSupported: mapper === 'MBC1',
+        isSupported: mapper !== 'UNKNOWN',
       })
       expect(() => new RomOnlyCartridge(rom)).toThrow(/não suportado/)
-      if (mapper === 'MBC1') expect(createCartridge(rom)).toBeInstanceOf(Mbc1Cartridge)
-      else expect(() => createCartridge(rom)).toThrow(/não suportado/)
+      const classes = {
+        MBC1: Mbc1Cartridge,
+        MBC2: Mbc2Cartridge,
+        MBC3: Mbc3Cartridge,
+        MBC5: Mbc5Cartridge,
+      }
+      if (mapper === 'UNKNOWN') expect(() => createCartridge(rom)).toThrow(/não suportado/)
+      else expect(createCartridge(rom)).toBeInstanceOf(classes[mapper as keyof typeof classes])
     },
   )
 

@@ -19,6 +19,8 @@ O benchmark de navegador usa o build estático servido com os mesmos cabeçalhos
 
 O projeto `desktop` usa Chromium no computador de teste. O projeto `mobile` usa viewport e entrada do Pixel 7, com redução de CPU 4x pelo CDP na página. Isso é uma simulação relativa ao computador, não uma medição em um Pixel 7 físico. O alcance da redução sobre o Worker não é presumido. A rede é local, sem representar latência, compressão ou distribuição geográfica do CDN. [Limites da simulação](https://developer.chrome.com/docs/devtools/performance/reference), [comando de redução de CPU](https://chromedevtools.github.io/devtools-protocol/tot/Emulation/#method-setCPUThrottlingRate).
 
+**Retorno do aparelho real:** o proprietário confirmou desktop fluido e, no Motorola Edge 40 Neo com Chrome, lentidão somente depois de ativar o som. O aceite mobile está pendente. Um experimento posterior confirmou que o throttle da página não desacelera o DedicatedWorker neste Chromium; outro reproduziu velocidade próxima de 33% e falta de PCM ao atrasar a entrega de mensagens de áudio, mantendo velocidade normal sem áudio. Isso sustenta a investigação da cadência, sem confirmar a causa específica no telefone. Os testes funcionais existentes também não exigem velocidade mínima ou ausência de underruns. Consulte [diagnóstico MB01](mobile-audio-investigation.md) e [resultados controlados](mobile-audio-diagnosis-results.json). Os números históricos abaixo descrevem o ambiente original e não constituem homologação nesse aparelho.
+
 Os relatórios de navegador são anexados aos resultados em `.work/benchmark-browser`. Eles registram ambiente, perfil, T-cycles, tempo, quadros observados e estatísticas PCM. Execute benchmarks sem outras tarefas intensivas de CPU; não use o tempo de execução de uma suíte concorrente como resultado de desempenho.
 
 ## Medição do núcleo na M10
@@ -78,12 +80,14 @@ No produto, capturas ocorrem aproximadamente a 10 Hz nos limites dos orçamentos
 
 ## Memória e limites
 
+A M12 acrescenta uma [regressão de transporte de áudio](performance-audio-mobile-results.json), executada isoladamente sobre o build congelado. Os seis cenários, cobrindo os três cartuchos em desktop e perfil Pixel 7 simulado, passaram com velocidade de 99,30% a 100,24% e zero frames PCM ausentes ou descartados nas janelas estáveis de 12 segundos. A compensação usa o pico de atraso observado na geração e crédito físico para proteger a fila. As medições anteriores da M10 e M11 permanecem históricas. Essa regressão não homologa o Motorola físico nem mede FPS de apresentação; consulte [diagnóstico, correção e limites MB01](mobile-audio-investigation.md).
+
 O relatório do núcleo soma buffers tipados conhecidos da máquina, incluindo cópias internas da ROM, RAM, vídeo, fila PCM e serial. Isso não mede objetos JavaScript, snapshots temporários, UI, heap do Worker, heap da página ou memória interna do navegador. Não use `performance.memory` da página como consumo total do emulador.
 
-A fila PCM do núcleo e do Worklet tem limites explícitos. Bateria é gravada somente quando sua revisão muda. Os slots persistidos são limitados a três por ROM e o formato de arquivo aceita no máximo 1 MiB. A página apresenta as cópias mais recentes sem executar a CPU dentro do React.
+A fila PCM do núcleo e do Worklet tem limites explícitos. Baterias de RAM simples são gravadas quando sua revisão muda. Cartuchos com RTC também atualizam o timestamp nos checkpoints, mesmo pausados, para preservar a fase e distinguir o tempo offline. Os slots persistidos são limitados a três por ROM e o formato de arquivo aceita no máximo 1 MiB. A página apresenta as cópias mais recentes sem executar a CPU dentro do React.
 
 ## Build e regressões
 
-`npm.cmd run check` valida regras, formatação, lint, testes, tipos e build. A suíte de desenvolvimento cobre os fluxos detalhados da interface. `npm.cmd run test:production` verifica o artefato final, MIME, cache, CSP, Worker, áudio, demos, slots, arquivos, preferências e tela cheia. O CI executa as duas suítes de navegador e os 87 testes externos de hardware.
+`npm.cmd run check` valida regras, formatação, lint, testes, tipos e build. A suíte de desenvolvimento cobre os fluxos detalhados da interface. `npm.cmd run test:production` verifica o artefato final, MIME, cache, CSP, Worker, áudio, demos, slots, arquivos, preferências e tela cheia. O CI também executa `test:audio-flow`, com atraso controlado entre Worker e Worklet, e os 103 testes externos de hardware. Essa regressão mede velocidade em T-cycles, frames PCM ausentes e descartados; viewport mobile não equivale a aparelho físico.
 
 Os artefatos de QA em `.work` e `test-results` são ignorados pelo watcher do Vite, evitando recarregar a página por causa de um trace de teste. O servidor estático de QA aplica o subconjunto de `_headers` usado no projeto e não substitui a infraestrutura da Cloudflare. Consulte [preparação e publicação](deployment.md).

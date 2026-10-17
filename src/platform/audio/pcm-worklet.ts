@@ -15,7 +15,7 @@ declare const sampleRate: number
 declare function registerProcessor(name: string, processor: typeof PocketPcmProcessor): void
 
 class PocketPcmProcessor extends AudioWorkletProcessor {
-  private readonly stream = new PcmStream()
+  private readonly stream = new PcmStream(sampleRate)
   private workerPort: MessagePort | null = null
   private disposed = false
   private reportFrames = 0
@@ -37,7 +37,8 @@ class PocketPcmProcessor extends AudioWorkletProcessor {
         this.workerPort.onmessage = (pcmEvent: MessageEvent<AudioSamplesMessage>) => {
           const data = pcmEvent.data
           if (data?.type === 'samples' && data.samples instanceof Float32Array) {
-            this.stream.receive(data.samples, data.epoch)
+            if (this.stream.receive(data.samples, data.epoch) && data.samples.length > 0)
+              this.requestSamples()
           }
         }
         this.workerPort.start()

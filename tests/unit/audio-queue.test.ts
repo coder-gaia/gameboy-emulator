@@ -144,7 +144,12 @@ describe('consumo dirigido pelo AudioWorklet', () => {
     stream.render(left, right)
     expect(left).toEqual(new Float32Array(128).fill(0.25))
     expect(right).toEqual(new Float32Array(128).fill(-0.5))
-    expect(stream.demand()).toBe(AUDIO_REFILL_FRAMES)
+    expect(stream.demand()).toBe(0)
+    stream.render(
+      new Float32Array(AUDIO_REFILL_FRAMES - 128),
+      new Float32Array(AUDIO_REFILL_FRAMES - 128),
+    )
+    expect(stream.demand()).toBe(AUDIO_REFILL_FRAMES + 128)
   })
 
   it('descarta PCM em voo da geração anterior ao pausar e retomar', () => {
@@ -180,13 +185,11 @@ describe('consumo dirigido pelo AudioWorklet', () => {
     stream.reset(1, true)
     stream.demand()
     stream.receive(stereo(AUDIO_TARGET_FRAMES), 1)
-    stream.render(
-      new Float32Array(AUDIO_TARGET_FRAMES + 128),
-      new Float32Array(AUDIO_TARGET_FRAMES + 128),
-    )
+    for (let offset = 0; offset < AUDIO_TARGET_FRAMES + 128; offset += 128)
+      stream.render(new Float32Array(128), new Float32Array(128))
     expect(stream.diagnostics()).toMatchObject({ underruns: 1, underrunFrames: 128 })
-    expect(stream.demand()).toBe(AUDIO_REFILL_FRAMES)
-    stream.receive(stereo(AUDIO_REFILL_FRAMES), 1)
+    expect(stream.demand()).toBe(AUDIO_TARGET_FRAMES)
+    stream.receive(stereo(AUDIO_TARGET_FRAMES), 1)
     const left = new Float32Array(128)
     stream.render(left, new Float32Array(128))
     expect(left).toEqual(new Float32Array(128).fill(0.25))

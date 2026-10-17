@@ -97,14 +97,14 @@ describe('histórico limitado de rewind', () => {
   })
 
   it('promove a âncora após wrap e evicção sem ultrapassar o orçamento', () => {
-    const history = new RewindHistory({ maxBytes: 512 * 1024 })
+    const history = new RewindHistory({ maxBytes: 1024 * 1024 })
     const values: MachineCheckpoint[] = []
     for (let index = 0; index < 60; index += 1) {
-      const value = checkpoint(index, new Uint8Array(50_000).fill(index % 2 ? 255 : 0))
+      const value = checkpoint(index, new Uint8Array(100_000).fill(index % 2 ? 255 : 0))
       values.push(value)
       history.record(value, time(index))
       expect(history.stats.usedBytes).toBeLessThanOrEqual(history.stats.maxBytes)
-      expect(history.stats.allocatedBytes).toBe(512 * 1024)
+      expect(history.stats.allocatedBytes).toBe(1024 * 1024)
     }
     expect(history.stats.entries).toBe(3)
     expect(history.stepBack()).toEqual(values[58])
@@ -146,7 +146,7 @@ describe('histórico limitado de rewind', () => {
   })
 
   it('combina deltas esparsos e densos com wrap, comprimentos variáveis e ramos novos', () => {
-    const history = new RewindHistory({ maxBytes: 512 * 1024 })
+    const history = new RewindHistory({ maxBytes: 1024 * 1024 })
     const expected: MachineCheckpoint[] = []
     let seed = 12345
     for (let index = 0; index < 140; index += 1) {
@@ -160,7 +160,7 @@ describe('histórico limitado de rewind', () => {
       history.record(value, time(index))
       expected.push(value)
       while (expected.length > history.stats.entries) expected.shift()
-      expect(history.stats.usedBytes).toBeLessThanOrEqual(512 * 1024)
+      expect(history.stats.usedBytes).toBeLessThanOrEqual(1024 * 1024)
       if (index % 7 === 0 && expected.length > 1) {
         expected.pop()
         expectSamePayload(history.stepBack(), expected.at(-1)!)
@@ -246,7 +246,7 @@ describe('histórico limitado de rewind', () => {
   })
 
   it('rejeita orçamentos fora do contrato', () => {
-    for (const maxBytes of [0, 512 * 1024 - 1, REWIND_MAX_BYTES + 1, Infinity])
+    for (const maxBytes of [0, 1024 * 1024 - 1, REWIND_MAX_BYTES + 1, Infinity])
       expect(() => new RewindHistory({ maxBytes })).toThrow('orçamento')
     for (const maxSeconds of [0, -1, 21, NaN])
       expect(() => new RewindHistory({ maxSeconds })).toThrow('duração')

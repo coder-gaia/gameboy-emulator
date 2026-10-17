@@ -11,7 +11,14 @@ const manifest = JSON.parse(
 const mbc1Manifest = JSON.parse(
   await readFile(resolve(projectRoot, 'tests/roms/mbc1-manifest.json'), 'utf8'),
 )
-if (mbc1Manifest.revision !== manifest.suites.mooneye.revision) {
+const extendedManifest = JSON.parse(
+  await readFile(resolve(projectRoot, 'tests/roms/mbc-extended-manifest.json'), 'utf8'),
+)
+if (
+  [mbc1Manifest, extendedManifest].some(
+    (entry) => entry.revision !== manifest.suites.mooneye.revision,
+  )
+) {
   throw new Error('Os manifestos Mooneye precisam usar a mesma revisão de fonte.')
 }
 const [sourceArgument, assemblerArgument, linkerArgument] = process.argv.slice(2)
@@ -55,6 +62,7 @@ let count = 0
 const entries = [
   ...manifest.tests.filter((test) => test.suite === 'mooneye'),
   ...mbc1Manifest.tests,
+  ...extendedManifest.tests,
 ]
 for (const entry of entries) {
   const relativePath = entry.sourcePath.replace(/\.s$/, '')

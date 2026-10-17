@@ -1,0 +1,513 @@
+{
+  "schemaVersion": 1,
+  "reportDateLocal": "2026-10-16",
+  "timezone": "America/Sao_Paulo",
+  "observedRevision": "d41d9b32bcb376f7d1c6ab5bf432c860b4fcb15f",
+  "userReport": {
+    "device": "Motorola Edge 40 Neo",
+    "browser": "Chrome",
+    "versionDetails": "Versões de sistema e navegador ainda não coletadas.",
+    "silent": "Tobu, 2048 e jardim fluidos antes de ativar o som.",
+    "audio": "Ativar som torna os três lentos; Tobu parece parar em sound by potato-tan e a música picota.",
+    "input": "Jogabilidade aprovada; proprietário pediu setas de toque maiores."
+  },
+  "runtimeExperiment": {
+    "checkedAt": "2026-10-17T00:53:43.334Z",
+    "origin": "https://gameboy-emulator-aox.pages.dev",
+    "cpu": "AMD Ryzen 7 5700U with Radeon Graphics         ",
+    "method": "Viewport Pixel 7 no Chromium desktop, transporte de áudio direto comparado a uma ponte de diagnóstico com temporizadores de 10 ms em cada sentido. Mesmos assets da aplicação, contextos novos e rewind desligado.",
+    "limitation": "Ensaio controlado neste computador, sem acesso ao aparelho do proprietário. A ponte acrescenta dois saltos de mensagem e dois temporizadores; 20 ms é o atraso nominal inserido, não a latência total medida. As janelas incluem abertura e menus, não constituem benchmark de gameplay.",
+    "rows": [
+      {
+        "mode": "normal",
+        "game": "garden",
+        "audioEnabled": false,
+        "browser": "156.0.8078.4",
+        "seconds": 8.01490000000596,
+        "emulatedSeconds": 8.023599624633789,
+        "speedPercent": 100.10854314623792,
+        "frameId": 627,
+        "frameDelta": 479,
+        "snapshots": 479,
+        "playing": true,
+        "rewind": {
+          "enabled": false,
+          "active": false,
+          "entries": 0,
+          "availableSeconds": 0,
+          "allocatedBytes": 0,
+          "usedBytes": 0,
+          "maxSeconds": 20,
+          "maxBytes": 8388608
+        },
+        "sampleRate": null,
+        "contextState": null,
+        "renderedFrames": 0,
+        "underrunFrames": 0,
+        "underruns": 0,
+        "underrunPercent": 0,
+        "latestAudio": null
+      },
+      {
+        "mode": "normal",
+        "game": "garden",
+        "audioEnabled": true,
+        "browser": "156.0.8078.4",
+        "seconds": 12.01060000000149,
+        "emulatedSeconds": 12.01732063293457,
+        "speedPercent": 100.05595584677766,
+        "frameId": 1416,
+        "frameDelta": 718,
+        "snapshots": 718,
+        "playing": true,
+        "rewind": {
+          "enabled": false,
+          "active": false,
+          "entries": 0,
+          "availableSeconds": 0,
+          "allocatedBytes": 0,
+          "usedBytes": 0,
+          "maxSeconds": 20,
+          "maxBytes": 8388608
+        },
+        "sampleRate": 48000,
+        "contextState": "running",
+        "renderedFrames": 577536,
+        "underrunFrames": 0,
+        "underruns": 0,
+        "underrunPercent": 0,
+        "latestAudio": {
+          "queuedFrames": 1357,
+          "renderedFrames": 601600,
+          "underrunFrames": 0,
+          "underruns": 0,
+          "droppedFrames": 0,
+          "peakLevel": 0,
+          "energy": 0,
+          "epoch": 1,
+          "active": true,
+          "primed": true,
+          "pendingFrames": 512,
+          "receivedAt": 27201.70000000298
+        }
+      },
+      {
+        "mode": "normal",
+        "game": "tobu",
+        "audioEnabled": false,
+        "browser": "156.0.8078.4",
+        "seconds": 8.0175,
+        "emulatedSeconds": 8.022600173950195,
+        "speedPercent": 100.06361302089424,
+        "frameId": 581,
+        "frameDelta": 450,
+        "snapshots": 454,
+        "playing": true,
+        "rewind": {
+          "enabled": false,
+          "active": false,
+          "entries": 0,
+          "availableSeconds": 0,
+          "allocatedBytes": 0,
+          "usedBytes": 0,
+          "maxSeconds": 20,
+          "maxBytes": 8388608
+        },
+        "sampleRate": null,
+        "contextState": null,
+        "renderedFrames": 0,
+        "underrunFrames": 0,
+        "underruns": 0,
+        "underrunPercent": 0,
+        "latestAudio": null
+      },
+      {
+        "mode": "normal",
+        "game": "tobu",
+        "audioEnabled": true,
+        "browser": "156.0.8078.4",
+        "seconds": 12.01879999999702,
+        "emulatedSeconds": 12.028388023376465,
+        "speedPercent": 100.07977521366065,
+        "frameId": 1325,
+        "frameDelta": 718,
+        "snapshots": 718,
+        "playing": true,
+        "rewind": {
+          "enabled": false,
+          "active": false,
+          "entries": 0,
+          "availableSeconds": 0,
+          "allocatedBytes": 0,
+          "usedBytes": 0,
+          "maxSeconds": 20,
+          "maxBytes": 8388608
+        },
+        "sampleRate": 48000,
+        "contextState": "running",
+        "renderedFrames": 577536,
+        "underrunFrames": 0,
+        "underruns": 0,
+        "underrunPercent": 0,
+        "latestAudio": {
+          "queuedFrames": 1641,
+          "renderedFrames": 613632,
+          "underrunFrames": 0,
+          "underruns": 0,
+          "droppedFrames": 0,
+          "peakLevel": 0.11330568045377731,
+          "energy": 4517.990499586881,
+          "epoch": 1,
+          "active": true,
+          "primed": true,
+          "pendingFrames": 0,
+          "receivedAt": 24379.5
+        }
+      },
+      {
+        "mode": "delayed-port-20ms",
+        "game": "garden",
+        "audioEnabled": false,
+        "browser": "156.0.8078.4",
+        "seconds": 8.01119999999553,
+        "emulatedSeconds": 8.021599769592285,
+        "speedPercent": 100.12981537842971,
+        "frameId": 627,
+        "frameDelta": 479,
+        "snapshots": 479,
+        "playing": true,
+        "rewind": {
+          "enabled": false,
+          "active": false,
+          "entries": 0,
+          "availableSeconds": 0,
+          "allocatedBytes": 0,
+          "usedBytes": 0,
+          "maxSeconds": 20,
+          "maxBytes": 8388608
+        },
+        "sampleRate": null,
+        "contextState": null,
+        "renderedFrames": 0,
+        "underrunFrames": 0,
+        "underruns": 0,
+        "underrunPercent": 0,
+        "latestAudio": null
+      },
+      {
+        "mode": "delayed-port-20ms",
+        "game": "garden",
+        "audioEnabled": true,
+        "browser": "156.0.8078.4",
+        "seconds": 12.00820000000298,
+        "emulatedSeconds": 4.00222110748291,
+        "speedPercent": 33.32906769942137,
+        "frameId": 910,
+        "frameDelta": 239,
+        "snapshots": 239,
+        "playing": true,
+        "rewind": {
+          "enabled": false,
+          "active": false,
+          "entries": 0,
+          "availableSeconds": 0,
+          "allocatedBytes": 0,
+          "usedBytes": 0,
+          "maxSeconds": 20,
+          "maxBytes": 8388608
+        },
+        "sampleRate": 48000,
+        "contextState": "running",
+        "renderedFrames": 192619,
+        "underrunFrames": 384917,
+        "underruns": 3008,
+        "underrunPercent": 66.64813968306737,
+        "latestAudio": {
+          "queuedFrames": 0,
+          "renderedFrames": 201839,
+          "underrunFrames": 399761,
+          "underruns": 3124,
+          "droppedFrames": 0,
+          "peakLevel": 0,
+          "energy": 0,
+          "epoch": 1,
+          "active": true,
+          "primed": true,
+          "pendingFrames": 512,
+          "receivedAt": 24219.70000000298
+        }
+      },
+      {
+        "mode": "delayed-port-20ms",
+        "game": "tobu",
+        "audioEnabled": false,
+        "browser": "156.0.8078.4",
+        "seconds": 8.01639999999851,
+        "emulatedSeconds": 8.023799896240234,
+        "speedPercent": 100.09230946861092,
+        "frameId": 583,
+        "frameDelta": 450,
+        "snapshots": 454,
+        "playing": true,
+        "rewind": {
+          "enabled": false,
+          "active": false,
+          "entries": 0,
+          "availableSeconds": 0,
+          "allocatedBytes": 0,
+          "usedBytes": 0,
+          "maxSeconds": 20,
+          "maxBytes": 8388608
+        },
+        "sampleRate": null,
+        "contextState": null,
+        "renderedFrames": 0,
+        "underrunFrames": 0,
+        "underruns": 0,
+        "underrunPercent": 0,
+        "latestAudio": null
+      },
+      {
+        "mode": "delayed-port-20ms",
+        "game": "tobu",
+        "audioEnabled": true,
+        "browser": "156.0.8078.4",
+        "seconds": 12.005400000005961,
+        "emulatedSeconds": 4.013023376464844,
+        "speedPercent": 33.426819401792955,
+        "frameId": 810,
+        "frameDelta": 218,
+        "snapshots": 226,
+        "playing": true,
+        "rewind": {
+          "enabled": false,
+          "active": false,
+          "entries": 0,
+          "availableSeconds": 0,
+          "allocatedBytes": 0,
+          "usedBytes": 0,
+          "maxSeconds": 20,
+          "maxBytes": 8388608
+        },
+        "sampleRate": 48000,
+        "contextState": "running",
+        "renderedFrames": 192625,
+        "underrunFrames": 384911,
+        "underruns": 3008,
+        "underrunPercent": 66.64710078679079,
+        "latestAudio": {
+          "queuedFrames": 256,
+          "renderedFrames": 205688,
+          "underrunFrames": 407944,
+          "underruns": 3188,
+          "droppedFrames": 0,
+          "peakLevel": 0.2610434591770172,
+          "energy": 1414.994056236064,
+          "epoch": 1,
+          "active": true,
+          "primed": true,
+          "pendingFrames": 512,
+          "receivedAt": 24333.89999999851
+        }
+      }
+    ]
+  },
+  "throttleExperiment": {
+    "generatedAt": "2026-10-17T00:49:50.145Z",
+    "environment": {
+      "browser": "156.0.8078.4",
+      "node": "v22.13.0",
+      "platform": "win32",
+      "release": "10.0.26300",
+      "cpu": "AMD Ryzen 7 5700U with Radeon Graphics"
+    },
+    "protocol": {
+      "page": "about:blank sem CSP",
+      "pageDomain": "Emulation.setCPUThrottlingRate",
+      "rates": [1, 4, 1],
+      "samplesPerCondition": 3,
+      "warmupCallsPerThread": 4,
+      "targetBaselineMs": 100,
+      "workload": "Math.imul e mistura determinística de inteiro de 32 bits, mesmo número de iterações na página e no DedicatedWorker.",
+      "workerTime": "performance.now() dentro do DedicatedWorker, excluindo fila de entrega ao main thread.",
+      "roundtripTime": "performance.now() em Node envolvendo a chamada Playwright, incluindo IPC e entrega de resposta.",
+      "limitation": "Experimento deste Chromium e deste computador. Não representa aparelho móvel real nem simula integralmente CPU, GPU, memória ou sistema operacional móvel.",
+      "iterations": 18348624,
+      "calibration": {
+        "elapsedMs": 10.900000005960464,
+        "checksum": 2562384355,
+        "roundtripMs": 13.197500000000105
+      }
+    },
+    "conditions": [
+      {
+        "label": "baseline-before",
+        "pageThrottleRate": 1,
+        "samples": [
+          {
+            "page": {
+              "elapsedMs": 99.69999999552965,
+              "checksum": 3984880369,
+              "roundtripMs": 102.01369999999997
+            },
+            "worker": {
+              "id": 5,
+              "elapsedMs": 108,
+              "checksum": 3984880369,
+              "roundtripMs": 111.56169999999997
+            }
+          },
+          {
+            "page": {
+              "elapsedMs": 98.60000000149012,
+              "checksum": 3984880369,
+              "roundtripMs": 100.83830000000012
+            },
+            "worker": {
+              "id": 6,
+              "elapsedMs": 99.60000000149012,
+              "checksum": 3984880369,
+              "roundtripMs": 101.92059999999992
+            }
+          },
+          {
+            "page": {
+              "elapsedMs": 99.60000000149012,
+              "checksum": 3984880369,
+              "roundtripMs": 101.9405999999999
+            },
+            "worker": {
+              "id": 7,
+              "elapsedMs": 98.39999999850988,
+              "checksum": 3984880369,
+              "roundtripMs": 100.69529999999986
+            }
+          }
+        ],
+        "pageMedianMs": 99.60000000149012,
+        "workerMedianMs": 99.60000000149012,
+        "pageRoundtripMedianMs": 101.9405999999999,
+        "workerRoundtripMedianMs": 101.92059999999992
+      },
+      {
+        "label": "page-throttle-4",
+        "pageThrottleRate": 4,
+        "samples": [
+          {
+            "page": {
+              "elapsedMs": 462.3999999985099,
+              "checksum": 3984880369,
+              "roundtripMs": 465.4218000000001
+            },
+            "worker": {
+              "id": 8,
+              "elapsedMs": 99.60000000149012,
+              "checksum": 3984880369,
+              "roundtripMs": 103.85970000000043
+            }
+          },
+          {
+            "page": {
+              "elapsedMs": 466.20000000298023,
+              "checksum": 3984880369,
+              "roundtripMs": 469.44820000000027
+            },
+            "worker": {
+              "id": 9,
+              "elapsedMs": 98.89999999850988,
+              "checksum": 3984880369,
+              "roundtripMs": 104.18650000000025
+            }
+          },
+          {
+            "page": {
+              "elapsedMs": 474.80000000447035,
+              "checksum": 3984880369,
+              "roundtripMs": 478.5821000000001
+            },
+            "worker": {
+              "id": 10,
+              "elapsedMs": 113.30000000447035,
+              "checksum": 3984880369,
+              "roundtripMs": 120.1563000000001
+            }
+          }
+        ],
+        "pageMedianMs": 466.20000000298023,
+        "workerMedianMs": 99.60000000149012,
+        "pageRoundtripMedianMs": 469.44820000000027,
+        "workerRoundtripMedianMs": 104.18650000000025
+      },
+      {
+        "label": "baseline-after",
+        "pageThrottleRate": 1,
+        "samples": [
+          {
+            "page": {
+              "elapsedMs": 147.80000000447035,
+              "checksum": 3984880369,
+              "roundtripMs": 149.80020000000013
+            },
+            "worker": {
+              "id": 11,
+              "elapsedMs": 105.19999999552965,
+              "checksum": 3984880369,
+              "roundtripMs": 107.61859999999979
+            }
+          },
+          {
+            "page": {
+              "elapsedMs": 99.29999999701977,
+              "checksum": 3984880369,
+              "roundtripMs": 101.42340000000013
+            },
+            "worker": {
+              "id": 12,
+              "elapsedMs": 100.39999999850988,
+              "checksum": 3984880369,
+              "roundtripMs": 103.13099999999986
+            }
+          },
+          {
+            "page": {
+              "elapsedMs": 98.70000000298023,
+              "checksum": 3984880369,
+              "roundtripMs": 100.70180000000028
+            },
+            "worker": {
+              "id": 13,
+              "elapsedMs": 99.10000000149012,
+              "checksum": 3984880369,
+              "roundtripMs": 100.8751000000002
+            }
+          }
+        ],
+        "pageMedianMs": 99.29999999701977,
+        "workerMedianMs": 100.39999999850988,
+        "pageRoundtripMedianMs": 101.42340000000013,
+        "workerRoundtripMedianMs": 103.13099999999986
+      }
+    ],
+    "directWorkerAttempt": {
+      "attempted": true,
+      "targetType": "worker",
+      "method": "Emulation.setCPUThrottlingRate",
+      "rate": 4,
+      "response": {
+        "id": 1,
+        "error": {
+          "code": -32000,
+          "message": "Operation is only supported for pages, not workers"
+        }
+      }
+    },
+    "equalChecksums": true,
+    "ratios": {
+      "pageRate4VersusBefore": 4.680722891526159,
+      "workerRate4VersusBefore": 1,
+      "pageAfterVersusBefore": 0.996987951762391,
+      "workerAfterVersusBefore": 1.0080321284840141
+    }
+  },
+  "status": "Problema mapeado. Nenhuma correção da implementação foi realizada. A causa específica no aparelho ainda exige medição."
+}

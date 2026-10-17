@@ -1,6 +1,7 @@
 import type { CpuSnapshot } from '../core/cpu'
 import type { JoypadButton } from '../core/joypad'
 import type { GameBoyState } from '../core/gameboy'
+import type { CartridgeRtcState } from '../core/cartridge'
 
 export interface MachineCheckpoint {
   version: 1
@@ -27,6 +28,7 @@ export interface EmulatorSnapshot {
   serial: string
   batteryRevision: number
   batteryRam?: Uint8Array | null
+  batteryRtc?: CartridgeRtcState | null
   playing: boolean
   audioEpoch: number
   romId: string
@@ -41,6 +43,12 @@ export type EmulatorCommand =
   | { type: 'step'; count: number }
   | { type: 'inspect' }
   | { type: 'import-battery'; bytes: Uint8Array }
+  | {
+      type: 'import-battery-state'
+      bytes: Uint8Array
+      rtc: CartridgeRtcState
+      elapsedSeconds: number
+    }
   | { type: 'audio-port'; port: MessagePort; sampleRate: number; epoch: number }
   | { type: 'audio-disable' }
   | { type: 'capture-state' }

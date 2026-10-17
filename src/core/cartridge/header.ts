@@ -15,6 +15,8 @@ export interface CartridgeMetadata {
   readonly romSizeCode: number
   readonly ramSizeCode: number
   readonly hasBattery: boolean
+  readonly hasRtc: boolean
+  readonly hasRumble: boolean
   readonly cgbMode: CgbMode
   readonly headerChecksum: number
   readonly checksumValid: boolean
@@ -122,7 +124,7 @@ export function parseCartridgeHeader(rom: Uint8Array): CartridgeMetadata {
   if (romSizeCode >= 0x52) {
     warnings.push('O tamanho de ROM declarado utiliza um código histórico sem cartucho confirmado.')
   }
-  if (mapper !== 'ROM_ONLY' && mapper !== 'MBC1') {
+  if (mapper === 'UNKNOWN') {
     warnings.push(
       `O controlador ${mapper === 'UNKNOWN' ? hex(cartridgeType) : mapper} ainda não é executado.`,
     )
@@ -148,6 +150,36 @@ export function parseCartridgeHeader(rom: Uint8Array): CartridgeMetadata {
   if (cartridgeType === 0x01 && ramSize > 0) {
     warnings.push('O tipo MBC1 sem RAM não declara hardware de RAM externa.')
   }
+  const powerOfTwoRom = (romSize & (romSize - 1)) === 0
+  const hasRtc = cartridgeType === 0x0f || cartridgeType === 0x10
+  const hasRumble = cartridgeType >= 0x1c && cartridgeType <= 0x1e
+  const mbc2Supported = romSize <= 0x40000 && powerOfTwoRom && ramSize === 0
+  const mbc3Supported =
+    romSize <= 0x200000 &&
+    powerOfTwoRom &&
+    ramSize <= 0x8000 &&
+    ((cartridgeType !== 0x0f && cartridgeType !== 0x11) || ramSize === 0)
+  const mbc5Supported =
+    powerOfTwoRom &&
+    ramSize <= (hasRumble ? 0x10000 : 0x20000) &&
+    ((cartridgeType !== 0x19 && cartridgeType !== 0x1c) || ramSize === 0)
+  if (mapper === 'MBC2' && !mbc2Supported) {
+    warnings.push(
+      'MBC2 exige até 256 KiB de ROM em potência de dois e código de RAM zero; seus 512 nibbles de RAM são internos.',
+    )
+  }
+  if (mapper === 'MBC3' && !mbc3Supported) {
+    warnings.push(
+      'MBC3 exige até 2 MiB de ROM em potência de dois e até 32 KiB de RAM; tipos sem RAM precisam declarar tamanho zero. MBC30 não é suportado.',
+    )
+  }
+  if (mapper === 'MBC5' && !mbc5Supported) {
+    warnings.push(
+      'MBC5 exige ROM em potência de dois, até 128 KiB de RAM ou 64 KiB com rumble; tipos sem RAM precisam declarar tamanho zero.',
+    )
+  }
+  if (hasRumble)
+    warnings.push('O banco de RAM respeita o circuito rumble; vibração física não é reproduzida.')
   if (cgbMode === 'required') warnings.push('Esta ROM exige Game Boy Color. O perfil atual é DMG.')
 
   return {
@@ -155,11 +187,13 @@ export function parseCartridgeHeader(rom: Uint8Array): CartridgeMetadata {
     mapper,
     cartridgeType,
     romSize,
-    ramSize,
+    ramSize: mapper === 'MBC2' ? 512 : ramSize,
     romBanks: romSize / ROM_BANK_SIZE,
     romSizeCode,
     ramSizeCode,
     hasBattery: BATTERY_TYPES.has(cartridgeType),
+    hasRtc,
+    hasRumble,
     cgbMode,
     headerChecksum,
     checksumValid,
@@ -175,6 +209,9 @@ export function parseCartridgeHeader(rom: Uint8Array): CartridgeMetadata {
           (romSize & (romSize - 1)) === 0 &&
           ramSize <= 0x8000 &&
           (romSize < 0x100000 || ramSize <= 0x2000) &&
-          (cartridgeType !== 0x01 || ramSize === 0))),
+          (cartridgeType !== 0x01 || ramSize === 0)) ||
+        (mapper === 'MBC2' && mbc2Supported) ||
+        (mapper === 'MBC3' && mbc3Supported) ||
+        (mapper === 'MBC5' && mbc5Supported)),
   }
 }

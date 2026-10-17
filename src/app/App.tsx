@@ -1068,10 +1068,12 @@ export function App() {
           arquivo não o transforma em um jogo.
         </p>
         <p>
-          A reprodução aceita <strong>ROM Only de 32 KiB</strong> e{' '}
-          <strong>MBC1 de até 2 MiB</strong>, com até 32 KiB de RAM conforme a configuração do
-          cartucho. MBC2, MBC3 e MBC5 ainda podem ter seus dados consultados, mas o suporte de
-          execução chega depois. O limite de leitura é 8 MiB.
+          A reprodução aceita <strong>ROM Only de 32 KiB</strong>,{' '}
+          <strong>MBC1 e MBC3 de até 2 MiB</strong>, <strong>MBC2 de até 256 KiB</strong> e{' '}
+          <strong>MBC5 de até 8 MiB</strong>, conforme o hardware declarado pelo cartucho. MBC3
+          inclui relógio quando presente; MBC5 aceita até 128 KiB de RAM. Cartuchos com rumble
+          funcionam sem vibração física. MBC1M e jogos exclusivos de Game Boy Color ainda não são
+          suportados.
         </p>
         <p>
           O arquivo fica no seu dispositivo e não é enviado para um servidor. Você não precisa

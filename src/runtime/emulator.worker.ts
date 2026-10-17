@@ -4,6 +4,8 @@ import type { EmulatorMessage, EmulatorRequest, EmulatorSnapshot } from './worke
 import type { MachineCheckpoint } from './worker-protocol'
 import { stateInteger, stateRecord } from '../core/state/validation'
 import { RewindHistory, REWIND_CAPTURE_HZ, REWIND_MAX_BYTES, REWIND_MAX_SECONDS } from './rewind'
+import { audioBufferProfile } from '../platform/audio/protocol'
+import { parseCartridgeRtcState } from '../core/cartridge'
 
 interface WorkerEndpoint {
   onmessage: ((event: MessageEvent<EmulatorRequest>) => void) | null
@@ -23,6 +25,7 @@ let audioPort: MessagePort | null = null
 let audioEpoch = 0
 let audioDriven = false
 let audioSampleRate: number | null = null
+let audioRequestLimit = 0
 let rewindHistory: RewindHistory | null = null
 let rewinding = false
 let rewindTimer: ReturnType<typeof setTimeout> | null = null
@@ -113,6 +116,7 @@ function snapshot(includeBattery = false): EmulatorSnapshot {
     state.batteryRam = device.cartridge.exportBatteryRam()
     publishedBatteryRevision = state.batteryRevision
   }
+  if (!rewinding) state.batteryRtc = device.cartridge.exportBatteryRtc?.() ?? null
   publishedFrame = state.frameId
   publishedAt = performance.now()
   return state
@@ -182,7 +186,11 @@ function onAudio(event: MessageEvent<{ type: string; frames: number; epoch: numb
   )
     return
   try {
-    if (!Number.isInteger(request.frames) || request.frames < 1 || request.frames > 4096)
+    if (
+      !Number.isInteger(request.frames) ||
+      request.frames < 1 ||
+      request.frames > audioRequestLimit
+    )
       throw new Error('O orçamento de áudio recebido é inválido.')
     const apu = device.bus.apu
     const maximum = Math.ceil((request.frames * DMG_CLOCK_HZ) / apu.sampleRate) + 24
@@ -205,6 +213,7 @@ endpoint.onmessage = ({ data: request }) => {
       playing = false
       audioDriven = false
       audioSampleRate = null
+      audioRequestLimit = 0
       stopRewindTimer()
       rewinding = false
       rewindHistory = null
@@ -253,6 +262,27 @@ endpoint.onmessage = ({ data: request }) => {
           device.cartridge.importBatteryRam(command.bytes)
           resetRewindHistory()
           break
+        case 'import-battery-state': {
+          if (playing || rewinding)
+            throw new Error('Pause a reprodução antes de recuperar o progresso.')
+          const elapsed = stateInteger(
+            command.elapsedSeconds,
+            0,
+            Number.MAX_SAFE_INTEGER,
+            'Tempo offline',
+          )
+          const rtc = parseCartridgeRtcState(command.rtc)
+          const saved = device.snapshotState()
+          if (saved.cartridge.mapper !== 'MBC3' || saved.cartridge.rtc === null)
+            throw new Error('Este cartucho não possui relógio RTC.')
+          saved.cartridge.ram = command.bytes
+          saved.cartridge.rtc = rtc
+          device.restoreState(saved)
+          device.cartridge.advanceRtcSeconds?.(elapsed)
+          publishedBatteryRevision = -1
+          resetRewindHistory()
+          break
+        }
         case 'audio-port':
           if (rewinding) throw new Error('Solte o rewind antes de ativar o som.')
           stopTimer()
@@ -260,6 +290,7 @@ endpoint.onmessage = ({ data: request }) => {
           audioPort = command.port
           audioEpoch = command.epoch
           audioSampleRate = command.sampleRate
+          audioRequestLimit = audioBufferProfile(command.sampleRate).requestLimit
           {
             const changedRate = device.bus.apu.sampleRate !== command.sampleRate
             device.bus.apu.setSampleRate(command.sampleRate)
@@ -273,6 +304,7 @@ endpoint.onmessage = ({ data: request }) => {
         case 'audio-disable':
           audioDriven = false
           audioSampleRate = null
+          audioRequestLimit = 0
           audioEpoch += 1
           audioPort?.close()
           audioPort = null

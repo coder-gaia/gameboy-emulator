@@ -958,6 +958,18 @@
   }
 }
 
+@media (pointer: coarse) and (max-height: 520px) and (min-width: 600px) {
+  .consoleSection:fullscreen .console {
+    grid-template-columns: minmax(160px, 1fr) 266px;
+  }
+}
+
+@media (max-height: 520px) and (min-width: 600px) and (max-width: 820px) {
+  .consoleSection:fullscreen .screenFrame {
+    width: min(100%, calc((100dvh - 216px) * 1.1 + 32px));
+  }
+}
+
 @media (min-width: 1500px) {
   .main {
     padding-top: 68px;

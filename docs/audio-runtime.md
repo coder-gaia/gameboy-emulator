@@ -35,7 +35,11 @@ Sem saída de áudio ativa, o Worker usa `performance.now()` e orçamentos em T-
 
 Com áudio ativo, a demanda do AudioWorklet controla a execução. O Worker recebe a taxa real `AudioContext.sampleRate`, calcula o orçamento de ciclos para o pedido e responde com PCM `Float32Array` intercalado: esquerda, direita, esquerda, direita. A frequência de atualização do monitor não controla a velocidade da máquina.
 
-O Worklet começa com uma reserva de 1536 frames estéreo e solicita reposições de 512 frames. Em 48 kHz, a reserva corresponde a 32 ms de PCM; a latência total também depende do navegador, do dispositivo de áudio e de seu buffer. Há somente um pedido pendente por vez, e as filas possuem capacidade fixa de 16.384 frames. Se faltar PCM, a saída restante do bloco recebe silêncio e os contadores registram a falta; se a fila exceder o limite, os dados mais antigos são descartados.
+Na M12, o Worklet começa com um alvo de aproximadamente 64 ms, arredondado em blocos de 128 frames. Solicita todo o déficit e, durante reprodução, o consumo previsto em voo a partir do maior tempo de ida e volta observado na geração atual. Uma reposição mínima de aproximadamente 10 ms evita pedidos pequenos após o priming. O tempo de ida e volta é observado em frames do próprio Worklet. O alvo pode crescer para cobrir duas vezes o atraso e dois quanta, limitado a aproximadamente 128 ms e ao teto de 16.256 frames por pedido. Em 192 kHz, esse teto corresponde a cerca de 85 ms. Há somente um pedido pendente por vez, e as filas possuem capacidade fixa de 16.384 frames. Cada pedido também respeita o crédito físico livre, com margem de 128 frames, para não descartar PCM se a resposta chegar antes do previsto.
+
+O alvo não é um teto de ocupação: quando uma resposta chega mais cedo que a previsão conservadora, a fila pode ultrapassá-lo, permanecendo dentro da capacidade física. A simulação adversa de jitter em 48 kHz alcançou 9.600 frames, equivalentes a 200 ms. Essa folga protege a continuidade, com maior latência de saída e resposta. A latência total também depende do navegador e do dispositivo de áudio. Pausar ou reconectar inicia outra geração e limpa as estimativas. Não existe garantia contra atrasos arbitrariamente longos; em taxas altas, a mesma capacidade cobre menos tempo.
+
+Se faltar PCM depois do primeiro priming, a saída recebe silêncio, contabiliza frames ausentes e aguarda preencher novamente a reserva. O silêncio inicial de preparação é contabilizado separadamente. Mensagens vazias de uma máquina em STOP não criam um ciclo infinito de pedidos. Consulte [investigação MB01 e regressão sob atraso](mobile-audio-investigation.md).
 
 O protocolo inclui um identificador de geração, `epoch`. Pausa, reinício, troca de cartucho, carregamento de estado e reconexão limpam a fila e invalidam amostras anteriores. Isso impede que uma resposta atrasada reproduza um trecho de outra sessão. Ao pausar, a máquina e a saída de áudio são suspensas; ao retomar, uma nova reserva é preenchida. A aba oculta também pausa a execução.
 
@@ -60,7 +64,7 @@ O tick da APU não aloca buffers por T-cycle. A drenagem de PCM cria o bloco tra
 
 ## Validação e limites
 
-O comando `npm.cmd run test:hardware` executa 87 testes externos: 75 das milestones anteriores e os 12 `dmg_sound`. Todas as ROMs possuem procedência, revisão, SHA-256 e protocolo em [ROMs externas de teste](test-roms.md). `dmg_sound` verifica os resultados que a CPU consegue observar, incluindo registradores e os timings associados a length, sweep, alimentação e wave RAM.
+O comando `npm.cmd run test:hardware` executa 103 testes externos, incluindo os 12 `dmg_sound`. Todas as ROMs possuem procedência, revisão, SHA-256 e protocolo em [ROMs externas de teste](test-roms.md). `dmg_sound` verifica os resultados que a CPU consegue observar, incluindo registradores e os timings associados a length, sweep, alimentação e wave RAM.
 
 Os testes locais também verificam os geradores, o mixer estéreo, a produção de PCM por ciclos, a fila limitada, as mensagens de gerações antigas e os fluxos de ativação, volume, pausa e retomada. Essas verificações não equivalem a comparar a saída acústica com gravações de um console físico. Não há promessa de equivalência analógica integral nem de ausência de underruns em qualquer dispositivo.
 

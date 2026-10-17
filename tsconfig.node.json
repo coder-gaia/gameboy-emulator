@@ -8,6 +8,7 @@
     "playwright.config.ts",
     "playwright.production.config.ts",
     "playwright.benchmark.config.ts",
+    "playwright.audio.config.ts",
     "scripts/benchmarks/**/*.ts"
   ]
 }

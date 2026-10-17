@@ -1,8 +1,9 @@
 import { BatteryStorageError } from './errors'
 import { LocalSaveDatabase } from './local-database'
 import type { LocalDatabaseOptions } from './local-database'
-import { BATTERY_RECORD_VERSION, BATTERY_STORE_NAME } from './schema'
-import type { BatteryRecord } from './schema'
+import { BATTERY_RECORD_VERSION, RTC_BATTERY_RECORD_VERSION, BATTERY_STORE_NAME } from './schema'
+import type { BatteryRecord, BatteryState, RtcBatteryRecord } from './schema'
+import { parseCartridgeRtcState } from '../../core/cartridge'
 
 export type BatteryRepositoryOptions = LocalDatabaseOptions
 
@@ -15,8 +16,8 @@ function validateRomId(romId: string): void {
   }
 }
 
-function validateLength(length: number): void {
-  if (!Number.isSafeInteger(length) || length <= 0) {
+function validateLength(length: number, allowEmpty = false): void {
+  if (!Number.isSafeInteger(length) || length < (allowEmpty ? 0 : 1)) {
     throw new BatteryStorageError(
       'invalid-data',
       'O tamanho da RAM de bateria deve ser um inteiro positivo.',
@@ -24,12 +25,17 @@ function validateLength(length: number): void {
   }
 }
 
-function readBatteryRecord(value: unknown, romId: string, expectedLength: number): Uint8Array {
+function readBatteryRecord(
+  value: unknown,
+  romId: string,
+  expectedLength: number,
+  version: number = BATTERY_RECORD_VERSION,
+): Uint8Array {
   if (value === null || typeof value !== 'object') {
     throw new BatteryStorageError('invalid-data', 'O save local de bateria está danificado.')
   }
   const record = value as Record<string, unknown>
-  if (record.version !== BATTERY_RECORD_VERSION) {
+  if (record.version !== version) {
     throw new BatteryStorageError(
       'incompatible-data',
       'A versão deste save de bateria não é compatível. O arquivo local foi preservado.',
@@ -81,6 +87,52 @@ export class BatteryRepository {
       byteLength: copy.byteLength,
       bytes: copy.buffer,
       updatedAt: Date.now(),
+    }
+    await this.database.execute(BATTERY_STORE_NAME, 'readwrite', (store) => store.put(record))
+  }
+
+  /** RTC usa envelope v2; RAM simples continua v1 e os saves antigos são preservados. */
+  async loadBatteryState(romId: string, expectedLength: number): Promise<BatteryState | null> {
+    validateRomId(romId)
+    validateLength(expectedLength, true)
+    const value = await this.database.execute<unknown>(BATTERY_STORE_NAME, 'readonly', (store) =>
+      store.get(romId),
+    )
+    if (value === undefined) return null
+    const record = value as Record<string, unknown> | null
+    if (record?.version === BATTERY_RECORD_VERSION && expectedLength > 0) {
+      const bytes = readBatteryRecord(value, romId, expectedLength)
+      return { bytes, rtc: null, updatedAt: record.updatedAt as number }
+    }
+    const bytes = readBatteryRecord(value, romId, expectedLength, RTC_BATTERY_RECORD_VERSION)
+    try {
+      return {
+        bytes,
+        rtc: parseCartridgeRtcState(record?.rtc),
+        updatedAt: record!.updatedAt as number,
+      }
+    } catch (cause) {
+      throw new BatteryStorageError(
+        'invalid-data',
+        `O relógio do save local está danificado. ${cause instanceof Error ? cause.message : ''}`,
+      )
+    }
+  }
+
+  async saveBatteryState(romId: string, state: BatteryState): Promise<void> {
+    validateRomId(romId)
+    validateLength(state.bytes.byteLength, true)
+    const rtc = parseCartridgeRtcState(state.rtc)
+    if (!Number.isSafeInteger(state.updatedAt) || state.updatedAt < 0)
+      throw new BatteryStorageError('invalid-data', 'O instante do save de relógio é inválido.')
+    const bytes = new Uint8Array(state.bytes)
+    const record: RtcBatteryRecord = {
+      version: RTC_BATTERY_RECORD_VERSION,
+      romId,
+      byteLength: bytes.byteLength,
+      bytes: bytes.buffer,
+      rtc,
+      updatedAt: state.updatedAt,
     }
     await this.database.execute(BATTERY_STORE_NAME, 'readwrite', (store) => store.put(record))
   }

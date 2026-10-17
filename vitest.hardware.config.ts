@@ -10,6 +10,7 @@ export default defineConfig({
       ...(milestone >= 'M05' ? ['tests/hardware/acid2.test.ts'] : []),
       ...(milestone >= 'M06' ? ['tests/hardware/mbc1.test.ts'] : []),
       ...(milestone >= 'M07' ? ['tests/hardware/audio.test.ts'] : []),
+      ...(milestone >= 'M12' ? ['tests/hardware/mbc-extended.test.ts'] : []),
     ],
     testTimeout: 120_000,
     maxWorkers: 2,

@@ -1,7 +1,7 @@
 import { spawnSync } from 'node:child_process'
 const milestone = process.argv.at(-1)
-if (!['M03', 'M04', 'M05', 'M06', 'M07'].includes(milestone)) {
-  throw new Error('Escolha M03, M04, M05, M06 ou M07.')
+if (!['M03', 'M04', 'M05', 'M06', 'M07', 'M12'].includes(milestone)) {
+  throw new Error('Escolha M03, M04, M05, M06, M07 ou M12.')
 }
 const result = spawnSync(
   process.execPath,

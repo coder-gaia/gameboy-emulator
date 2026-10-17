@@ -39,7 +39,7 @@ export class MemoryBus {
   private interruptEnable = 0
 
   constructor(
-    readonly cartridge: Pick<Cartridge, 'readRom' | 'writeRom' | 'readRam' | 'writeRam'>,
+    readonly cartridge: Pick<Cartridge, 'readRom' | 'writeRom' | 'readRam' | 'writeRam' | 'tick'>,
   ) {
     // O bus isolado começa sem LCD; GameBoy aplica o estado pós boot da máquina.
     this.ppu.reset(false)
@@ -199,6 +199,7 @@ export class MemoryBus {
       throw new Error('O barramento exige uma quantidade inteira e não negativa de T-cycles.')
     }
     this.tCycles += tCycles
+    this.cartridge.tick?.(tCycles)
     // Periféricos compartilham a ordem de cada T-cycle, inclusive durante HALT.
     for (let elapsed = 0; elapsed < tCycles; elapsed += 1) {
       const previousDivider = this.timer.systemCounter

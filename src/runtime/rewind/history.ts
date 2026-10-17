@@ -57,7 +57,7 @@ export class RewindHistory {
       maxBytes < WORKSPACE_BYTES + MAX_REWIND_STATE_BYTES ||
       maxBytes > REWIND_MAX_BYTES
     )
-      throw new Error('O orçamento do rewind deve estar entre 512 KiB e 8 MiB.')
+      throw new Error('O orçamento do rewind deve estar entre 1 MiB e 8 MiB.')
     if (!Number.isFinite(maxSeconds) || maxSeconds <= 0 || maxSeconds > REWIND_MAX_SECONDS)
       throw new Error('A duração do rewind deve ser positiva e de no máximo 20 segundos.')
     this.maxSeconds = maxSeconds

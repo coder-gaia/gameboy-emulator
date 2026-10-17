@@ -16,7 +16,7 @@ Stack aprovada: TypeScript estrito, React, Vite, CSS Modules, Canvas 2D, Worker,
 | M09   | Interface completa, controles e acessibilidade      | Concluída |
 | M10   | Desempenho e beta pública                           | Concluída |
 | M11   | Rewind com memória limitada                         | Concluída |
-| M12   | MBC2, MBC3 com RTC e MBC5                           | Pendente  |
+| M12   | Correção mobile, setas maiores, MBC2, MBC3 e MBC5   | Concluída |
 | M13   | Painel técnico completo                             | Pendente  |
 | M14   | Release, README, portfólio e material para LinkedIn | Pendente  |
 
@@ -24,7 +24,7 @@ Stack aprovada: TypeScript estrito, React, Vite, CSS Modules, Canvas 2D, Worker,
 
 Os grupos M00 a M02 e M03 a M05 foram aprovados pelo proprietário. O [roteiro de teste M03 a M05](testing-m03-m05.md) permanece como referência das entregas anteriores.
 
-O grupo M06, M07 e M08 foi aprovado pelo proprietário. O [roteiro de teste M06 a M08](testing-m06-m08.md) permanece como referência. M09, M10 e M11 estão concluídas. O desenvolvimento pausa antes da M12 e aguarda o ok do proprietário após seguir o [roteiro M09 a M11](testing-m09-m11.md). Cada milestone deve ter seu commit validado, push imediato e confirmação no GitHub antes da seguinte. Os commits e resultados da validação ficam disponíveis no histórico e nas execuções de CI do GitHub.
+O grupo M06, M07 e M08 foi aprovado pelo proprietário. O [roteiro de teste M06 a M08](testing-m06-m08.md) permanece como referência. M09, M10 e M11 estão concluídas. Na revisão do [roteiro M09 a M11](testing-m09-m11.md), o proprietário aprovou desktop e isolou lentidão no Motorola Edge 40 Neo com Chrome somente depois de ativar o som. Em 16/10/2026 foi registrado apenas o diagnóstico; em 17/10/2026 o proprietário autorizou continuar M12 a M14. Cada milestone deve ter seu commit validado, push imediato e confirmação no GitHub antes da seguinte. Os commits e resultados da validação ficam disponíveis no histórico e nas execuções de CI do GitHub.
 
 M09 completa preferências, remapeamento de teclado, gamepad padrão, tela cheia e acessibilidade. M10 mede desempenho de produção e publica a beta estática no Cloudflare Pages. M11 acrescenta rewind com memória limitada. Como último passo do grupo, o fundo recebeu o creme #eee9df, preservando contraste e aparência do console sem opacidade ou sobreposição.
 
@@ -50,6 +50,16 @@ Cada milestone recebe um commit, com título Conventional Commits em inglês e c
 
 Cada commit validado deve receber push imediatamente e ser confirmado no GitHub. O proprietário não precisa receber links individuais. A pausa a cada três milestones não adia o envio dos commits ao GitHub. Aguardar o ok dos testes antes de iniciar o próximo grupo.
 
+## Grupo M12 a M14 em andamento
+
+**MB01 é prioridade da M12:** investigar e corrigir a cadência de áudio que desacelera a máquina no celular. Sem som, os três cartuchos ficaram fluidos no aparelho do proprietário. O diagnóstico reproduziu o padrão ao atrasar mensagens entre Worker e Worklet, mas ainda não mediu a origem do atraso no Motorola. O perfil Pixel 7 em desktop não homologou essa condição. Consulte [evidências, métricas e critérios](mobile-audio-investigation.md).
+
+A M12 implementa reposição PCM pelo déficit completo e consumo previsto em voo, reserva em tempo adaptada ao atraso observado no Worklet e contagem de rebuffer. As setas de toque têm alvos de 52 px e ícones de 22 px quando há espaço, preservando 44 px em 320 px e os tamanhos desktop. MBC2, MBC3 com RTC e MBC5 incluem estados completos, bateria e rewind. O envelope de bateria RTC v2 mantém compatibilidade com RAM v1 e admite relógio sem RAM. A arena de rewind permanece 8 MiB, com checkpoints de até 256 KiB. Passaram 103 testes externos, incluindo 16 casos Mooneye novos. Consulte [mappers e política de tempo](cartridge-mappers.md).
+
+O fechamento automatizado da M12 aprovou `npm run check`, com 777 testes locais e build, 103 testes de hardware, 156 cenários de interface e 14 testes de produção sob CSP. Depois do ajuste final do áudio, os 32 cenários pertinentes de áudio, estados e rewind passaram novamente. A regressão isolada de transporte aprovou os seis cenários, com velocidade de 99,30% a 100,24% e zero frames ausentes ou descartados nas janelas estáveis; o [relatório](performance-audio-mobile-results.json) fixa os hashes e o escopo. A regressão de interface teve dois casos repetidos depois de ajustar a expectativa da fixture incompatível: MBC3 e MBC5 agora são suportados; 0x22 permanece recusado. Os testes de RTC incluem bateria sem RAM, migração v1, offline, halt, importação atômica e preservação de slots. A homologação no Motorola permanece pendente.
+
+A M13 mantém o painel técnico e a M14 mantém release, portfólio e material para LinkedIn. O lançamento depende do aceite com áudio no aparelho real, além da regressão desktop. O [roteiro do grupo](testing-m12-m14.md) separa validações automatizadas e testes manuais pendentes. Preservar o grupo de três milestones e o commit por milestone.
+
 ## Critérios de qualidade
 
 - Tipos, lint, formatação, regras de escrita e build aprovados.
@@ -61,9 +71,9 @@ Cada commit validado deve receber push imediatamente e ser confirmado no GitHub.
 
 ## Escopo e metas
 
-A beta pública da M10 inclui demos, áudio, toque, teclado, gamepad, paletas, bateria e save states. A M11 acrescenta rewind; cartuchos ampliados e debugger continuam nas milestones seguintes.
+A beta pública da M10 inclui demos, áudio, toque, teclado, gamepad, paletas, bateria e save states. A M11 acrescenta rewind; M12 amplia cartuchos e fluxo de áudio. O painel técnico completo continua na M13.
 
-A aplicação atual executa ROM Only de 32 KiB e MBC1 padrão com ROM de até 2 MiB em potência de dois. ROMs de até 512 KiB admitem até 32 KiB de RAM; ROMs de 1 MiB ou 2 MiB admitem até 8 KiB, conforme a fiação física. A convenção homebrew de RAM de 2 KiB é aceita com aviso. MBC1M usa outra fiação, não é implementado e não possui autodetecção.
+A aplicação executa ROM Only de 32 KiB, MBC1 e MBC3 de até 2 MiB, MBC2 de até 256 KiB e MBC5 de até 8 MiB em potência de dois. MBC1 mantém a fiação padrão, com até 32 KiB de RAM para ROMs de até 512 KiB e até 8 KiB para ROMs maiores. MBC2 usa 512 nibbles internos, MBC3 até 32 KiB de RAM e RTC quando presente, MBC5 até 128 KiB de RAM. A convenção homebrew de RAM de 2 KiB é aceita com aviso. MBC1M e MBC30 não são implementados; não há autodetecção de MBC1M. Rumble não gera vibração física.
 
 MBC1, bateria e a biblioteca fazem parte da M06 concluída. Áudio, APU, Worker e sincronização fazem parte da M07 concluída. Estados versionados, slots e arquivos de backup fazem parte da M08 concluída. O jardim é uma fixture interativa própria, sem trilha ou bateria, e pode usar os estados salvos para retornar a uma posição exata. A inicialização pós boot não reproduz integralmente todas as revisões físicas. A PPU por scanline ainda não cobre pixel FIFO, escritas dentro do modo 3 ou peculiaridades de WX 0 e 166. A aprovação de `dmg_sound` verifica comportamento observável pela CPU e não comprova equivalência acústica integral.
 

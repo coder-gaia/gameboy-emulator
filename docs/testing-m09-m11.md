@@ -2,6 +2,8 @@
 
 Este grupo entrega controles e preferências, a beta estática publicada, rewind e o fundo creme. **M09, M10 e M11 estão concluídas.** O desenvolvimento está pausado antes da M12 para a revisão do proprietário. Siga este roteiro no desktop e, se possível, no celular.
 
+**Retorno da revisão:** o proprietário aprovou desktop. No Motorola Edge 40 Neo com Chrome, os jogos ficam fluidos sem som, mas ativar áudio causa lentidão e cortes. O [diagnóstico MB01](mobile-audio-investigation.md) registra as evidências e o plano. A correção e setas de toque maiores entram na próxima sessão, no lote M12 a M14. O aceite mobile permanece pendente; o perfil Pixel 7 simulado não substitui esse teste.
+
 ## Escolher o endereço
 
 Abra a [beta pública](https://gameboy-emulator-aox.pages.dev/). Ela recebe novas entregas depois do push e do deploy correspondente. Para conferir qual build foi publicado, veja o [guia de deploy](deployment.md). Também é possível testar o mesmo código localmente.

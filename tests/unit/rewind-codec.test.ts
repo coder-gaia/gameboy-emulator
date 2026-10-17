@@ -62,7 +62,7 @@ describe('codec binário do rewind', () => {
     expect(Buffer.isBuffer(fromBuffer.bytes)).toBe(false)
   })
 
-  it('aceita até 128 KiB e rejeita overflow mesmo com destino maior', () => {
+  it('aceita até 256 KiB e rejeita overflow mesmo com destino maior', () => {
     const largest = new Uint8Array(MAX_REWIND_STATE_BYTES - 9)
     const target = new Uint8Array(MAX_REWIND_STATE_BYTES * 2)
     expect(encodeToBuffer(largest, target)).toBe(MAX_REWIND_STATE_BYTES)

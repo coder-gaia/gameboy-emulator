@@ -4,7 +4,9 @@ Um emulador de Game Boy DMG no navegador, com núcleo TypeScript independente da
 
 Experimente a [beta pública do Pocket Lab](https://gameboy-emulator-aox.pages.dev/), publicada no Cloudflare Pages.
 
-Projeto em desenvolvimento, com M00 a M11 concluídas. CPU, timer, DMA, vídeo, sprites, janela, controles, MBC1, saves de bateria, áudio, save states versionados e rewind já estão disponíveis. A biblioteca oferece Tobu Tobu Girl e 2048 para jogar sem fornecer arquivos. O jardim interativo continua disponível como ROM própria de diagnóstico. O grupo M09 a M11 está pronto para a revisão do proprietário. O desenvolvimento pausa antes da M12 até receber seu ok.
+Projeto em desenvolvimento, com M00 a M12 implementadas. CPU, timer, DMA, vídeo, sprites, janela, controles, MBC1, saves de bateria, áudio, save states versionados e rewind já estão disponíveis. A M12 acrescenta MBC2, MBC3 com RTC, MBC5, setas maiores no toque e abastecimento adaptativo de áudio. A biblioteca oferece Tobu Tobu Girl e 2048; o jardim é uma ROM própria de diagnóstico. A homologação mobile no aparelho real continua pendente.
+
+**Validação mobile pendente:** o proprietário relatou lentidão somente após ativar o som no Motorola Edge 40 Neo com Chrome. A M12 corrige a limitação de vazão reproduzida sob atraso controlado de mensagens. O teste automatizado em computador não homologa o aparelho real. Consulte [diagnóstico e implementação MB01](docs/mobile-audio-investigation.md) e o [roteiro M12 a M14](docs/testing-m12-m14.md).
 
 ## Desenvolvimento local
 
@@ -41,13 +43,13 @@ O endereço público da M10 passou pelos dez testes de produção em desktop e p
 
 Escolha **Tobu Tobu Girl** ou **2048** na biblioteca para começar sem arquivo. **Controles e créditos dos jogos** explica as ações e apresenta os autores e as licenças. Use **Explorar jardim** para abrir o diagnóstico visual. Para carregar um jogo próprio, selecione um arquivo `.gb` ou `.gbc`, ou arraste-o para a página. Os bytes são lidos localmente e não são enviados. A ajuda **Quais arquivos posso usar?** explica formatos, extração de `.zip` e compatibilidade.
 
-A execução aceita cartuchos **ROM Only de 32 KiB** e **MBC1 de até 2 MiB** compatíveis com o Game Boy original. MBC1 inclui bancos de ROM e RAM, ambos os modos de banking e habilitação de RAM. ROMs de até 512 KiB admitem até 32 KiB de RAM; ROMs de 1 MiB ou 2 MiB admitem até 8 KiB, conforme a fiação padrão. O tamanho de ROM precisa ser uma potência de dois. A convenção homebrew de RAM de 2 KiB é aceita com aviso, incluindo o 2048 da biblioteca.
+A execução aceita cartuchos **ROM Only de 32 KiB**, **MBC1 e MBC3 de até 2 MiB**, **MBC2 de até 256 KiB** e **MBC5 de até 8 MiB**, compatíveis com o Game Boy original. MBC2 possui 512 nibbles internos; MBC3 inclui RTC nos tipos que possuem relógio; MBC5 admite até 128 KiB de RAM. MBC1 usa fiação padrão: ROMs de até 512 KiB admitem até 32 KiB de RAM; ROMs maiores admitem até 8 KiB. A convenção homebrew de RAM de 2 KiB é aceita com aviso, incluindo o 2048. Consulte [controladores e limites](docs/cartridge-mappers.md).
 
-Compilações **MBC1M** usam outra fiação e ficam fora do escopo atual. Não há autodetecção de MBC1M, cujo header também pode declarar MBC1. Arquivos `.gbc` precisam funcionar também no DMG. Jogos exclusivos de Game Boy Color e cartuchos MBC2, MBC3 ou MBC5 podem ter seus dados consultados, mas ainda não executam. O limite de leitura é 8 MiB. Não é necessário fornecer BIOS ou boot ROM.
+Compilações **MBC1M** usam outra fiação e ficam fora do escopo atual. Não há autodetecção de MBC1M, cujo header também pode declarar MBC1. MBC30 e jogos exclusivos de Game Boy Color não são suportados. Arquivos `.gbc` precisam funcionar também no DMG. Rumble não produz vibração física. O tamanho de ROM precisa ser uma potência de dois, com limite de leitura de 8 MiB. Não é necessário fornecer BIOS ou boot ROM.
 
 O bus implementa memória de trabalho, echo RAM, VRAM, OAM, HRAM, timer, DMA de OAM, interrupções, joypad, PPU e APU. A transferência serial interna leva 4096 T-cycles por byte. A PPU implementa fundo, tiles, scroll, modos, LY/LYC, STAT, sprites e janela. A APU implementa dois canais de pulso, wave e noise, com sweep, envelope, length, DACs, mixer estéreo e filtro passa-altas.
 
-`npm.cmd test` executa os testes de núcleo, entrada, reprodução, áudio e persistência. `npm.cmd run test:hardware` executa 87 testes externos: os 75 da M06 e 12 ROMs `dmg_sound`, com revisão e SHA-256 fixados. Consulte [procedência e protocolos](docs/test-roms.md).
+`npm.cmd test` executa os testes de núcleo, entrada, reprodução, áudio e persistência. `npm.cmd run test:hardware` executa 103 testes externos, com revisão e SHA-256 fixados. Consulte [procedência e protocolos](docs/test-roms.md). `npm.cmd run test:audio-flow` usa o build final para medir velocidade e abastecimento com atraso controlado de mensagens; não substitui um celular físico.
 
 | Suíte                                        | Resultado atual |
 | -------------------------------------------- | --------------- |
@@ -59,8 +61,9 @@ O bus implementa memória de trabalho, echo RAM, VRAM, OAM, HRAM, timer, DMA de 
 | dmg-acid2, comparação gráfica DMG            | 1 de 1          |
 | Mooneye, MBC1 padrão da M06                  | 12 de 12        |
 | Blargg dmg_sound, perfil DMG da M07          | 12 de 12        |
+| Mooneye, MBC2, MBC5 e DMA da M12             | 16 de 16        |
 
-As ROMs Blargg são baixadas para uma pasta ignorada. O runner usa a mesma factory e os mesmos mappers da aplicação, preservando os binários originais. As 59 fixtures Mooneye preservam a licença MIT.
+As ROMs Blargg são baixadas para uma pasta ignorada. O runner usa a mesma factory e os mesmos mappers da aplicação, preservando os binários originais. As 75 fixtures Mooneye preservam a licença MIT.
 
 ## Som
 
@@ -75,6 +78,8 @@ Os 12 testes `dmg_sound` validam o comportamento que a CPU consegue observar, in
 O progresso que o próprio jogo grava na RAM de bateria é salvo automaticamente em IndexedDB. A chave usa o SHA-256 dos bytes da ROM, portanto renomear o mesmo arquivo não cria outro save. Jogos diferentes mantêm dados separados. A interface informa quando recupera o progresso ou quando o armazenamento está indisponível.
 
 As gravações ocorrem em lotes periódicos quando a RAM muda e nos checkpoints de pausa, troca de cartucho e saída da aba. Reiniciar a máquina preserva a bateria. Os dados pertencem ao navegador e à origem do site; limpar os dados do site ou mudar de origem não mantém esses saves. Não há conta nem sincronização em nuvem.
+
+Cartuchos MBC3 com RTC salvam RAM e relógio juntos, inclusive quando não possuem RAM externa. O relógio avança em T-cycles durante a emulação e congela na pausa. Ao reabrir a bateria, o adaptador acrescenta os segundos inteiros transcorridos desde o último checkpoint entregue ao armazenamento, respeitando o halt do cartucho. A precisão offline é de segundos e depende do relógio do dispositivo; encerrar a aba abruptamente pode impedir a última gravação. Save states e rewind recuperam o instante exato sem compensação offline. O envelope RTC v2 preserva a leitura dos saves de RAM v1.
 
 Esse recurso preserva os dados de progresso que cada jogo decide gravar. Não garante retornar à posição exata em que a partida foi interrompida. Para guardar esse ponto, use um estado salvo.
 
@@ -104,7 +109,7 @@ O Worker guarda até 20 segundos de tempo emulado, com capturas de aproximadamen
 
 ## Testar as milestones
 
-O [roteiro M06 a M08](docs/testing-m06-m08.md) registra os testes de biblioteca, bateria, áudio, slots e arquivos do grupo aprovado. O [roteiro M09 a M11](docs/testing-m09-m11.md) reúne controles, preferências, publicação, rewind e o fundo creme para a pausa atual. A entrega tem 677 testes locais e 87 externos aprovados, 130 cenários de navegador cobertos e 14 testes de produção aprovados no build final.
+O [roteiro M06 a M08](docs/testing-m06-m08.md) registra os testes do grupo aprovado. O [roteiro M09 a M11](docs/testing-m09-m11.md) preserva a revisão anterior. O [roteiro M12 a M14](docs/testing-m12-m14.md) acompanha o grupo atual. A validação da M12 inclui 103 testes externos, 156 cenários de interface e 14 testes de produção. Dois casos de interface foram repetidos após corrigir a expectativa da fixture de mapper incompatível, agora 0x22. A regressão isolada de áudio passou nos seis cenários, com velocidade de 99,30% a 100,24% e zero frames ausentes ou descartados nas janelas estáveis. Veja [dados e escopo](docs/performance-audio-mobile-results.json). A cobertura automatizada não representa aceite do Motorola.
 
 ## Testar o primeiro grupo de milestones
 
@@ -122,7 +127,7 @@ Os registradores da CPU usam inicialização pós boot DMG, incluindo F dependen
 
 A M03 corrige `EI;HALT` com interrupção pendente e a resseleção de interrupção quando a pilha escreve sobre IE. Os testes externos não representam aprovação de todos os comportamentos de todas as revisões do hardware.
 
-Os grupos M00 a M02, M03 a M05 e M06 a M08 foram aprovados pelo proprietário. Os roteiros de teste [M03 a M05](docs/testing-m03-m05.md) e [M06 a M08](docs/testing-m06-m08.md) permanecem como referências das entregas anteriores. M09, M10 e M11 estão concluídas e aguardam revisão manual antes da M12.
+Os grupos M00 a M02, M03 a M05 e M06 a M08 foram aprovados pelo proprietário. Os roteiros de teste [M03 a M05](docs/testing-m03-m05.md) e [M06 a M08](docs/testing-m06-m08.md) permanecem como referências das entregas anteriores. M09 a M11 foram revisadas, com desktop aprovado e MB01 identificado no mobile. O grupo M12 a M14 está em andamento, autorizado em 17/10/2026.
 
 ## Vídeo e reprodução
 

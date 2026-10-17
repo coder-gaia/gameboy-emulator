@@ -1,6 +1,6 @@
 # ROMs externas de teste
 
-O manifesto em `tests/roms/manifest.json` fixa a origem, a revisão, o SHA-256, o protocolo de resultado e as dependências dos testes de instruções e timing. `tests/roms/mbc1-manifest.json` registra os testes do mapper MBC1, `tests/roms/audio-manifest.json` registra `dmg_sound` e `tests/roms/acid2-manifest.json` registra a validação gráfica. A seleção representa o Game Boy DMG com revisão de CPU A, B ou C. Não inclui expectativas exclusivas de DMG 0, MGB, SGB ou CGB.
+O manifesto em `tests/roms/manifest.json` fixa a origem, a revisão, o SHA-256, o protocolo de resultado e as dependências dos testes de instruções e timing. `tests/roms/mbc1-manifest.json` registra MBC1, `tests/roms/mbc-extended-manifest.json` registra MBC2, MBC5 e DMA com MBC5, `tests/roms/audio-manifest.json` registra `dmg_sound` e `tests/roms/acid2-manifest.json` registra a validação gráfica. A seleção representa o Game Boy DMG com revisão de CPU A, B ou C. Não inclui expectativas exclusivas de DMG 0, MGB, SGB ou CGB.
 
 Os binários de teste não entram no site e não são jogos disponíveis ao visitante. O projeto não inclui ROM comercial nem boot ROM original.
 
@@ -9,26 +9,26 @@ Os binários de teste não entram no site e não são jogos disponíveis ao visi
 Na raiz do projeto, com Node 22.12 ou superior:
 
 ```powershell
-node scripts/test-roms/fetch.mjs --acid2 --mbc1 --audio
+node scripts/test-roms/fetch.mjs --acid2 --mbc1 --audio --mbc-extended
 ```
 
-O comando baixa somente os 27 arquivos Blargg necessários, de URLs fixadas por revisão, para `.work/roms/blargg/`: 15 de CPU e timing, mais 12 `dmg_sound`. Essa pasta é ignorada pelo Git. As 59 fixtures Mooneye são distribuídas com a licença MIT original em `tests/roms/fixtures/mooneye/LICENSE.txt`: 47 de CPU, periféricos e timing, mais 12 de MBC1. A ROM e a referência dmg-acid2 também são fixtures versionadas, com licença MIT em `tests/roms/fixtures/acid2/LICENSE.txt`.
+O comando baixa somente os 27 arquivos Blargg necessários, de URLs fixadas por revisão, para `.work/roms/blargg/`: 15 de CPU e timing, mais 12 `dmg_sound`. Essa pasta é ignorada pelo Git. As 75 fixtures Mooneye são distribuídas com a licença MIT original em `tests/roms/fixtures/mooneye/LICENSE.txt`: 47 de CPU, periféricos e timing, 12 de MBC1 e 16 do grupo MBC2/MBC5/DMA. A ROM e a referência dmg-acid2 também são fixtures versionadas, com licença MIT em `tests/roms/fixtures/acid2/LICENSE.txt`.
 
 Todo arquivo existente e todo download precisa coincidir com o SHA-256 registrado. Um arquivo divergente causa falha e não é substituído silenciosamente. A opção `--verify` executa apenas a conferência, sem acesso à rede:
 
 ```powershell
-node scripts/test-roms/fetch.mjs --verify --acid2 --mbc1 --audio
+node scripts/test-roms/fetch.mjs --verify --acid2 --mbc1 --audio --mbc-extended
 ```
 
 O CI pode executar os mesmos comandos antes do runner de hardware. Os testes devem falhar se um arquivo estiver ausente, corrompido ou se a execução atingir o limite de T-cycles.
 
-O comando completo da M07 verifica todos os manifestos e executa os 87 testes externos:
+O comando atual da M12 verifica todos os manifestos e executa os 103 testes externos:
 
 ```powershell
 npm.cmd run test:hardware
 ```
 
-O resultado atual é 62 ROMs de instruções e timing aprovadas, dmg-acid2 aprovado com zero pixels divergentes, 12 ROMs MBC1 aprovadas e 12 ROMs `dmg_sound` aprovadas. Os testes locais de unidade e integração são executados separadamente por `npm.cmd test`.
+O resultado registrado até M11 é 62 ROMs de instruções e timing aprovadas, dmg-acid2 aprovado com zero pixels divergentes, 12 ROMs MBC1 aprovadas e 12 ROMs `dmg_sound` aprovadas. Na M12, os 16 casos adicionais de MBC2/MBC5/DMA passaram, assim como a execução completa de 103 testes em 17/10/2026. Os testes locais de unidade e integração são executados separadamente por `npm.cmd test`.
 
 ## Licenças e procedência
 
@@ -77,7 +77,7 @@ As outras 20 entradas ficam na M04 porque esperam LY/VBlank real durante o teste
 
 Os casos de instruções que atravessam WRAM e OAM durante DMA também verificam a separação dos barramentos do DMG. Uma cópia de VRAM ocupa seu próprio barramento e permite acesso à memória principal; uma cópia da memória principal permite acesso à VRAM quando a PPU a libera. O bloqueio acompanha a origem ativa durante reinícios do DMA. Essa modelagem foi conferida com os testes Mooneye verificados em hardware e a seleção de barramento em `is_addr_in_dma_use` do [SameBoy](https://github.com/LIJI32/SameBoy/blob/master/Core/memory.c).
 
-O teste `oam_dma/sources-GS` não integra este grupo: seu cartucho é MBC5 com RAM e bateria. Ele pode ser incluído na M12, quando o mapper correspondente existir. Os testes de boot ficam fora da seleção porque o projeto inicializa após o boot e não distribui boot ROM.
+O teste `oam_dma/sources-GS` integra o manifesto estendido da M12: seu cartucho MBC5 com RAM e bateria agora usa o mapper real. Os testes de boot ficam fora da seleção porque o projeto inicializa após o boot e não distribui boot ROM.
 
 ### Mooneye MBC1
 
@@ -88,6 +88,12 @@ O runner `tests/hardware/mbc1.test.ts` verifica cada hash e executa as ROMs com 
 O mapper implementa MBC1 padrão: ROM em potência de dois até 2 MiB, RAM até 32 KiB para ROM até 512 KiB e RAM até 8 KiB para ROM de 1 MiB ou 2 MiB. Os bits de banco sem linhas físicas são mascarados depois da tradução do registro primário zero para um. A convenção homebrew de RAM de 2 KiB usa espelhamento e gera aviso no header.
 
 `multicart_rom_8Mb` exige MBC1M, com outra ligação dos bits de banco. Esse perfil fica fora do escopo atual e não é implementado nem autodetectado. A ROM não integra o manifesto de MBC1 padrão. Configurações incompatíveis com a fiação padrão, como ROM de 1 MiB com 32 KiB de RAM, são rejeitadas pela factory.
+
+### Mooneye MBC2, MBC5 e DMA
+
+O manifesto `tests/roms/mbc-extended-manifest.json` fixa a mesma revisão Mooneye e o mesmo WLA-DX 10.6. Ele inclui os sete casos MBC2 (`bits_ramg`, `bits_romb`, `bits_unused`, `ram`, `rom_512kb`, `rom_1Mb` e `rom_2Mb`), os oito tamanhos ROM MBC5 de 512 kbit a 64 Mbit e `acceptance/oam_dma/sources-GS`. Os 16 testes foram executados e aprovados com `createCartridge`, `MemoryBus` e CPU do produto, sem alterar cabeçalhos, memória ou critérios de sucesso.
+
+MBC3 e RTC possuem testes próprios de banking, estado, latch, halt, overflow, fase subsegundo, validação atômica e avanço determinístico em T-cycles. Não há ROM externa de RTC executada neste manifesto. Consulte [contratos e política do RTC](cartridge-mappers.md).
 
 ### dmg-acid2
 
@@ -142,4 +148,4 @@ cmake --build .work/roms/wla-build --target wla-gb wlalink --parallel 2
 node scripts/test-roms/build-mooneye.mjs .work/roms/mooneye-source .work/roms/wla-build/binaries/wla-gb .work/roms/wla-build/binaries/wlalink
 ```
 
-A reconstrução no Linux está documentada a partir do processo upstream. A conferência efetivamente executada foi Windows, reconstruindo todas as 59 fixtures selecionadas com igualdade de SHA-256. O script inclui os dois manifestos Mooneye, e o runner do projeto registra separadamente o resultado de cada ROM no emulador.
+A reconstrução no Linux está documentada a partir do processo upstream. A conferência efetivamente executada foi Windows, reconstruindo todas as 75 fixtures selecionadas com igualdade de SHA-256. O script inclui os três manifestos Mooneye, e o runner do projeto registra separadamente o resultado de cada ROM no emulador.

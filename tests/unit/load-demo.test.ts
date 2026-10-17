@@ -38,7 +38,7 @@ describe('carregamento da demonstração', () => {
   })
 
   it('não inicia uma ROM de controlador incompatível mesmo com hash correto', async () => {
-    const rom = buildTestRom({ cartridgeType: 0x19 })
+    const rom = buildTestRom({ cartridgeType: 0x22 })
     const game = { ...DEMO_GAMES[0]!, sha256: await hashRom(rom) }
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(new Uint8Array(rom))))
     await expect(loadDemo(game)).rejects.toThrow('não é compatível')

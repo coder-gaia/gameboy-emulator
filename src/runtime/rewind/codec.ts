@@ -1,4 +1,4 @@
-export const MAX_REWIND_STATE_BYTES = 128 * 1024
+export const MAX_REWIND_STATE_BYTES = 256 * 1024
 const MAX_DEPTH = 64
 const MAGIC = [0x50, 0x4c, 0x52, 1] as const
 const TAG = { null: 0, false: 1, true: 2, number: 3, string: 4, bytes: 5, array: 6, object: 7 }

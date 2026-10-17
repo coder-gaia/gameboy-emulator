@@ -13,7 +13,10 @@
 - Pausar ao concluir cada grupo de três milestones para o proprietário testar.
 - Na pausa, entregar instruções concretas de teste e os resultados esperados. Aguardar o ok antes de continuar.
 - Os grupos M00 a M02, M03 a M05 e M06 a M08 foram aprovados pelo proprietário.
-- M09, M10 e M11 estão concluídas. Entregar docs/testing-m09-m11.md e pausar antes da M12, aguardando novo ok do proprietário.
+- M09, M10 e M11 estão concluídas. O proprietário aprovou o desktop e reportou lentidão mobile somente depois de ativar o som no Motorola Edge 40 Neo com Chrome.
+- Na revisão de 16/10/2026, foi autorizado apenas o diagnóstico, sem correção, início de nova milestone ou commit extra. MB01 está registrado em docs/mobile-audio-investigation.md.
+- Em 17/10/2026, o proprietário autorizou continuar M12 a M14. Incluir a correção do áudio mobile como prioridade da M12 e ampliar as setas de toque no mesmo lote, preservando o desktop aprovado. Incorporar o diagnóstico ao commit da milestone correspondente.
+- Não declarar desempenho mobile homologado apenas com viewport Pixel 7 ou CPU throttle da página. Validar áudio e velocidade no aparelho real; o Worker não foi desacelerado pelo throttle da página no experimento registrado.
 - Como último passo deste grupo, ajustar o fundo para pastel/off-white confortável, preservando contraste e aparência do console, sem aplicar opacidade ou sobreposição ao Game Boy.
 
 ## Escrita

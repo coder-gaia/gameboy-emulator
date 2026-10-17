@@ -95,16 +95,17 @@ describe('continuação da máquina a partir do rewind binário', () => {
     expect(device.cartridge.exportBatteryRam()![0]).toBe(12)
   })
 
-  it('acomoda a maior RAM suportada com buffers seriais completos no slot de 128 KiB', () => {
-    const device = new GameBoy(buildTestRom({ cartridgeType: 3, ramSizeCode: 3, romSizeCode: 4 }))
+  it('acomoda MBC5 com 128 KiB de RAM e serial completo no slot de 256 KiB', () => {
+    const device = new GameBoy(buildTestRom({ cartridgeType: 0x1b, ramSizeCode: 4 }))
     device.bus.serial.restoreState({
       ...device.bus.serial.snapshotState(),
       outputBytes: new Uint8Array(4096).fill(255),
     })
     const saved = capture(device, 'ÿ'.repeat(4096))
-    expect(saved.core.cartridge.ram.length).toBe(32 * 1024)
+    expect(saved.core.cartridge.ram.length).toBe(128 * 1024)
     const length = encodeToBuffer(saved, new Uint8Array(MAX_REWIND_STATE_BYTES))
     expect(length).toBeLessThan(MAX_REWIND_STATE_BYTES)
+    expect(length).toBeGreaterThan(128 * 1024)
     const history = new RewindHistory()
     history.record(saved, device.bus.tCycles)
     device.bus.write8Direct(0xc000, 19)

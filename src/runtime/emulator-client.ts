@@ -1,5 +1,6 @@
 import type { JoypadButton } from '../core/joypad'
 import type { AudioOutput } from '../platform/audio'
+import type { CartridgeRtcState } from '../core/cartridge'
 import type {
   EmulatorCommand,
   EmulatorMessage,
@@ -29,6 +30,7 @@ export class EmulatorClient {
   private disposed = false
   private current!: EmulatorSnapshot
   private battery: Uint8Array | null = null
+  private rtc: CartridgeRtcState | null = null
   private output: AudioOutput | null = null
 
   private constructor() {
@@ -135,6 +137,21 @@ export class EmulatorClient {
     await this.request({ type: 'import-battery', bytes: copy }, [copy.buffer])
   }
 
+  exportBatteryRtc(): CartridgeRtcState | null {
+    return this.rtc ? { ...this.rtc } : null
+  }
+
+  async importBatteryState(
+    bytes: Uint8Array,
+    rtc: CartridgeRtcState,
+    elapsedSeconds: number,
+  ): Promise<void> {
+    const copy = bytes.slice()
+    await this.request({ type: 'import-battery-state', bytes: copy, rtc, elapsedSeconds }, [
+      copy.buffer,
+    ])
+  }
+
   setButton(button: JoypadButton, pressed: boolean): void {
     this.post({ type: 'input', button, pressed })
   }
@@ -228,6 +245,7 @@ export class EmulatorClient {
       snapshot.rewind = previous
     this.current = snapshot
     if (snapshot.batteryRam !== undefined) this.battery = snapshot.batteryRam
+    if (snapshot.batteryRtc !== undefined) this.rtc = snapshot.batteryRtc
     for (const listener of this.listeners) listener()
     if (snapshot.rewind !== previous) for (const listener of this.rewindListeners) listener()
   }

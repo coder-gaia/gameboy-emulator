@@ -8,9 +8,9 @@ const manifest = JSON.parse(
   await readFile(resolve(projectRoot, 'tests/roms/manifest.json'), 'utf8'),
 )
 const verifyOnly = process.argv.includes('--verify')
-const knownOptions = new Set(['--verify', '--acid2', '--mbc1', '--audio'])
+const knownOptions = new Set(['--verify', '--acid2', '--mbc1', '--audio', '--mbc-extended'])
 if (process.argv.slice(2).some((argument) => !knownOptions.has(argument))) {
-  throw new Error('Opções aceitas: --verify, --acid2, --mbc1 e --audio.')
+  throw new Error('Opções aceitas: --verify, --acid2, --mbc1, --audio e --mbc-extended.')
 }
 
 function projectPath(path) {
@@ -98,6 +98,15 @@ if (process.argv.includes('--audio')) {
   audioCount = audio.tests.length
 }
 
+let extendedCount = 0
+if (process.argv.includes('--mbc-extended')) {
+  const extended = JSON.parse(
+    await readFile(resolve(projectRoot, 'tests/roms/mbc-extended-manifest.json'), 'utf8'),
+  )
+  for (const entry of extended.tests) await ensureFile(entry)
+  extendedCount = extended.tests.length
+}
+
 console.log(
-  `${manifest.tests.length + mbc1Count + audioCount} ROMs verificadas por SHA-256${process.argv.includes('--acid2') ? ', com ROM e referência dmg-acid2' : ''}.`,
+  `${manifest.tests.length + mbc1Count + audioCount + extendedCount} ROMs verificadas por SHA-256${process.argv.includes('--acid2') ? ', com ROM e referência dmg-acid2' : ''}.`,
 )
