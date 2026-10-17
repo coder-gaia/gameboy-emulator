@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test'
 import type { Locator, Page } from '@playwright/test'
+import { AUDIO_MAX_FRAMES } from '../../src/platform/audio/protocol'
 import type { AudioStreamDiagnostics } from '../../src/platform/audio/protocol'
 
 interface AudioCommandProbe {
@@ -116,7 +117,7 @@ test('PCM real chega ao Worklet e mute, volume e pausas rápidas preservam a rep
   await expect
     .poll(async () => (await readProbe(page)).latest?.energy ?? 0, { timeout: 15_000 })
     .toBeGreaterThan(0)
-  expect((await readProbe(page)).latest!.queuedFrames).toBeLessThanOrEqual(16_384)
+  expect((await readProbe(page)).latest!.queuedFrames).toBeLessThanOrEqual(AUDIO_MAX_FRAMES)
   expect((await readProbe(page)).contexts.at(-1)!.state).toBe('running')
 
   const slider = page.getByRole('slider', { name: 'Volume', exact: true })

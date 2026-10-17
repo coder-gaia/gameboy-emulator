@@ -120,17 +120,19 @@ describe('captura de vídeo durante o mesmo orçamento PCM', () => {
     const control = new GameBoy(rom)
     const pool = new VideoBufferPool()
     let frames = 0
-    const budget = 40 * DMG_FRAME_T_CYCLES
+    let droppedFrames = 0
+    const budget = 80 * DMG_FRAME_T_CYCLES
     // A APU é drenada por pedidos reais; aqui o orçamento maior testa apenas
     // equivalência, inclusive o mesmo descarte do ring PCM nas duas máquinas.
     runAudioVideoBudget(device, budget, 0, (frame) => {
       frames += 1
-      pool.lease(frame.framebuffer)
+      if (!pool.lease(frame.framebuffer)) droppedFrames += 1
     })
     control.runCycles(budget)
-    expect(frames).toBe(40)
-    expect(pool.leasedBuffers).toBe(32)
-    expect(pool.allocatedBytes).toBe(737280)
+    expect(frames).toBe(80)
+    expect(pool.leasedBuffers).toBe(64)
+    expect(droppedFrames).toBe(16)
+    expect(pool.allocatedBytes).toBe(1_474_560)
     deepStrictEqual(device.snapshotState(), control.snapshotState())
     deepStrictEqual(device.bus.apu.drainSamples(), control.bus.apu.drainSamples())
   })

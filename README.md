@@ -8,7 +8,7 @@ Um Game Boy DMG no navegador, escrito em TypeScript. Jogue, volte alguns segundo
 
 ![Console Pocket Lab com o jardim original](docs/media/pocket-lab-desktop.png)
 
-Versão **1.0.0-rc.1**, candidata a lançamento. O desktop foi aprovado pelo proprietário. No Motorola Edge 40 Neo com Chrome, a M12 eliminou travadas e cortes da música, mas ainda houve lentidão percebida somente com som. A M14 trata a apresentação dos quadros intermediários. O aceite dessa mudança no aparelho real continua pendente; testes com viewport móvel em computador não o substituem.
+Versão **1.0.0-rc.2**, candidata a lançamento. Esta revisão corrige a continuidade do vídeo durante reposição de áudio e amplia a margem da reserva PCM para entregas demoradas. O aceite no Motorola Edge 40 Neo com Chrome continua pendente; testes com viewport móvel e relógios simulados no computador não substituem o aparelho real.
 
 ## Experimente
 
@@ -99,3 +99,9 @@ O README e as capturas reais do jardim servem de base para apresentar o projeto 
 Não há jogo comercial ou boot ROM original distribuído. Tobu Tobu Girl e 2048 são homebrews com redistribuição autorizada, binários originais e créditos no site. [Jogos disponíveis](docs/cartridges.md) e [licenças](docs/third-party.md).
 
 POCKET TEST e POCKET GARDEN, incluindo cenário, personagem e letras, são criações próprias. As ROMs externas de teste ficam restritas às suítes de validação. DM Sans e Space Mono são fornecidas localmente por Fontsource. [Créditos de terceiros](docs/third-party.md).
+
+## Autoria e licença
+
+Criado e desenvolvido por **[Alexandre Gaia](https://github.com/coder-gaia)**. Código e documentação de sua autoria sob a [licença MIT](LICENSE), copyright 2026 Alexandre Gaia.
+
+Jogos, fontes, ícones e demais componentes de terceiros mantêm suas licenças e atribuições próprias, descritas nos [créditos](docs/third-party.md).

@@ -1,10 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { PcmStream } from '../../src/platform/audio/pcm-stream'
-import {
-  AUDIO_MAX_FRAMES,
-  AUDIO_MAX_REQUEST_FRAMES,
-  audioBufferProfile,
-} from '../../src/platform/audio/protocol'
+import { AUDIO_MAX_FRAMES, audioBufferProfile } from '../../src/platform/audio/protocol'
 
 interface Flight {
   frames: number
@@ -52,7 +48,7 @@ function jitterScenario(sampleRate = 48_000, alternating = false, overshoot = 0)
     flight = { frames, due: frame + latency }
     const state = stream.diagnostics()
     maximumOutstanding = Math.max(maximumOutstanding, state.queuedFrames + state.pendingFrames)
-    expect(state.queuedFrames + state.pendingFrames).toBeLessThanOrEqual(AUDIO_MAX_REQUEST_FRAMES)
+    expect(state.queuedFrames + state.pendingFrames + 128).toBeLessThanOrEqual(AUDIO_MAX_FRAMES)
     expect(frames).toBeLessThanOrEqual(profile.requestLimit)
   }
 
@@ -110,13 +106,13 @@ describe('reserva de PCM enquanto uma demanda está em voo', () => {
     'mantém limites físicos e recupera a reserva em %i Hz',
     (sampleRate) => {
       const result = jitterScenario(sampleRate, true, 128)
-      expect(result.maximumOutstanding).toBeLessThanOrEqual(AUDIO_MAX_REQUEST_FRAMES)
+      expect(result.maximumOutstanding + 128).toBeLessThanOrEqual(AUDIO_MAX_FRAMES)
       expect(result.maximumQueued).toBeLessThanOrEqual(AUDIO_MAX_FRAMES)
       expect(result.stream.diagnostics().droppedFrames).toBe(0)
       expect(result.stream.diagnostics().primed).toBe(true)
       expect(result.stream.diagnostics().active).toBe(true)
-      // Em 192 kHz a arena comporta menos de 86 ms. Não se presume que cubra
-      // jitter arbitrário de 75 ms combinado com a resposta anterior.
+      // Em 192 kHz a arena comporta menos de 171 ms. Não se presume que cubra
+      // jitter arbitrário combinado com a resposta anterior.
     },
   )
 

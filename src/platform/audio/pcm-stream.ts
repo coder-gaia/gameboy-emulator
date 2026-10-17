@@ -1,5 +1,5 @@
 import { StereoPcmQueue } from './pcm-queue'
-import { AUDIO_MAX_REQUEST_FRAMES, audioBufferProfile, isAudioEpoch } from './protocol'
+import { AUDIO_MAX_FRAMES, audioBufferProfile, isAudioEpoch } from './protocol'
 import type { AudioStreamDiagnostics } from './protocol'
 
 /** Estado de consumo testável sem AudioContext nem APIs de Worklet. */
@@ -71,7 +71,7 @@ export class PcmStream {
     this.pendingFrames = Math.min(
       deficit + inFlightConsumption,
       this.profile.requestLimit,
-      AUDIO_MAX_REQUEST_FRAMES - this.queue.queuedFrames,
+      AUDIO_MAX_FRAMES - 128 - this.queue.queuedFrames,
     )
     this.requestedAtFrame = this.elapsedFrames
     return this.pendingFrames
@@ -90,7 +90,7 @@ export class PcmStream {
     this.peakRoundTripFrames = Math.max(this.peakRoundTripFrames, this.roundTripFrames)
     this.targetFrames = Math.min(
       this.profile.maxFrames,
-      Math.max(this.targetFrames, this.roundTripFrames * 2 + this.renderQuantumFrames * 2),
+      Math.max(this.targetFrames, this.peakRoundTripFrames * 2 + this.renderQuantumFrames * 2),
     )
     this.pendingFrames = 0
     this.queue.push(samples)

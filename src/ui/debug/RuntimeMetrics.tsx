@@ -66,6 +66,7 @@ export function RuntimeMetrics({
       playing: device.inspection.playing,
       rewinding: device.rewind.active,
       audio: getAudio(),
+      presentation: device.getPresentationDiagnostics(),
     }),
     [device, getAudio],
   )

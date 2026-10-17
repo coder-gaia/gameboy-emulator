@@ -29,6 +29,14 @@ function audio(overrides: Partial<AudioDiagnostics> = {}): AudioDiagnostics {
     volume: 0.7,
     muted: false,
     error: null,
+    playback: {
+      clockMode: 'graph',
+      pcmFrame: 48_000,
+      graphPcmFrame: 48_000,
+      graphContextTimeSeconds: 1,
+      outputContextTimeSeconds: null,
+      outputPerformanceTimeMilliseconds: null,
+    },
     ...overrides,
   }
 }

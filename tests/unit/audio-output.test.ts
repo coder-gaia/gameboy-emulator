@@ -278,7 +278,7 @@ describe('cursor de reprodução para apresentação de vídeo', () => {
       expect(timestamp).toHaveBeenCalledOnce()
       expect(output.getPlaybackFrame(1)).toBeCloseTo(32)
       now.mockReturnValue(5000)
-      expect(output.getPlaybackFrame(1)).toBe(0)
+      expect(output.getPlaybackFrame(1)).toBeCloseTo(32)
       now.mockReturnValue(5030)
       expect(output.getPlaybackFrame(1)).toBeCloseTo(992)
       now.mockReturnValue(6000)
@@ -318,7 +318,6 @@ describe('cursor de reprodução para apresentação de vídeo', () => {
   it.each([
     undefined,
     {},
-    { contextTime: 0, performanceTime: 5000 },
     { contextTime: 10, performanceTime: 0 },
     { contextTime: -1, performanceTime: 5000 },
     { contextTime: 10, performanceTime: Number.NaN },
@@ -353,7 +352,7 @@ describe('cursor de reprodução para apresentação de vídeo', () => {
       fake.context.currentTime = 10.01
       expect(output.getPlaybackFrame(1)).toBeCloseTo(992)
       playback(fake)
-      expect(timestamp).toHaveBeenCalledTimes(2)
+      expect(timestamp).toHaveBeenCalledOnce()
       expect(output.getPlaybackFrame(1)).toBeCloseTo(992)
       now.mockReturnValue(-1)
       expect(output.getPlaybackFrame(1)).toBeCloseTo(992)
@@ -363,7 +362,7 @@ describe('cursor de reprodução para apresentação de vídeo', () => {
     }
   })
 
-  it('correlação fica congelada em rebuffer e é substituída depois da retomada ou reset', async () => {
+  it('consulta o trecho de rebuffer no instante de saída e limpa o histórico no reset', async () => {
     const fake = fakeAudio()
     const timestamp = vi.fn(() => ({ contextTime: 10, performanceTime: 5000 }))
     Object.assign(fake.context, { getOutputTimestamp: timestamp })
@@ -395,6 +394,489 @@ describe('cursor de reprodução para apresentação de vídeo', () => {
     }
   })
 
+  it('preserva cadência com 312 ms de saída ao esvaziar e retomar a fila', async () => {
+    const fake = fakeAudio()
+    const now = vi.spyOn(performance, 'now').mockReturnValue(10_000)
+    Object.assign(fake.context, {
+      baseLatency: 0.12825,
+      outputLatency: 0.312,
+      getOutputTimestamp: () => ({
+        contextTime: fake.context.currentTime - 0.312,
+        performanceTime: performance.now(),
+      }),
+    })
+    const output = new AudioOutput(fake.options)
+    try {
+      await output.prepare()
+      output.connect({} as MessagePort, 1)
+      await output.resume(1)
+      fake.context.currentTime = 10
+      playback(fake, { frame: 0, availableFrame: 3072, contextTime: 9 })
+      playback(fake, {
+        frame: 47_872,
+        availableFrame: 48_000,
+        contextTime: 10 - 128 / 48_000,
+      })
+      expect(output.getPlaybackFrame(1)).toBeCloseTo(33_024)
+      expect(output.getDiagnostics().playback).toMatchObject({
+        clockMode: 'output',
+        graphPcmFrame: 47_872,
+        graphContextTimeSeconds: 10 - 128 / 48_000,
+        outputContextTimeSeconds: 9.688,
+        outputPerformanceTimeMilliseconds: 10_000,
+      })
+      expect(output.getDiagnostics().playback.pcmFrame).toBeCloseTo(33_024)
+      playback(fake, {
+        frame: 48_000,
+        availableFrame: 48_000,
+        contextTime: 10,
+        advancing: false,
+      })
+      expect(output.getPlaybackFrame(1)).toBeCloseTo(33_024)
+
+      fake.context.currentTime = 10 + 128 / 48_000
+      now.mockReturnValue(10_000 + 128 / 48)
+      playback(fake, {
+        frame: 48_000,
+        availableFrame: 64_000,
+        contextTime: fake.context.currentTime,
+      })
+      let previous = output.getPlaybackFrame(1)!
+      expect(previous).toBeCloseTo(33_152)
+      let advancingSteps = 0
+      for (let quantum = 2; quantum <= 180; quantum += 1) {
+        now.mockReturnValue(10_000 + (quantum * 128) / 48)
+        const position = output.getPlaybackFrame(1)!
+        expect(position).toBeGreaterThanOrEqual(previous)
+        expect(position - previous).toBeLessThanOrEqual(128.0001)
+        if (position > previous + 0.001) advancingSteps += 1
+        previous = position
+      }
+      expect(advancingSteps).toBeGreaterThanOrEqual(177)
+      expect(previous).toBeCloseTo(55_936)
+    } finally {
+      now.mockRestore()
+      await output.dispose()
+    }
+  })
+
+  it('silêncio no grafo só congela o cursor quando esse trecho chega à saída', async () => {
+    const fake = fakeAudio()
+    const now = vi.spyOn(performance, 'now').mockReturnValue(10_000)
+    Object.assign(fake.context, {
+      getOutputTimestamp: () => ({
+        contextTime: fake.context.currentTime - 0.312,
+        performanceTime: performance.now(),
+      }),
+    })
+    const output = new AudioOutput(fake.options)
+    try {
+      await output.prepare()
+      output.connect({} as MessagePort, 1)
+      await output.resume(1)
+      fake.context.currentTime = 10
+      playback(fake, { frame: 0, availableFrame: 3072, contextTime: 9 })
+      playback(fake, {
+        frame: 48_000,
+        availableFrame: 48_000,
+        contextTime: 10,
+        advancing: false,
+      })
+      expect(output.getPlaybackFrame(1)).toBeCloseTo(33_024)
+      fake.context.currentTime = 10.2
+      now.mockReturnValue(10_200)
+      playback(fake, {
+        frame: 48_000,
+        availableFrame: 64_000,
+        contextTime: 10.2,
+      })
+      expect(output.getPlaybackFrame(1)).toBeCloseTo(42_624)
+      now.mockReturnValue(10_312)
+      expect(output.getPlaybackFrame(1)).toBeCloseTo(48_000)
+      now.mockReturnValue(10_412)
+      expect(output.getPlaybackFrame(1)).toBeCloseTo(48_000)
+      now.mockReturnValue(10_512)
+      expect(output.getPlaybackFrame(1)).toBeCloseTo(48_000)
+      now.mockReturnValue(10_532)
+      expect(output.getPlaybackFrame(1)).toBeCloseTo(48_960)
+    } finally {
+      now.mockRestore()
+      await output.dispose()
+    }
+  })
+
+  it('fila vazia e reposta no mesmo instante não altera o cursor de saída', async () => {
+    const fake = fakeAudio()
+    const now = vi.spyOn(performance, 'now').mockReturnValue(10_000)
+    Object.assign(fake.context, {
+      getOutputTimestamp: () => ({ contextTime: 9.688, performanceTime: 10_000 }),
+    })
+    const output = new AudioOutput(fake.options)
+    try {
+      await output.prepare()
+      output.connect({} as MessagePort, 1)
+      await output.resume(1)
+      fake.context.currentTime = 10
+      playback(fake, { frame: 0, availableFrame: 3072, contextTime: 9 })
+      playback(fake, {
+        frame: 48_000,
+        availableFrame: 48_000,
+        contextTime: 10,
+        advancing: false,
+      })
+      expect(output.getPlaybackFrame(1)).toBeCloseTo(33_024)
+      playback(fake, { frame: 48_000, availableFrame: 64_000, contextTime: 10 })
+      expect(output.getPlaybackFrame(1)).toBeCloseTo(33_024)
+      now.mockReturnValue(10_320)
+      expect(output.getPlaybackFrame(1)).toBeCloseTo(48_384)
+    } finally {
+      now.mockRestore()
+      await output.dispose()
+    }
+  })
+
+  it('falha temporária do timestamp não troca a saída atrasada pelo relógio do grafo', async () => {
+    const fake = fakeAudio()
+    const timestamp = vi.fn(() => ({ contextTime: 9.688, performanceTime: 10_000 }))
+    Object.assign(fake.context, { getOutputTimestamp: timestamp })
+    const now = vi.spyOn(performance, 'now').mockReturnValue(10_000)
+    const output = new AudioOutput(fake.options)
+    try {
+      await output.prepare()
+      output.connect({} as MessagePort, 1)
+      await output.resume(1)
+      fake.context.currentTime = 10
+      playback(fake, { frame: 48_000, availableFrame: 64_000, contextTime: 10 })
+      expect(output.getPlaybackFrame(1)).toBeCloseTo(33_024)
+      timestamp.mockImplementationOnce(() => {
+        throw new Error('Estimativa indisponível')
+      })
+      fake.context.currentTime = 10 + 512 / 48_000
+      now.mockReturnValue(10_000 + 512 / 48)
+      playback(fake, {
+        frame: 48_512,
+        availableFrame: 64_000,
+        contextTime: fake.context.currentTime,
+      })
+      expect(output.getPlaybackFrame(1)).toBeCloseTo(33_536)
+      timestamp.mockReturnValueOnce({ contextTime: Number.NaN, performanceTime: 10_020 })
+      fake.context.currentTime = 10 + 1024 / 48_000
+      now.mockReturnValue(10_000 + 1024 / 48)
+      playback(fake, {
+        frame: 49_024,
+        availableFrame: 64_000,
+        contextTime: fake.context.currentTime,
+      })
+      expect(output.getPlaybackFrame(1)).toBeCloseTo(34_048)
+    } finally {
+      now.mockRestore()
+      await output.dispose()
+    }
+  })
+
+  it('aguarda timestamp inicial zerado sem antecipar o grafo nem congelar na primeira saída', async () => {
+    const fake = fakeAudio()
+    const timestamp = vi.fn(() => ({ contextTime: 0, performanceTime: 0 }))
+    Object.assign(fake.context, { getOutputTimestamp: timestamp })
+    const now = vi.spyOn(performance, 'now').mockReturnValue(0)
+    const output = new AudioOutput(fake.options)
+    try {
+      await output.prepare()
+      output.connect({} as MessagePort, 1)
+      await output.resume(1)
+      playback(fake, { frame: 0, availableFrame: 6144, contextTime: 0 })
+      expect(output.getPlaybackFrame(1)).toBeNull()
+      expect(output.getDiagnostics().playback).toEqual({
+        clockMode: 'awaiting-output',
+        pcmFrame: null,
+        graphPcmFrame: 0,
+        graphContextTimeSeconds: 0,
+        outputContextTimeSeconds: null,
+        outputPerformanceTimeMilliseconds: null,
+      })
+      fake.context.currentTime = 0.128
+      now.mockReturnValue(128)
+      playback(fake, { frame: 6144, availableFrame: 12_288, contextTime: 0.128 })
+      expect(output.getPlaybackFrame(1)).toBeNull()
+      fake.context.currentTime = 0.4
+      now.mockReturnValue(400)
+      timestamp.mockReturnValue({ contextTime: 0.088, performanceTime: 400 })
+      playback(fake, { frame: 19_200, availableFrame: 25_344, contextTime: 0.4 })
+      expect(output.getPlaybackFrame(1)).toBeCloseTo(4224)
+      now.mockReturnValue(416)
+      expect(output.getPlaybackFrame(1)).toBeCloseTo(4992)
+      timestamp.mockReturnValue({ contextTime: 0, performanceTime: 0 })
+      playback(fake, { frame: 19_712, availableFrame: 25_344, contextTime: 0.4 + 512 / 48_000 })
+      now.mockReturnValue(432)
+      expect(output.getPlaybackFrame(1)).toBeCloseTo(5760)
+    } finally {
+      now.mockRestore()
+      await output.dispose()
+    }
+  })
+
+  it('contextTime zero com instante da página válido representa o começo da saída', async () => {
+    const fake = fakeAudio()
+    Object.assign(fake.context, {
+      getOutputTimestamp: () => ({ contextTime: 0, performanceTime: 312 }),
+    })
+    const now = vi.spyOn(performance, 'now').mockReturnValue(312)
+    const output = new AudioOutput(fake.options)
+    try {
+      await output.prepare()
+      output.connect({} as MessagePort, 1)
+      await output.resume(1)
+      fake.context.currentTime = 0.312
+      playback(fake, { frame: 0, availableFrame: 3072, contextTime: 0 })
+      playback(fake, { frame: 14_976, availableFrame: 21_120, contextTime: 0.312 })
+      expect(output.getPlaybackFrame(1)).toBe(0)
+      now.mockReturnValue(328)
+      expect(output.getPlaybackFrame(1)).toBeCloseTo(768)
+    } finally {
+      now.mockRestore()
+      await output.dispose()
+    }
+  })
+
+  it('timestamp sempre zerado libera PCM progressivo no grafo após um segundo', async () => {
+    const fake = fakeAudio()
+    const timestamp = vi.fn(() => ({ contextTime: 0, performanceTime: 0 }))
+    Object.assign(fake.context, { getOutputTimestamp: timestamp })
+    const now = vi.spyOn(performance, 'now').mockReturnValue(5000)
+    const output = new AudioOutput(fake.options)
+    try {
+      await output.prepare()
+      output.connect({} as MessagePort, 1)
+      await output.resume(1)
+      fake.context.currentTime = 10
+      playback(fake, { frame: 0, availableFrame: 6144, contextTime: 10 })
+      expect(output.getPlaybackFrame(1)).toBeNull()
+      for (let quantum = 1; quantum < 375; quantum += 1) {
+        fake.context.currentTime = 10 + (quantum * 128) / 48_000
+        now.mockReturnValue(5000 + (quantum * 128) / 48)
+        playback(fake, {
+          frame: quantum * 128,
+          availableFrame: quantum * 128 + 6144,
+          contextTime: fake.context.currentTime,
+        })
+        expect(output.getPlaybackFrame(1)).toBeNull()
+      }
+      fake.context.currentTime = 11
+      now.mockReturnValue(6000)
+      playback(fake, { frame: 48_000, availableFrame: 54_144, contextTime: 11 })
+      expect(output.getPlaybackFrame(1)).toBeCloseTo(48_000)
+      expect(output.getDiagnostics().playback.clockMode).toBe('graph')
+      timestamp.mockReturnValue({ contextTime: 10.688, performanceTime: 6000 })
+      for (let quantum = 376; quantum <= 385; quantum += 1) {
+        fake.context.currentTime = 10 + (quantum * 128) / 48_000
+        now.mockReturnValue(5000 + (quantum * 128) / 48)
+        playback(fake, {
+          frame: quantum * 128,
+          availableFrame: quantum * 128 + 6144,
+          contextTime: fake.context.currentTime,
+        })
+        expect(output.getPlaybackFrame(1)).toBeCloseTo(quantum * 128)
+      }
+      expect(output.getDiagnostics().playback.outputContextTimeSeconds).toBeNull()
+
+      await output.pause(2)
+      await output.resume(3)
+      timestamp.mockReturnValue({ contextTime: 0, performanceTime: 0 })
+      fake.context.currentTime = 20
+      now.mockReturnValue(7000)
+      playback(fake, { epoch: 3, frame: 0, availableFrame: 6144, contextTime: 20 })
+      expect(output.getPlaybackFrame(3)).toBeNull()
+      fake.context.currentTime = 20.999
+      now.mockReturnValue(7999)
+      timestamp.mockReturnValue({ contextTime: 20.687, performanceTime: 7999 })
+      playback(fake, { epoch: 3, frame: 47_952, availableFrame: 54_096, contextTime: 20.999 })
+      expect(output.getPlaybackFrame(3)).toBeCloseTo(32_976)
+      expect(output.getDiagnostics().playback.clockMode).toBe('output')
+    } finally {
+      now.mockRestore()
+      await output.dispose()
+    }
+  })
+
+  it('prazo também expira no RAF e rejeita primeira correlação que chega tarde', async () => {
+    const fake = fakeAudio()
+    const timestamp = vi.fn(() => ({ contextTime: 0, performanceTime: 0 }))
+    Object.assign(fake.context, { getOutputTimestamp: timestamp })
+    const now = vi.spyOn(performance, 'now').mockReturnValue(100)
+    const output = new AudioOutput(fake.options)
+    try {
+      await output.prepare()
+      output.connect({} as MessagePort, 1)
+      await output.resume(1)
+      fake.context.currentTime = 10
+      playback(fake, { frame: 0, availableFrame: 6144, contextTime: 10 })
+      now.mockReturnValue(1099)
+      expect(output.getPlaybackFrame(1)).toBeNull()
+      now.mockReturnValue(1100)
+      fake.context.currentTime = 10.128
+      expect(output.getPlaybackFrame(1)).toBeCloseTo(6144)
+      expect(output.getDiagnostics().playback.clockMode).toBe('graph')
+
+      await output.pause(2)
+      await output.resume(3)
+      now.mockReturnValue(2000)
+      fake.context.currentTime = 20
+      playback(fake, { epoch: 3, frame: 0, availableFrame: 6144, contextTime: 20 })
+      now.mockReturnValue(3000)
+      fake.context.currentTime = 21
+      timestamp.mockReturnValue({ contextTime: 20.688, performanceTime: 3000 })
+      playback(fake, { epoch: 3, frame: 48_000, availableFrame: 54_144, contextTime: 21 })
+      expect(output.getPlaybackFrame(3)).toBeCloseTo(48_000)
+      expect(output.getDiagnostics().playback.clockMode).toBe('graph')
+      expect(output.getDiagnostics().playback.outputContextTimeSeconds).toBeNull()
+    } finally {
+      now.mockRestore()
+      await output.dispose()
+    }
+  })
+
+  it('não espera indefinidamente se o relógio da página é inválido no startup', async () => {
+    const fake = fakeAudio()
+    Object.assign(fake.context, {
+      getOutputTimestamp: () => ({ contextTime: 0, performanceTime: 0 }),
+    })
+    const now = vi.spyOn(performance, 'now').mockReturnValue(Number.NaN)
+    const output = new AudioOutput(fake.options)
+    try {
+      await output.prepare()
+      output.connect({} as MessagePort, 1)
+      await output.resume(1)
+      fake.context.currentTime = 10.01
+      playback(fake)
+      expect(output.getPlaybackFrame(1)).toBeCloseTo(992)
+      expect(output.getDiagnostics().playback.clockMode).toBe('graph')
+    } finally {
+      now.mockRestore()
+      await output.dispose()
+    }
+  })
+
+  it('reset libera espera inicial quando a próxima epoch precisa do fallback do grafo', async () => {
+    const fake = fakeAudio()
+    Object.assign(fake.context, {
+      getOutputTimestamp: () => ({ contextTime: 0, performanceTime: 0 }),
+    })
+    const output = new AudioOutput(fake.options)
+    await output.prepare()
+    output.connect({} as MessagePort, 1)
+    await output.resume(1)
+    playback(fake)
+    expect(output.getPlaybackFrame(1)).toBeNull()
+    await output.pause(2)
+    await output.resume(3)
+    Object.assign(fake.context, { getOutputTimestamp: undefined })
+    fake.context.currentTime = 10
+    playback(fake, { epoch: 3 })
+    expect(output.getPlaybackFrame(3)).toBe(512)
+    await output.dispose()
+  })
+
+  it('mantém fallback durante a epoch após desenhar, e tenta saída novamente no reset', async () => {
+    const fake = fakeAudio()
+    const timestamp = vi.fn((): { contextTime: number; performanceTime: number } => {
+      throw new Error('Estimativa inicialmente indisponível')
+    })
+    Object.assign(fake.context, { getOutputTimestamp: timestamp })
+    const now = vi.spyOn(performance, 'now').mockReturnValue(5000)
+    const output = new AudioOutput(fake.options)
+    try {
+      expect(output.getDiagnostics().playback).toEqual({
+        clockMode: 'graph',
+        pcmFrame: null,
+        graphPcmFrame: null,
+        graphContextTimeSeconds: null,
+        outputContextTimeSeconds: null,
+        outputPerformanceTimeMilliseconds: null,
+      })
+      await output.prepare()
+      output.connect({} as MessagePort, 1)
+      await output.resume(1)
+      fake.context.currentTime = 10.01
+      playback(fake)
+      expect(output.getPlaybackFrame(1)).toBeCloseTo(992)
+      timestamp.mockReturnValue({ contextTime: 9.708, performanceTime: 5010 })
+      fake.context.currentTime = 10.02
+      now.mockReturnValue(5010)
+      playback(fake, { frame: 1024, contextTime: 10 + 512 / 48_000 })
+      expect(output.getPlaybackFrame(1)).toBeCloseTo(1472)
+      expect(timestamp).toHaveBeenCalledOnce()
+      expect(output.getDiagnostics().playback.clockMode).toBe('graph')
+      expect(output.getDiagnostics().playback.outputContextTimeSeconds).toBeNull()
+
+      await output.pause(2)
+      await output.resume(3)
+      expect(output.getDiagnostics().playback.graphPcmFrame).toBeNull()
+      expect(output.getDiagnostics().playback.pcmFrame).toBeNull()
+      fake.context.currentTime = 12
+      now.mockReturnValue(7000)
+      timestamp.mockReturnValue({ contextTime: 12, performanceTime: 7000 })
+      playback(fake, { epoch: 3, frame: 0, availableFrame: 6144, contextTime: 12 })
+      expect(output.getPlaybackFrame(3)).toBe(0)
+      expect(output.getDiagnostics().playback.clockMode).toBe('output')
+      now.mockReturnValue(7016)
+      expect(output.getPlaybackFrame(3)).toBeCloseTo(768)
+      await output.pause(4)
+      expect(output.getDiagnostics().playback).toEqual({
+        clockMode: 'graph',
+        pcmFrame: null,
+        graphPcmFrame: null,
+        graphContextTimeSeconds: null,
+        outputContextTimeSeconds: null,
+        outputPerformanceTimeMilliseconds: null,
+      })
+    } finally {
+      now.mockRestore()
+      await output.dispose()
+    }
+  })
+
+  it.each([Number.NaN, -1])('usa o grafo se performance.now é inválido: %s', async (invalidNow) => {
+    const fake = fakeAudio()
+    Object.assign(fake.context, {
+      getOutputTimestamp: () => ({ contextTime: 9.688, performanceTime: 5000 }),
+    })
+    const now = vi.spyOn(performance, 'now').mockReturnValue(invalidNow)
+    const output = new AudioOutput(fake.options)
+    try {
+      await output.prepare()
+      output.connect({} as MessagePort, 1)
+      await output.resume(1)
+      fake.context.currentTime = 10.01
+      playback(fake)
+      expect(output.getPlaybackFrame(1)).toBeCloseTo(992)
+    } finally {
+      now.mockRestore()
+      await output.dispose()
+    }
+  })
+
+  it('fallback consulta o grafo anterior a uma notificação no fim do quantum', async () => {
+    const fake = fakeAudio()
+    const output = new AudioOutput(fake.options)
+    await output.prepare()
+    output.connect({} as MessagePort, 1)
+    await output.resume(1)
+    playback(fake, { frame: 0, availableFrame: 4800, contextTime: 1 })
+    playback(fake, {
+      frame: 4800,
+      availableFrame: 4800,
+      contextTime: 1.1,
+      advancing: false,
+    })
+    fake.context.currentTime = 1.1 - 128 / 48_000
+    expect(output.getPlaybackFrame(1)).toBeCloseTo(4672)
+    fake.context.currentTime = 1.1
+    expect(output.getPlaybackFrame(1)).toBeCloseTo(4800)
+    fake.context.currentTime = 2
+    expect(output.getPlaybackFrame(1)).toBeCloseTo(4800)
+    await output.dispose()
+  })
+
   it('usa o relógio do AudioContext e limita a extrapolação ao PCM disponível', async () => {
     const fake = fakeAudio()
     const output = new AudioOutput(fake.options)
@@ -410,7 +892,7 @@ describe('cursor de reprodução para apresentação de vídeo', () => {
     fake.context.currentTime = 11
     expect(output.getPlaybackFrame(1)).toBe(4096)
     fake.context.currentTime = 9
-    expect(output.getPlaybackFrame(1)).toBe(512)
+    expect(output.getPlaybackFrame(1)).toBe(4096)
     await output.dispose()
   })
 

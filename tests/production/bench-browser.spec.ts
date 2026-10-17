@@ -3,6 +3,7 @@ import { writeFile } from 'node:fs/promises'
 import { expect, test } from '@playwright/test'
 import type { Locator, Page } from '@playwright/test'
 import { DMG_CLOCK_HZ } from '../../src/core/model'
+import { AUDIO_MAX_FRAMES } from '../../src/platform/audio/protocol'
 import { expectProductionClean, observeProduction, readProductionProbe } from './probe'
 
 const WINDOW_MS = 30_000
@@ -140,7 +141,7 @@ test('mede 30 s sem som e 30 s com som em Tobu Tobu Girl em gameplay', async ({
   expect(sound.audio!.observationCount).toBeGreaterThan(0)
   expect(sound.audio!.energy).toBeGreaterThan(0)
   expect(sound.audio!.maximumObservedPeakLevel).toBeLessThanOrEqual(1)
-  expect(sound.audio!.queueMaximumFrames).toBeLessThanOrEqual(16_384)
+  expect(sound.audio!.queueMaximumFrames).toBeLessThanOrEqual(AUDIO_MAX_FRAMES)
   await expectProductionClean(page)
 
   const report = {

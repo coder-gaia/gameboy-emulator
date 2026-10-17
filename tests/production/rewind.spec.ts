@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { AUDIO_MAX_FRAMES } from '../../src/platform/audio/protocol'
 import { expectProductionClean, observeProduction, readProductionProbe } from './probe'
 
 test.beforeEach(async ({ page }) => observeProduction(page))
@@ -86,5 +87,5 @@ test('AudioWorklet da build limpa PCM ao voltar e retoma áudio real sob CSP', a
   const after = await readProductionProbe(page)
   expect(after.contexts).toHaveLength(1)
   expect(after.nodeCount).toBe(1)
-  expect(after.latestAudio!.queuedFrames).toBeLessThanOrEqual(16_384)
+  expect(after.latestAudio!.queuedFrames).toBeLessThanOrEqual(AUDIO_MAX_FRAMES)
 })

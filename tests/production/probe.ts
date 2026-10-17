@@ -33,6 +33,101 @@ interface AudioObservation extends AudioStreamDiagnostics {
   receivedAt: number
 }
 
+export interface CapturedVideoObservation {
+  readonly sequence: number
+  readonly epoch: number
+  readonly frameId: number
+  readonly pcmFrame: number
+  readonly receivedAt: number
+}
+
+export interface CanvasDrawObservation {
+  readonly at: number
+  frameId: number | null
+}
+
+interface PresentationWindow {
+  readonly epoch: number
+  readonly sampleRate: number
+  readonly measuredFrom: number
+  readonly measuredUntil: number
+  readonly capturePaddingMs: number
+}
+
+/** Compara cada intervalo visível com lacunas de capturas consecutivas da própria ROM. */
+export function analyzePresentationGaps(
+  allDraws: readonly CanvasDrawObservation[],
+  allCaptures: readonly CapturedVideoObservation[],
+  window: PresentationWindow,
+) {
+  const draws = allDraws.filter(
+    (draw) => draw.at >= window.measuredFrom && draw.at <= window.measuredUntil,
+  )
+  const captures = allCaptures.filter(
+    (capture) =>
+      capture.epoch === window.epoch &&
+      capture.receivedAt >= window.measuredFrom - window.capturePaddingMs &&
+      capture.receivedAt <= window.measuredUntil,
+  )
+  const scheduledGaps = []
+  for (let index = 1; index < captures.length; index += 1) {
+    const before = captures[index - 1]!
+    const after = captures[index]!
+    if (
+      before.sequence + 1 !== after.sequence ||
+      after.frameId < before.frameId ||
+      after.pcmFrame < before.pcmFrame
+    )
+      continue
+    scheduledGaps.push({
+      fromFrameId: before.frameId,
+      untilFrameId: after.frameId,
+      fromPcmFrame: before.pcmFrame,
+      untilPcmFrame: after.pcmFrame,
+      fromReceivedAt: before.receivedAt,
+      untilReceivedAt: after.receivedAt,
+      durationMs: ((after.pcmFrame - before.pcmFrame) / window.sampleRate) * 1000,
+    })
+  }
+  const gaps = []
+  for (let index = 1; index < draws.length; index += 1) {
+    const before = draws[index - 1]!
+    const after = draws[index]!
+    let maximumScheduledGapMs = 0
+    if (
+      before.frameId !== null &&
+      after.frameId !== null &&
+      after.frameId >= before.frameId &&
+      captures.some(
+        (capture) => capture.frameId === before.frameId && capture.receivedAt <= before.at,
+      ) &&
+      captures.some(
+        (capture) => capture.frameId === after.frameId && capture.receivedAt <= after.at,
+      )
+    ) {
+      for (const scheduled of scheduledGaps) {
+        if (
+          scheduled.fromFrameId >= before.frameId &&
+          scheduled.untilFrameId <= after.frameId &&
+          scheduled.untilReceivedAt <= after.at
+        )
+          maximumScheduledGapMs = Math.max(maximumScheduledGapMs, scheduled.durationMs)
+      }
+    }
+    gaps.push({
+      from: before.at,
+      until: after.at,
+      fromFrameId: before.frameId,
+      untilFrameId: after.frameId,
+      durationMs: after.at - before.at,
+      maximumScheduledGapMs,
+      // A tolerância original permanece para intervalos sem lacuna programada maior.
+      allowanceMs: Math.max(100, maximumScheduledGapMs + (2 * 1000) / 60),
+    })
+  }
+  return { draws, captures, scheduledGaps, gaps }
+}
+
 interface ProductionProbe {
   workers: WorkerObservation[]
   contexts: AudioContext[]
@@ -44,7 +139,10 @@ interface ProductionProbe {
   firstPresentedAt: number | null
   firstUiPresentedAt: number | null
   canvasDraws: number
+  canvasDrawTimes: number[]
+  canvasDrawObservations: CanvasDrawObservation[]
   videoFrames: number
+  videoFrameObservations: CapturedVideoObservation[]
 }
 
 type ProbedWindow = Window & typeof globalThis & { __productionProbe: ProductionProbe }
@@ -77,7 +175,10 @@ export async function observeProduction(page: Page): Promise<void> {
       firstPresentedAt: null,
       firstUiPresentedAt: null,
       canvasDraws: 0,
+      canvasDrawTimes: [],
+      canvasDrawObservations: [],
       videoFrames: 0,
+      videoFrameObservations: [],
     }
     ;(window as ProbedWindow).__productionProbe = probe
     const nativePutImageData = CanvasRenderingContext2D.prototype.putImageData
@@ -87,7 +188,17 @@ export async function observeProduction(page: Page): Promise<void> {
       dy: number,
       ...dirty: number[]
     ) {
-      if (this.canvas.getAttribute('aria-label') === 'Tela do emulador') probe.canvasDraws += 1
+      if (this.canvas.getAttribute('aria-label') === 'Tela do emulador') {
+        const observation: CanvasDrawObservation = { at: performance.now(), frameId: null }
+        probe.canvasDrawTimes[probe.canvasDraws % 2048] = observation.at
+        probe.canvasDrawObservations[probe.canvasDraws % 2048] = observation
+        // CanvasRenderer grava o frameId imediatamente depois de putImageData.
+        queueMicrotask(() => {
+          const frameId = Number(this.canvas.dataset.frameId)
+          if (Number.isSafeInteger(frameId) && frameId >= 0) observation.frameId = frameId
+        })
+        probe.canvasDraws += 1
+      }
       Reflect.apply(nativePutImageData, this, [imageData, dx, dy, ...dirty])
     }
     document.addEventListener('securitypolicyviolation', (event) => {
@@ -144,7 +255,16 @@ export async function observeProduction(page: Page): Promise<void> {
         }
         probe.workers.push(this.observation)
         this.addEventListener('message', ({ data }: MessageEvent<EmulatorMessage>) => {
-          if (data.type === 'video-frame') probe.videoFrames += 1
+          if (data.type === 'video-frame') {
+            probe.videoFrameObservations[probe.videoFrames % 2048] = {
+              sequence: probe.videoFrames,
+              epoch: data.frame.epoch,
+              frameId: data.frame.frameId,
+              pcmFrame: data.frame.pcmFrame,
+              receivedAt: performance.now(),
+            }
+            probe.videoFrames += 1
+          }
           if (!('snapshot' in data) || !data.snapshot) return
           const rewind = (data.snapshot as typeof data.snapshot & { rewind?: BrowserRewindState })
             .rewind
@@ -210,7 +330,24 @@ export async function readProductionProbe(page: Page) {
     return {
       observedAt: performance.now(),
       canvasDraws: probe.canvasDraws,
+      canvasDrawTimes: Array.from(
+        { length: Math.min(probe.canvasDraws, 2048) },
+        (_, index) =>
+          probe.canvasDrawTimes[(Math.max(0, probe.canvasDraws - 2048) + index) % 2048]!,
+      ),
+      canvasDrawObservations: Array.from(
+        { length: Math.min(probe.canvasDraws, 2048) },
+        (_, index) => ({
+          ...probe.canvasDrawObservations[(Math.max(0, probe.canvasDraws - 2048) + index) % 2048]!,
+        }),
+      ),
       videoFrames: probe.videoFrames,
+      videoFrameObservations: Array.from(
+        { length: Math.min(probe.videoFrames, 2048) },
+        (_, index) => ({
+          ...probe.videoFrameObservations[(Math.max(0, probe.videoFrames - 2048) + index) % 2048]!,
+        }),
+      ),
       workers: probe.workers.map((worker) => ({ ...worker })),
       contexts: probe.contexts.map((context) => ({
         state: context.state,

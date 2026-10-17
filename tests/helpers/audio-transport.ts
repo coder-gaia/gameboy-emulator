@@ -1,5 +1,21 @@
 import type { Page } from '@playwright/test'
 
+/** Atraso sintético adicional no relógio de saída; não altera PCM nem hardware. */
+export async function delayOutputClock(page: Page, delayMilliseconds: number): Promise<void> {
+  if (!Number.isFinite(delayMilliseconds) || delayMilliseconds < 0)
+    throw new RangeError('O atraso de saída deve ser finito e não negativo.')
+  await page.addInitScript((delay) => {
+    const nativeTimestamp = AudioContext.prototype.getOutputTimestamp
+    AudioContext.prototype.getOutputTimestamp = function (): AudioTimestamp {
+      const timestamp = Reflect.apply(nativeTimestamp, this, []) as AudioTimestamp
+      return {
+        contextTime: Math.max(0, (timestamp.contextTime ?? 0) - delay / 1000),
+        performanceTime: timestamp.performanceTime,
+      }
+    }
+  }, delayMilliseconds)
+}
+
 interface AudioTransportRequest {
   readonly sequence: number
   readonly epoch: number

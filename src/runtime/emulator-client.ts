@@ -16,6 +16,15 @@ import { VideoPresentation } from './video-presentation'
 const audioOwners = new WeakMap<AudioOutput, EmulatorClient>()
 let clientSequence = 0
 
+export interface PresentationDiagnostics {
+  readonly receivedVideoFrames: number
+  readonly queuedVideoFrames: number
+  readonly pcmCursorFrame: number | null
+  readonly lastDrawGapMilliseconds: number | null
+  readonly maximumDrawGapMilliseconds: number
+  readonly drawGapsOver100Milliseconds: number
+}
+
 interface PendingRequest {
   resolve: (reply: EmulatorReplyPayload) => void
   reject: (error: Error) => void
@@ -37,6 +46,12 @@ export class EmulatorClient {
   private rtc: CartridgeRtcState | null = null
   private drawnFrameId: number | null = null
   private drawnFrameCount = 0
+  private receivedVideoFrames = 0
+  private pcmCursorFrame: number | null = null
+  private lastDrawAt: number | null = null
+  private lastDrawGap: number | null = null
+  private maximumDrawGap = 0
+  private longDrawGaps = 0
   private output: AudioOutput | null = null
   private readonly displayed = new Uint8Array(160 * 144)
   private displayedFrameId = 0
@@ -53,6 +68,7 @@ export class EmulatorClient {
         return
       }
       if (data.type === 'video-frame') {
+        this.receivedVideoFrames += 1
         if (this.current?.audioDriven && this.current.playing) this.video.push(data.frame)
         else this.recycleVideo(data.frame)
         return
@@ -118,12 +134,31 @@ export class EmulatorClient {
     if (this.disposed || revision === this.drawnFrameId) return
     this.drawnFrameId = revision
     this.drawnFrameCount += 1
+    const now = performance.now()
+    if (this.current.playing && this.lastDrawAt !== null) {
+      this.lastDrawGap = Math.max(0, now - this.lastDrawAt)
+      this.maximumDrawGap = Math.max(this.maximumDrawGap, this.lastDrawGap)
+      if (this.lastDrawGap > 100) this.longDrawGaps += 1
+    }
+    this.lastDrawAt = this.current.playing ? now : null
+  }
+
+  getPresentationDiagnostics(): PresentationDiagnostics {
+    return {
+      receivedVideoFrames: this.receivedVideoFrames,
+      queuedVideoFrames: this.video.size,
+      pcmCursorFrame: this.current.audioDriven ? this.pcmCursorFrame : null,
+      lastDrawGapMilliseconds: this.lastDrawGap,
+      maximumDrawGapMilliseconds: this.maximumDrawGap,
+      drawGapsOver100Milliseconds: this.longDrawGaps,
+    }
   }
 
   /** Chamado pelo RAF; o relógio é o do PCM consumido, sem antecipar quadros futuros. */
   presentAudioFrame(): void {
     if (this.disposed || !this.current.audioDriven || !this.current.playing) return
     const position = this.output?.getPlaybackFrame(this.current.audioEpoch) ?? null
+    this.pcmCursorFrame = position
     if (position === null) return
     const frame = this.video.takeDue(position)
     if (!frame) return
@@ -297,8 +332,14 @@ export class EmulatorClient {
     )
       snapshot.rewind = previous
     this.current = snapshot
-    if (!previousSnapshot || previousSnapshot.audioEpoch !== snapshot.audioEpoch)
+    if (!previousSnapshot || previousSnapshot.audioEpoch !== snapshot.audioEpoch) {
       this.video.reset(snapshot.audioEpoch)
+      this.pcmCursorFrame = null
+      this.lastDrawAt = null
+      this.lastDrawGap = null
+      this.maximumDrawGap = 0
+      this.longDrawGaps = 0
+    }
     if (!snapshot.audioDriven || !snapshot.playing || snapshot.rewind.active) {
       this.video.clear()
       let changed = !previousSnapshot || this.displayedFrameId !== snapshot.frameId

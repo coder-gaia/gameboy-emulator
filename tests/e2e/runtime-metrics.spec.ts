@@ -118,6 +118,18 @@ test('mede Canvas separadamente dos quadros emulados e exporta áudio sem dados 
   expect(last.audio).toMatchObject({ connected: true, sampleRate: expect.any(Number) })
   expect(last.audio).toHaveProperty('baseLatencySeconds')
   expect(last.audio).toHaveProperty('outputLatencySeconds')
+  expect(last.audio?.playback).toMatchObject({
+    clockMode: expect.stringMatching(/^(output|graph|awaiting-output)$/),
+    pcmFrame: expect.any(Number),
+    graphPcmFrame: expect.any(Number),
+  })
+  expect(last.presentation).toMatchObject({
+    receivedVideoFrames: expect.any(Number),
+    queuedVideoFrames: expect.any(Number),
+    pcmCursorFrame: expect.any(Number),
+    maximumDrawGapMilliseconds: expect.any(Number),
+    drawGapsOver100Milliseconds: expect.any(Number),
+  })
 })
 
 test('o relógio manual encerra o fluxo de 60 segundos sem acelerar o Worker nem homologar velocidade', async ({

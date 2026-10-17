@@ -17,7 +17,9 @@
 - Em 17/10/2026, o proprietário autorizou M12 a M14, com correção do áudio mobile e setas de toque maiores, preservando o desktop aprovado. O diagnóstico histórico está no Git; decisões atuais ficam em docs/architecture.md.
 - Não declarar desempenho mobile homologado apenas com viewport Pixel 7 ou CPU throttle da página. Validar áudio e velocidade no aparelho real; o Worker não foi desacelerado pelo throttle da página no experimento registrado.
 - Após o deploy da M12 em 17/10/2026, o proprietário confirmou Tobu sem travadas e música contínua no Motorola. Sem som fica 100% fluido; com som ainda percebe lentidão. O desktop continua perfeito. Usar as métricas da M13 para distinguir velocidade emulada e frequência de apresentação antes de atribuir a diferença ao aparelho; a homologação completa segue pendente.
-- M12 a M14 foram enviadas ao GitHub e tiveram CI e publicação conferidos. A candidata 1.0.0-rc.1 separa captura de quadros e apresentação por cursor PCM. O grupo está em pausa para validação no Motorola, sem afirmar aceite do aparelho antes do retorno do proprietário.
+- M12 a M14 foram enviadas ao GitHub e tiveram CI e publicação conferidos. O teste físico da candidata 1.0.0-rc.1 reportou regressão grave com som. O diagnóstico do Tobu mediu 99,7% de velocidade emulada e 31,9 desenhos/s; a troca de relógio durante reposição PCM foi reproduzida no código.
+- Em 17/10/2026, o proprietário autorizou corrigir e iterar até obter fluidez com som. A rc.2 preserva o histórico do relógio, amplia a margem de PCM e vídeo e inclui regressões de alta latência. Aguardar o teste físico antes de afirmar aceite; estudar outro jogo somente depois da fluidez validada.
+- O proprietário escolheu MIT para o código próprio, com autoria de Alexandre Gaia no LICENSE e README. Preservar licenças e créditos separados dos componentes de terceiros.
 - Não publicar em rede social nem criar release estável antes do aceite do grupo. Rascunhos históricos de divulgação permanecem no Git.
 - Preservar o fundo pastel/off-white confortável e o contraste e aparência do console, sem aplicar opacidade ou sobreposição ao Game Boy.
 

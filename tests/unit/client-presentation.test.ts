@@ -332,4 +332,46 @@ describe('cliente de apresentação entre mensagens e gerações', () => {
     expect(worker.terminated).toBe(true)
     expect(worker.recycled.map((image) => image.token)).toEqual([1, 2])
   })
+
+  it('registra intervalos reais de desenho e limpa a cadência ao mudar de geração', async () => {
+    const now = vi.spyOn(performance, 'now')
+    try {
+      await audio()
+      video(1, 800)
+      video(2, 1600)
+      setPlayback(800)
+      client.presentAudioFrame()
+      now.mockReturnValue(1000)
+      client.noteFrameDrawn(client.presentationRevision)
+      now.mockReturnValue(1100)
+      client.noteFrameDrawn(client.presentationRevision)
+      setPlayback(1600)
+      client.presentAudioFrame()
+      now.mockReturnValue(1130)
+      client.noteFrameDrawn(client.presentationRevision)
+      expect(client.getPresentationDiagnostics()).toEqual({
+        receivedVideoFrames: 2,
+        queuedVideoFrames: 0,
+        pcmCursorFrame: 1600,
+        lastDrawGapMilliseconds: 130,
+        maximumDrawGapMilliseconds: 130,
+        drawGapsOver100Milliseconds: 1,
+      })
+      await client.pause()
+      now.mockReturnValue(10_000)
+      await client.resume()
+      video(3, 800)
+      setPlayback(800)
+      client.presentAudioFrame()
+      client.noteFrameDrawn(client.presentationRevision)
+      expect(client.getPresentationDiagnostics()).toMatchObject({
+        maximumDrawGapMilliseconds: 0,
+        drawGapsOver100Milliseconds: 0,
+        lastDrawGapMilliseconds: null,
+        pcmCursorFrame: 800,
+      })
+    } finally {
+      now.mockRestore()
+    }
+  })
 })

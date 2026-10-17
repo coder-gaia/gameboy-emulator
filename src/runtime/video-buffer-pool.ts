@@ -1,4 +1,5 @@
-export const VIDEO_BUFFER_COUNT = 32
+// Cobre a reserva PCM e saída atrasada sem perder imagens ainda futuras.
+export const VIDEO_BUFFER_COUNT = 64
 export const VIDEO_FRAME_BYTES = 160 * 144
 
 export interface VideoBufferLease {

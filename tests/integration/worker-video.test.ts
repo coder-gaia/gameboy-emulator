@@ -174,13 +174,13 @@ describe('protocolo de vídeo do Worker com transporte determinístico', () => {
   it('limita empréstimos em trânsito e aceita devolução de época anterior sem snapshot adicional', () => {
     const port = connectAudio()
     const epoch = command({ type: 'inspect' }).snapshot!.audioEpoch
-    for (let batch = 0; batch < 6; batch += 1) requestPcm(port, epoch)
+    for (let batch = 0; batch < 10; batch += 1) requestPcm(port, epoch)
     const leased = messages
       .filter((message) => message.type === 'video-frame')
       .map((message) => message.frame)
-    expect(leased).toHaveLength(32)
-    expect(new Set(leased.map((frame) => frame.slot)).size).toBe(32)
-    expect(port.postMessage).toHaveBeenCalledTimes(6)
+    expect(leased).toHaveLength(64)
+    expect(new Set(leased.map((frame) => frame.slot)).size).toBe(64)
+    expect(port.postMessage).toHaveBeenCalledTimes(10)
     command({ type: 'play', playing: false })
     const resumed = command({ type: 'play', playing: true }).snapshot!
     const first = leased[0]!
@@ -212,6 +212,6 @@ describe('protocolo de vídeo do Worker com transporte determinístico', () => {
     expect(
       messages.slice(staleStart).filter((message) => message.type === 'video-frame'),
     ).toHaveLength(0)
-    expect(port.postMessage).toHaveBeenCalledTimes(8)
+    expect(port.postMessage).toHaveBeenCalledTimes(12)
   })
 })

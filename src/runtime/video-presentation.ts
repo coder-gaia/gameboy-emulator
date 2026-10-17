@@ -1,6 +1,7 @@
 import type { EmulatorVideoFrame } from './worker-protocol'
+import { VIDEO_BUFFER_COUNT } from './video-buffer-pool'
 
-export const VIDEO_PRESENTATION_CAPACITY = 32
+export const VIDEO_PRESENTATION_CAPACITY = VIDEO_BUFFER_COUNT
 
 /** Guarda imagens futuras, com o mesmo limite de buffers cedidos pelo Worker. */
 export class VideoPresentation {

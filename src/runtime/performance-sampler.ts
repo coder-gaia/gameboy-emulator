@@ -1,5 +1,6 @@
 import { DMG_CLOCK_HZ } from '../core/model'
 import type { AudioDiagnostics } from '../platform/audio/audio-output'
+import type { PresentationDiagnostics } from './emulator-client'
 
 export interface PerformancePoint {
   at: number
@@ -10,6 +11,7 @@ export interface PerformancePoint {
   playing: boolean
   rewinding: boolean
   audio: AudioDiagnostics | null
+  presentation?: PresentationDiagnostics
 }
 
 export interface PerformanceInterval {

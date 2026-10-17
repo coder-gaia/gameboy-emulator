@@ -1,11 +1,14 @@
 import workletUrl from './pcm-worklet.ts?worker&url'
 import { AUDIO_MAX_FRAMES, AUDIO_PROCESSOR_NAME, isAudioEpoch } from './protocol'
+import { PlaybackTimeline } from './playback-timeline'
 import type {
   AudioControlMessage,
   AudioPlaybackMessage,
   AudioStatsMessage,
   AudioStreamDiagnostics,
 } from './protocol'
+
+const OUTPUT_TIMESTAMP_STARTUP_TIMEOUT_MS = 1000
 
 export interface AudioDiagnostics extends AudioStreamDiagnostics {
   readonly sampleRate: number
@@ -16,6 +19,14 @@ export interface AudioDiagnostics extends AudioStreamDiagnostics {
   readonly volume: number
   readonly muted: boolean
   readonly error: string | null
+  readonly playback: {
+    readonly clockMode: 'output' | 'graph' | 'awaiting-output'
+    readonly pcmFrame: number | null
+    readonly graphPcmFrame: number | null
+    readonly graphContextTimeSeconds: number | null
+    readonly outputContextTimeSeconds: number | null
+    readonly outputPerformanceTimeMilliseconds: number | null
+  }
 }
 
 export interface AudioOutputOptions {
@@ -67,8 +78,13 @@ export class AudioOutput {
   private playbackFrame = 0
   private availablePlaybackFrame = 0
   private playbackContextTime = 0
-  private playbackPerformanceTime: number | null = null
-  private playbackAdvancing = false
+  private outputContextTime: number | null = null
+  private outputPerformanceTime: number | null = null
+  private awaitingOutputTimestamp = false
+  private outputTimestampWaitStartedAt: number | null = null
+  private graphClockLocked = false
+  private readonly playbackTimeline = new PlaybackTimeline()
+  private visiblePlaybackFrame = 0
 
   constructor(private readonly options: AudioOutputOptions = {}) {}
 
@@ -176,16 +192,24 @@ export class AudioOutput {
       context.currentTime < 0
     )
       return null
-    if (!this.playbackAdvancing) return this.playbackFrame
-    const now = this.playbackPerformanceTime === null ? null : performance.now()
-    const elapsed =
-      now !== null && now >= 0 && Number.isFinite(now) && this.playbackPerformanceTime !== null
-        ? (now - this.playbackPerformanceTime) / 1000
-        : Math.max(0, context.currentTime - this.playbackContextTime)
-    return Math.max(
-      0,
-      Math.min(this.availablePlaybackFrame, this.playbackFrame + elapsed * context.sampleRate),
+    if (this.awaitingOutputTimestamp && !this.expireOutputTimestampWait()) return null
+    const now = this.outputPerformanceTime === null ? null : performance.now()
+    const contextTime =
+      now !== null &&
+      now >= 0 &&
+      Number.isFinite(now) &&
+      this.outputPerformanceTime !== null &&
+      this.outputContextTime !== null
+        ? this.outputContextTime + (now - this.outputPerformanceTime) / 1000
+        : context.currentTime
+    const frame = this.playbackTimeline.frameAt(contextTime)
+    this.visiblePlaybackFrame = Math.max(
+      this.visiblePlaybackFrame,
+      Math.min(this.availablePlaybackFrame, frame),
     )
+    if (this.outputPerformanceTime === null && this.visiblePlaybackFrame > 0)
+      this.graphClockLocked = true
+    return this.visiblePlaybackFrame
   }
 
   getDiagnostics(): AudioDiagnostics {
@@ -208,6 +232,21 @@ export class AudioOutput {
       volume: this.volume,
       muted: this.muted,
       error: this.failure,
+      playback: {
+        clockMode: this.awaitingOutputTimestamp
+          ? 'awaiting-output'
+          : this.outputPerformanceTime === null
+            ? 'graph'
+            : 'output',
+        pcmFrame:
+          this.playbackEpoch === null || this.awaitingOutputTimestamp
+            ? null
+            : this.visiblePlaybackFrame,
+        graphPcmFrame: this.playbackEpoch === null ? null : this.playbackFrame,
+        graphContextTimeSeconds: this.playbackEpoch === null ? null : this.playbackContextTime,
+        outputContextTimeSeconds: this.outputContextTime,
+        outputPerformanceTimeMilliseconds: this.outputPerformanceTime,
+      },
     }
   }
 
@@ -348,31 +387,64 @@ export class AudioOutput {
     this.playbackFrame = message.frame
     this.availablePlaybackFrame = message.availableFrame
     this.playbackContextTime = message.contextTime
-    this.playbackAdvancing = message.advancing
+    this.playbackTimeline.record(message.contextTime, message.frame, message.advancing)
     this.correlatePlaybackClock()
   }
 
   private correlatePlaybackClock(): void {
-    this.playbackPerformanceTime = null
+    // Depois de apresentar pelo grafo, trocar para uma saída atrasada congelaria a tela.
+    // A próxima geração pode tentar a correlação física desde o começo.
+    if (this.awaitingOutputTimestamp) this.expireOutputTimestampWait()
+    if (this.graphClockLocked) return
     const context = this.context
     if (!context || typeof context.getOutputTimestamp !== 'function') return
     try {
       const timestamp = context.getOutputTimestamp()
+      // Antes da primeira saída, a API pode existir e ainda devolver ambos zerados.
+      // Usar o grafo nesse intervalo anteciparia imagens e exigiria congelar depois.
+      if (timestamp.contextTime === 0 && timestamp.performanceTime === 0) {
+        if (this.outputPerformanceTime === null) {
+          this.awaitingOutputTimestamp = true
+          this.outputTimestampWaitStartedAt ??= performance.now()
+          this.expireOutputTimestampWait()
+        }
+        return
+      }
       if (
         typeof timestamp.contextTime !== 'number' ||
         !Number.isFinite(timestamp.contextTime) ||
-        timestamp.contextTime <= 0 ||
+        timestamp.contextTime < 0 ||
         typeof timestamp.performanceTime !== 'number' ||
         !Number.isFinite(timestamp.performanceTime) ||
         timestamp.performanceTime <= 0
       )
         return
-      const anchor =
-        timestamp.performanceTime + (this.playbackContextTime - timestamp.contextTime) * 1000
-      if (Number.isFinite(anchor)) this.playbackPerformanceTime = anchor
+      this.outputContextTime = timestamp.contextTime
+      this.outputPerformanceTime = timestamp.performanceTime
+      this.awaitingOutputTimestamp = false
+      this.outputTimestampWaitStartedAt = null
     } catch {
-      // A ausência de uma estimativa de saída conserva o relógio do grafo.
+      // Uma falha transitória conserva a última correlação de saída válida.
     }
+  }
+
+  private expireOutputTimestampWait(): boolean {
+    const now = performance.now()
+    const started = this.outputTimestampWaitStartedAt
+    if (
+      started !== null &&
+      Number.isFinite(started) &&
+      started >= 0 &&
+      Number.isFinite(now) &&
+      now >= 0 &&
+      now - started < OUTPUT_TIMESTAMP_STARTUP_TIMEOUT_MS
+    )
+      return false
+    // Uma implementação que nunca informa a saída não pode bloquear o vídeo.
+    this.awaitingOutputTimestamp = false
+    this.outputTimestampWaitStartedAt = null
+    this.graphClockLocked = true
+    return true
   }
 
   private clearPlayback(): void {
@@ -380,8 +452,13 @@ export class AudioOutput {
     this.playbackFrame = 0
     this.availablePlaybackFrame = 0
     this.playbackContextTime = 0
-    this.playbackPerformanceTime = null
-    this.playbackAdvancing = false
+    this.outputContextTime = null
+    this.outputPerformanceTime = null
+    this.awaitingOutputTimestamp = false
+    this.outputTimestampWaitStartedAt = null
+    this.graphClockLocked = false
+    this.playbackTimeline.reset(this.context?.sampleRate ?? 48_000)
+    this.visiblePlaybackFrame = 0
   }
 
   private validateEpoch(epoch: number): void {

@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test'
 import type { Page } from '@playwright/test'
+import { AUDIO_MAX_FRAMES } from '../../src/platform/audio/protocol'
 import type { AudioStreamDiagnostics } from '../../src/platform/audio/protocol'
 import type {
   EmulatorMessage,
@@ -151,7 +152,7 @@ test('estado com som ativo volta em pausa, limpa PCM antigo e retoma na nova ger
   const resumed = await readProbe(page)
   expect(resumed.epoch).toBeGreaterThan(restored.epoch!)
   expect(resumed.latest!.energy).toBeGreaterThan(0)
-  expect(resumed.latest!.queuedFrames).toBeLessThanOrEqual(16_384)
+  expect(resumed.latest!.queuedFrames).toBeLessThanOrEqual(AUDIO_MAX_FRAMES)
   expect(resumed.frame).toBeGreaterThan(saved.savedFrame!)
   expect(resumed.contexts).toBe(1)
   expect(resumed.nodes).toBe(1)

@@ -1,6 +1,6 @@
 # Entregas e aceite
 
-Um pacote npm, sem monorepo. Candidata **1.0.0-rc.1** publicada em [Pocket Lab](https://gameboy-emulator-aox.pages.dev/).
+Um pacote npm, sem monorepo. Revisão **1.0.0-rc.2**, candidata em validação para [Pocket Lab](https://gameboy-emulator-aox.pages.dev/).
 
 | Marco | Entrega                                              | Estado    |
 | ----- | ---------------------------------------------------- | --------- |
@@ -24,9 +24,11 @@ Um pacote npm, sem monorepo. Candidata **1.0.0-rc.1** publicada em [Pocket Lab](
 
 Os grupos M00 a M02, M03 a M05 e M06 a M08 foram aprovados pelo proprietário. No grupo M09 a M11, o desktop foi aprovado; o Motorola Edge 40 Neo com Chrome apresentou lentidão somente após ativar som.
 
-Após a M12, o proprietário confirmou música contínua e ausência de travadas no Motorola, mas ainda percebeu lentidão com som. A M14 preserva imagens intermediárias e sincroniza a apresentação ao cursor PCM. Foi enviada ao GitHub, aprovada no CI e conferida na publicação. **O grupo M12 a M14 está em pausa para aceite no aparelho real e regressão desktop.**
+Após a M12, o proprietário confirmou música contínua e ausência de travadas no Motorola, mas ainda percebeu lentidão com som. A M14 preserva imagens intermediárias e sincroniza a apresentação ao cursor PCM. Foi enviada ao GitHub, aprovada no CI e conferida na publicação, mas o teste físico da rc.1 reportou regressão grave com áudio. O diagnóstico mostrou 99,7% de velocidade emulada e apenas 31,9 imagens desenhadas/s.
 
-A validação automatizada da candidata aprovou 1.473 testes locais, 103 externos, 176 cenários de interface, 16 de produção e seis de áudio/vídeo. As suítes de produção e áudio/vídeo também passaram na URL HTTPS. Perfil móvel executado no computador não homologa o Motorola.
+A rc.2 corrige a troca de referência durante esvaziamento e retomada da fila, amplia a margem PCM e o pool limitado de vídeo e acrescenta regressões de alta latência. A licença MIT identifica Alexandre Gaia como autor. **O aceite do grupo M12 a M14 permanece pendente no Motorola e na regressão desktop.** Correções iterativas foram autorizadas pelo proprietário; outro jogo só será estudado depois de validar a fluidez com som.
+
+Os resultados e logs automatizados ficam no workflow Quality do commit correspondente. Relógios controlados e perfil móvel no computador reproduzem mecanismos e regressões; não homologam o aparelho físico.
 
 Release estável e divulgação no LinkedIn aguardam o aceite. Os roteiros de teste são enviados diretamente no chat, de forma curta e com resultado esperado. Relatórios detalhados, roteiros anteriores e rascunhos de divulgação continuam no histórico do Git.
 

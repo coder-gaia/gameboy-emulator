@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto'
 import { readFile } from 'node:fs/promises'
 import { expect, test } from '@playwright/test'
 import type { Locator, Page } from '@playwright/test'
+import { AUDIO_MAX_FRAMES } from '../../src/platform/audio/protocol'
 import { DEMO_GAMES } from '../../src/platform/games/catalog'
 import { decodeState } from '../../src/platform/states'
 import { expectProductionClean, observeProduction, readProductionProbe } from './probe'
@@ -101,7 +102,7 @@ test('reproduz PCM real no AudioWorklet sem erros da CSP, e pausa limpa a fila',
   expect(probe.nodeCount).toBe(1)
   expect(probe.contexts[0]!.state).toBe('running')
   expect(probe.latestAudio!.renderedFrames).toBeGreaterThan(8192)
-  expect(probe.latestAudio!.queuedFrames).toBeLessThanOrEqual(16_384)
+  expect(probe.latestAudio!.queuedFrames).toBeLessThanOrEqual(AUDIO_MAX_FRAMES)
   await page.getByLabel('Volume', { exact: true }).fill('25')
   await expect.poll(async () => (await readProductionProbe(page)).gain).toBe(0.25)
   await page.getByRole('button', { name: 'Pausar', exact: true }).click()

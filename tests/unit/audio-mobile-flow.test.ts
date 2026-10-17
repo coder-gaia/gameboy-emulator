@@ -1,6 +1,10 @@
 import { describe, expect, it, vi } from 'vitest'
 import { PcmStream } from '../../src/platform/audio/pcm-stream'
-import { AUDIO_MAX_FRAMES, audioBufferProfile } from '../../src/platform/audio/protocol'
+import {
+  AUDIO_MAX_FRAMES,
+  AUDIO_MAX_REQUEST_FRAMES,
+  audioBufferProfile,
+} from '../../src/platform/audio/protocol'
 import type { AudioStreamDiagnostics } from '../../src/platform/audio/protocol'
 
 const SAMPLE_RATES = [8_000, 44_100, 48_000, 96_000, 192_000] as const
@@ -97,10 +101,13 @@ describe('abastecimento PCM com atraso e callbacks em rajadas', () => {
     expect(profile.initialFrames / sampleRate).toBeGreaterThanOrEqual(0.064)
     expect(profile.initialFrames).toBeLessThanOrEqual(profile.maxFrames)
     expect(profile.maxFrames).toBeLessThanOrEqual(AUDIO_MAX_FRAMES - QUANTUM)
-    expect(profile.requestLimit).toBeLessThanOrEqual(profile.maxFrames)
+    expect(profile.requestLimit).toBe(AUDIO_MAX_REQUEST_FRAMES)
+    expect(profile.maxFrames).toBe(
+      Math.min(AUDIO_MAX_FRAMES - QUANTUM, Math.ceil((sampleRate * 0.384) / QUANTUM) * QUANTUM),
+    )
     expect(profile.refillFrames / sampleRate).toBeGreaterThanOrEqual(0.01)
     expect(profile.refillFrames % QUANTUM).toBe(0)
-    expect(profile.maxFrames / sampleRate).toBeLessThanOrEqual(0.128 + QUANTUM / sampleRate)
+    expect(profile.maxFrames / sampleRate).toBeLessThanOrEqual(0.384 + QUANTUM / sampleRate)
   })
 
   it.each(SAMPLE_RATES)(
@@ -136,7 +143,7 @@ describe('abastecimento PCM com atraso e callbacks em rajadas', () => {
     const stats = stream.diagnostics()
     expect(stats.targetFrames).toBeLessThanOrEqual(profile.maxFrames)
     expect(stats.queuedFrames).toBeLessThanOrEqual(AUDIO_MAX_FRAMES)
-    expect(profile.maxFrames / sampleRate).toBeLessThan(0.086)
+    expect(profile.maxFrames / sampleRate).toBeLessThan(0.171)
     expect(stream.demand()).toBeLessThanOrEqual(profile.requestLimit)
   })
 

@@ -32,7 +32,7 @@ Blargg é obtido diretamente da origem somente para testes locais e CI, sem redi
 
 ## Conteúdo próprio e capturas
 
-POCKET TEST e POCKET GARDEN, incluindo cenário, personagem, tiles e letras, são criações próprias. As licenças dos jogos e dependências não concedem uma licença geral ao código do emulador.
+POCKET TEST e POCKET GARDEN, incluindo cenário, personagem, tiles e letras, são criações próprias. O código e a documentação de Alexandre Gaia seguem a [licença MIT do projeto](../LICENSE). Jogos e dependências de terceiros mantêm os avisos e licenças indicados acima.
 
 As duas imagens usadas no README mostram o jardim real no Chromium, sem áudio ativo:
 

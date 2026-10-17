@@ -1,7 +1,8 @@
 export const AUDIO_REFILL_FRAMES = 512
 export const AUDIO_TARGET_FRAMES = 3072
-export const AUDIO_MAX_FRAMES = 16_384
-export const AUDIO_MAX_REQUEST_FRAMES = AUDIO_MAX_FRAMES - 128
+export const AUDIO_MAX_FRAMES = 32_768
+/** A arena PCM da APU comporta 16384 frames; cada pedido reserva 128 para overshoot. */
+export const AUDIO_MAX_REQUEST_FRAMES = 16_256
 export const AUDIO_PROCESSOR_NAME = 'pocket-lab-pcm'
 
 /** Reservas temporais, limitadas pela arena PCM e pela margem de overshoot da CPU. */
@@ -9,12 +10,13 @@ export function audioBufferProfile(sampleRate: number) {
   if (!Number.isSafeInteger(sampleRate) || sampleRate < 8000 || sampleRate > 192_000)
     throw new RangeError('A taxa de áudio precisa ser inteira, entre 8000 e 192000 Hz.')
   const align = (frames: number) => Math.ceil(frames / 128) * 128
-  const maxFrames = Math.min(AUDIO_MAX_REQUEST_FRAMES, align(sampleRate * 0.128))
+  const maxFrames = Math.min(AUDIO_MAX_FRAMES - 128, align(sampleRate * 0.384))
   return {
     initialFrames: Math.min(maxFrames, align(sampleRate * 0.064)),
     maxFrames,
     refillFrames: Math.max(128, align(sampleRate * 0.01)),
-    requestLimit: maxFrames,
+    // O alvo limita a reserva adaptativa; o pedido também precisa repor o consumo em voo.
+    requestLimit: AUDIO_MAX_REQUEST_FRAMES,
   }
 }
 
