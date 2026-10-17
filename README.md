@@ -4,7 +4,7 @@
 
 Um Game Boy DMG no navegador, escrito em TypeScript. Jogue, volte alguns segundos e explore o hardware que faz cada pixel acontecer.
 
-**[Abrir Pocket Lab](https://gameboy-emulator-aox.pages.dev/)** · [Como testar](docs/testing-m12-m14.md) · [Milestones](docs/milestones.md)
+**[Abrir Pocket Lab](https://gameboy-emulator-aox.pages.dev/)** · [Arquitetura](docs/architecture.md) · [Cartuchos](docs/cartridges.md)
 
 ![Console Pocket Lab com o jardim original](docs/media/pocket-lab-desktop.png)
 
@@ -48,7 +48,7 @@ flowchart LR
 
 Sem áudio, um relógio monotônico controla o orçamento de T-cycles. Com áudio, o Worklet solicita PCM na taxa real do dispositivo. A reserva se adapta ao atraso do transporte; quadros intermediários usam buffers limitados e são apresentados por requestAnimationFrame conforme o PCM avança. A solução usa MessageChannel e transferências, sem SharedArrayBuffer ou exigência de COOP/COEP.
 
-[Áudio e apresentação](docs/audio-runtime.md), [estados salvos](docs/save-states.md), [rewind](docs/rewind.md), [inspeção](docs/debugger-core.md) e [métricas](docs/performance-metrics.md) detalham contratos e limites.
+[Decisões de arquitetura](docs/architecture.md) reúne os contratos de execução, áudio, vídeo, persistência e inspeção.
 
 ## Compatibilidade e limites
 
@@ -60,7 +60,7 @@ Sem áudio, um relógio monotônico controla o orçamento de T-cycles. Com áudi
 | MBC3     | 2 MiB      | Até 32 KiB de RAM; RTC quando declarado pelo cartucho.                           |
 | MBC5     | 8 MiB      | Até 128 KiB de RAM; variante rumble até 64 KiB, sem vibração física.             |
 
-O tamanho de ROM deve ser potência de dois. A convenção homebrew de 2 KiB de RAM é aceita com aviso. MBC1M, MBC30, jogos exclusivos de Game Boy Color e link cable ficam fora do escopo. [Controladores e RTC](docs/cartridge-mappers.md).
+O tamanho de ROM deve ser potência de dois. A convenção homebrew de 2 KiB de RAM é aceita com aviso. MBC1M, MBC30, jogos exclusivos de Game Boy Color e link cable ficam fora do escopo. [Formatos de cartucho e RTC](docs/cartridges.md).
 
 A PPU usa scanlines, sem pixel FIFO, mudanças dentro do modo 3 ou peculiaridades de WX 0 e 166. A inicialização pós boot não reproduz todas as revisões físicas. Os testes `dmg_sound` verificam comportamento observável pela CPU e não comprovam equivalência acústica integral. A reserva de áudio pode introduzir latência; navegador, carga e saída física também influenciam a experiência. Gamepad e leitores de tela físicos ainda precisam de revisão manual.
 
@@ -86,18 +86,16 @@ npm.cmd run test:audio-flow
 
 `check` verifica regras, formatação, lint, testes locais, tipos e build. Hardware prepara fixtures com revisão e SHA-256 fixados e executa **103 casos externos** de Blargg, Mooneye e dmg-acid2. Produção aplica CSP ao artefato compilado. A regressão de transporte mede áudio, T-cycles e desenhos reais sob atraso controlado; não homologa celular físico.
 
-[Procedência dos testes](docs/test-roms.md), [metodologia de desempenho](docs/performance.md) e [investigação mobile](docs/mobile-audio-investigation.md). Os resultados de cada entrega ficam no [acompanhamento](docs/milestones.md) e no GitHub Actions.
+[Validação técnica](docs/test-roms.md) explica a procedência das ROMs, a reprodução dos testes e os limites das medições. O [acompanhamento](docs/milestones.md) registra as entregas e os aceites pendentes. Roteiros manuais são enviados diretamente no chat; relatórios históricos permanecem no Git.
 
 ## Publicação e apresentação
 
 O site é estático no **Cloudflare Pages Free**, conectado ao GitHub. Um push em `main` dispara o deploy, sem servidor para inicializar na visita. Download e inicialização no navegador continuam existindo. O [guia de deploy](docs/deployment.md) explica o painel, a configuração e a conferência da publicação.
 
-[Notas da candidata](docs/release-notes.md), [estudo para portfólio](docs/portfolio.md) e [rascunho para LinkedIn](docs/linkedin.md) apresentam o projeto e seus limites. Os textos são materiais para revisão do proprietário, sem publicação automática.
-
-O [plano original](plano-emulador-gameboy.md) permanece preservado. Os roteiros [M00 a M02](docs/testing-m00-m02.md), [M03 a M05](docs/testing-m03-m05.md), [M06 a M08](docs/testing-m06-m08.md) e [M09 a M11](docs/testing-m09-m11.md) registram os grupos anteriores. O teste atual está em [M12 a M14](docs/testing-m12-m14.md).
+O README e as capturas reais do jardim servem de base para apresentar o projeto no portfólio e no LinkedIn. A release estável e a divulgação aguardam o aceite do grupo M12 a M14. O [plano original](plano-emulador-gameboy.md) permanece preservado.
 
 ## Conteúdo de terceiros
 
-Não há jogo comercial ou boot ROM original distribuído. Tobu Tobu Girl e 2048 são homebrews com redistribuição autorizada, binários originais e créditos no site. [Jogos e licenças](docs/demo-games.md).
+Não há jogo comercial ou boot ROM original distribuído. Tobu Tobu Girl e 2048 são homebrews com redistribuição autorizada, binários originais e créditos no site. [Jogos disponíveis](docs/cartridges.md) e [licenças](docs/third-party.md).
 
-POCKET TEST e POCKET GARDEN, incluindo cenário, personagem e letras, são criações próprias. As ROMs externas ficam restritas aos testes. DM Sans e Space Mono são fornecidas localmente por Fontsource. [Créditos de terceiros](docs/third-party.md).
+POCKET TEST e POCKET GARDEN, incluindo cenário, personagem e letras, são criações próprias. As ROMs externas de teste ficam restritas às suítes de validação. DM Sans e Space Mono são fornecidas localmente por Fontsource. [Créditos de terceiros](docs/third-party.md).
