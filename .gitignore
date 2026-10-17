@@ -15,3 +15,4 @@ test-results/
 !tests/fixtures/*.gb
 !tests/roms/fixtures/**/*.gb
 !public/games/**/*.gb
+AGENTS.md
