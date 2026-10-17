@@ -28,11 +28,13 @@ Após a M12, o proprietário confirmou música contínua e ausência de travadas
 
 A rc.2 corrigiu a troca de referência durante reposição, ampliou as reservas e acrescentou a licença MIT de Alexandre Gaia. No teste físico, manteve 100,2% de velocidade emulada, 51,2 desenhos/s e nenhuma falta ou perda de PCM registrada, mas o proprietário reportou cerca de 1,5 segundo entre toque e resposta. Essa latência de entrada não era medida pelas suítes anteriores.
 
-A rc.3 avança CPU e vídeo pelo relógio interativo em ambos os modos. O áudio consome PCM já produzido, sem antecipar o jogo; a imagem não espera a reprodução no alto-falante. Acrescenta medição de entrada nativa até pixel e contadores da fila do produtor. O custo explícito é permitir atraso sonoro em relação à imagem em saídas lentas. **O aceite do grupo M12 a M14 permanece pendente no Motorola e na regressão desktop.** Correções iterativas foram autorizadas pelo proprietário; outro jogo só será estudado depois de validar a fluidez com som.
+A rc.3 avança CPU e vídeo pelo relógio interativo em ambos os modos. O áudio consome PCM já produzido, sem antecipar o jogo; a imagem não espera a reprodução no alto-falante. Acrescenta medição de entrada nativa até pixel e contadores da fila do produtor. O custo explícito é permitir atraso sonoro em relação à imagem em saídas lentas.
+
+**Em 17/10/2026, o proprietário confirmou controles rápidos e música contínua com Tobu e som ativo no Motorola Edge 40 Neo com Chrome.** A condição para estudar outro homebrew foi atendida. A regressão automatizada desktop passou; lançamento estável e divulgação dependem de instrução do proprietário.
 
 Os resultados e logs automatizados ficam no workflow Quality do commit correspondente. Relógios controlados e perfil móvel no computador reproduzem mecanismos e regressões; não homologam o aparelho físico.
 
-Release estável e divulgação no LinkedIn aguardam o aceite. Os roteiros de teste são enviados diretamente no chat, de forma curta e com resultado esperado. Relatórios detalhados, roteiros anteriores e rascunhos de divulgação continuam no histórico do Git.
+Os roteiros de teste são enviados diretamente no chat, de forma curta e com resultado esperado. Relatórios detalhados, roteiros anteriores e rascunhos de divulgação continuam no histórico do Git.
 
 Cada milestone recebe um commit Conventional Commits, com título em inglês e corpo em pt-br, usando exclusivamente a identidade Git do proprietário. Mensagem, autor e committer são conferidos antes do push imediato. A cada três milestones, aguardar o ok do proprietário antes de avançar.
 

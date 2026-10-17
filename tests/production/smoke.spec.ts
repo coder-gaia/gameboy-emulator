@@ -97,6 +97,13 @@ test('reproduz PCM real no AudioWorklet sem erros da CSP, e pausa limpa a fila',
       timeout: 15_000,
     })
     .toBeGreaterThan(0)
+  // Energia já positiva não implica que a saída consumiu o volume mínimo.
+  // As estatísticas chegam periodicamente; aguarda as duas condições reais.
+  await expect
+    .poll(async () => (await readProductionProbe(page)).latestAudio?.renderedFrames ?? 0, {
+      timeout: 15_000,
+    })
+    .toBeGreaterThan(8192)
   const probe = await readProductionProbe(page)
   expect(probe.contexts).toHaveLength(1)
   expect(probe.nodeCount).toBe(1)

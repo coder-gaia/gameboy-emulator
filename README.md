@@ -8,7 +8,7 @@ Um Game Boy DMG no navegador, escrito em TypeScript. Jogue, volte alguns segundo
 
 ![Console Pocket Lab com o jardim original](docs/media/pocket-lab-desktop.png)
 
-Versão **1.0.0-rc.3**, candidata a lançamento. Esta revisão separa o avanço do jogo da reprodução sonora para reduzir a demora entre toque e imagem. A rc.2 melhorou a continuidade, mas o proprietário ainda reportou atraso nos controles do Motorola Edge 40 Neo com Chrome. O aceite no aparelho real continua pendente; testes no computador não o substituem.
+Versão **1.0.0-rc.3**, candidata a lançamento. Esta revisão separa o avanço do jogo da reprodução sonora para reduzir a demora entre toque e imagem. Em 17/10/2026, o proprietário confirmou controles rápidos e música contínua no Tobu, no Motorola Edge 40 Neo com Chrome.
 
 ## Experimente
 
@@ -86,13 +86,13 @@ npm.cmd run test:audio-flow
 
 `check` verifica regras, formatação, lint, testes locais, tipos e build. Hardware prepara fixtures com revisão e SHA-256 fixados e executa **103 casos externos** de Blargg, Mooneye e dmg-acid2. Produção aplica CSP ao artefato compilado. A regressão de transporte mede áudio, T-cycles e desenhos reais sob atraso controlado; não homologa celular físico.
 
-[Validação técnica](docs/test-roms.md) explica a procedência das ROMs, a reprodução dos testes e os limites das medições. O [acompanhamento](docs/milestones.md) registra as entregas e os aceites pendentes. Roteiros manuais são enviados diretamente no chat; relatórios históricos permanecem no Git.
+[Validação técnica](docs/test-roms.md) explica a procedência das ROMs, a reprodução dos testes e os limites das medições. O [acompanhamento](docs/milestones.md) registra as entregas e os aceites. Roteiros manuais são enviados diretamente no chat; relatórios históricos permanecem no Git.
 
 ## Publicação e apresentação
 
 O site é estático no **Cloudflare Pages Free**, conectado ao GitHub. Um push em `main` dispara o deploy, sem servidor para inicializar na visita. Download e inicialização no navegador continuam existindo. O [guia de deploy](docs/deployment.md) explica o painel, a configuração e a conferência da publicação.
 
-O README e as capturas reais do jardim servem de base para apresentar o projeto no portfólio e no LinkedIn. A release estável e a divulgação aguardam o aceite do grupo M12 a M14. O [plano original](plano-emulador-gameboy.md) permanece preservado.
+O README e as capturas reais do jardim servem de base para apresentar o projeto no portfólio e no LinkedIn. A release estável e a divulgação ficam a critério do proprietário após o aceite registrado. O [plano original](plano-emulador-gameboy.md) permanece preservado.
 
 ## Conteúdo de terceiros
 
