@@ -39,4 +39,4 @@ As duas imagens usadas no README mostram o jardim real no Chromium, sem áudio a
 - [Desktop](media/pocket-lab-desktop.png): candidata M14 1.0.0-rc.1, viewport 1440 por 1100 e DPR 1, sem edição.
 - [GIF](media/pocket-lab-garden.gif): captura da M13, recortada e convertida com FFmpeg para 400 por 585 pixels, 48 quadros em quatro segundos, a 12 fps. A frequência do arquivo não mede desempenho da aplicação.
 
-Capturas de divulgação não comprovam homologação de áudio ou fluidez no Motorola. Publicação em rede social depende do proprietário.
+As capturas ilustram a renderização do jardim; não medem latência de entrada, continuidade sonora ou desempenho no aparelho físico.

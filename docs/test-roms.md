@@ -12,9 +12,9 @@ npm.cmd run test:production
 npm.cmd run test:audio-flow
 ```
 
-`check` verifica regras, formatação, lint, testes locais, tipos e build. Hardware executa o núcleo sem navegador; Playwright cobre interface, acessibilidade, produção sob CSP e transporte PCM. Antes do primeiro teste de navegador, execute `npx.cmd playwright install chromium`.
+`check` verifica formatação, lint, testes locais, tipos e build. Hardware executa o núcleo sem navegador; Playwright cobre interface, acessibilidade, produção sob CSP e transporte PCM. Antes do primeiro teste de navegador, execute `npx.cmd playwright install chromium`.
 
-Roteiros manuais são enviados no chat. O [acompanhamento](milestones.md) registra o aceite atual; logs de CI e histórico Git preservam resultados anteriores.
+As [entregas](milestones.md) registram o estado da versão. Os resultados automatizados por revisão ficam no [workflow Quality](https://github.com/coder-gaia/gameboy-emulator/actions/workflows/ci.yml).
 
 ## Procedência das ROMs
 
