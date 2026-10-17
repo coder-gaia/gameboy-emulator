@@ -1,0 +1,185 @@
+.panel {
+  margin-top: 18px;
+  padding: 20px;
+  border: 1px solid #d7d5cc;
+  border-radius: 10px;
+  background: #f8f6f0;
+}
+
+.heading {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+}
+
+.heading > svg {
+  flex: 0 0 auto;
+  margin-top: 2px;
+  color: var(--color-accent);
+}
+
+.heading h2 {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  font-weight: 600;
+}
+
+.heading p {
+  margin: 3px 0 16px;
+  color: #626659;
+  font-size: 10px;
+  line-height: 1.6;
+}
+
+.actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.actions button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 9px 7px;
+  border: 1px solid #c8c5bb;
+  border-radius: 5px;
+  color: var(--color-ink);
+  background: #faf8f2;
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.actions button:not(:disabled):hover {
+  color: var(--color-accent);
+  border-color: var(--color-accent);
+}
+
+.toggle {
+  font-weight: 600;
+}
+
+.actions .enabled,
+.actions .active {
+  border-color: #a99bbb;
+  color: #514565;
+  background: #eeebf1;
+}
+
+.hold {
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.history {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 15px;
+  color: #626659;
+  font-size: 10px;
+  line-height: 1.7;
+}
+
+.history output {
+  color: var(--color-ink);
+  font: 9px/1.7 var(--font-mono);
+}
+
+.track {
+  width: 100%;
+  height: 4px;
+  overflow: hidden;
+  border-radius: 2px;
+  background: #e5e1d8;
+}
+
+.track span {
+  display: block;
+  height: 100%;
+  background: #8d7caa;
+}
+
+.note,
+.notice {
+  margin: 11px 0 0;
+  color: #626659;
+  font-size: 10px;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+
+.notice {
+  color: #514565;
+}
+
+.compact {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 250px;
+  max-width: 100%;
+  height: 44px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.compact .heading,
+.compact .note,
+.compact .notice,
+.compact .history > span {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  clip: rect(0, 0, 0, 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.compact .actions {
+  display: flex;
+  flex: 1 1 auto;
+  gap: 0;
+  min-width: 0;
+}
+
+.compact .actions button {
+  width: 100%;
+  height: 44px;
+  white-space: nowrap;
+}
+
+.compactEnabled .toggle,
+.compact:not(.compactEnabled) .hold,
+.compact .track {
+  display: none;
+}
+
+.compact .history {
+  display: block;
+  flex: 0 0 auto;
+  min-width: 0;
+  margin: 0;
+  white-space: nowrap;
+}
+
+@media (max-width: 360px) {
+  .actions {
+    grid-template-columns: 1fr;
+  }
+}

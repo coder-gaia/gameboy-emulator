@@ -52,7 +52,29 @@ Velocidade `1x` significa avançar um segundo do console em um segundo real. O b
 
 Quadros observados pela página não são uma comparação acústica ou um registro de cada quadro interno. O Worker pode publicar somente o quadro mais recente entre solicitações de áudio. As filas PCM são limitadas; os contadores de underrun mostram falta de amostras na apresentação durante a janela medida. Um resultado sem underruns nesse teste não garante ausência de cortes em qualquer dispositivo.
 
-A meta de primeiro jogo pronto em até três segundos só pode ser avaliada no perfil e na origem descritos no relatório. Download inicial, inicialização do JavaScript e abertura do cartucho continuam existindo em hospedagem estática. A validação pública será repetida quando houver uma URL Cloudflare conectada pelo proprietário.
+A meta de primeiro jogo pronto em até três segundos só pode ser avaliada no perfil e na origem descritos no relatório. Download inicial, inicialização do JavaScript e abertura do cartucho continuam existindo em hospedagem estática. A beta M10 também passou pelos testes funcionais no endereço público da Cloudflare, conforme [publicação validada](deployment.md); esses testes não substituem uma medição da rede de cada visitante.
+
+## Rewind na M11
+
+O ensaio isolado em Node neste computador alternou cinco pares de 25 segundos emulados, com rewind desligado e com captura a cada 0,1 segundo. Cada cenário também realizou 100 restaurações, medindo XOR, decodificação e `GameBoy.restoreState` completo. A validação segura usada nos estados externos foi preservada.
+
+| Cenário            | Velocidade desligado | Velocidade ativo | Restore mediano | Restore p95 |
+| ------------------ | -------------------: | ---------------: | --------------: | ----------: |
+| Jardim             |               6,152x |           6,503x |        1,728 ms |    3,484 ms |
+| Tobu Tobu Girl     |               4,920x |           4,872x |        3,068 ms |    4,363 ms |
+| Fixture MBC1 2 MiB |               6,754x |           7,019x |       13,325 ms |   15,106 ms |
+
+As faixas das amostras forward se sobrepõem. Valores maiores com rewind ativo não são tratados como ganho causado pelo recurso. Os hashes finais de estado e PCM foram iguais em todos os pares. O ensaio cobre o núcleo e o histórico, sem Worker, React, Canvas, Worklet ou hardware móvel; não comprova esses tempos em celulares.
+
+Todos os cenários retiveram 201 pontos e 20 segundos ao fim da janela de 25 segundos. A arena reservou exatamente 8.388.608 bytes, incluindo seus buffers de trabalho. Os bytes utilizados foram 493.504 no jardim, 1.386.426 em Tobu e 507.904 na fixture MBC1. A ROM e a máquina atual ficam fora dessa arena; ela não limita toda a memória da aba. Outros padrões de alteração podem reduzir a duração disponível.
+
+O [relatório de rewind](performance-rewind-results.json) preserva amostras, hashes, ambiente e escopo. Para reproduzir:
+
+```powershell
+npm.cmd run benchmark:rewind -- docs/performance-rewind-results.json
+```
+
+No produto, capturas ocorrem aproximadamente a 10 Hz nos limites dos orçamentos do Worker. A duração usa os timestamps reais em T-cycles. Consulte [funcionamento e limites](rewind.md).
 
 ## Memória e limites
 

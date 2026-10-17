@@ -1,32 +1,32 @@
 # Plano de implementação e acompanhamento
 
-Stack aprovada: TypeScript estrito, React, Vite, CSS Modules, Canvas 2D, Worker, AudioWorklet, IndexedDB, Vitest, Playwright e GitHub Actions. Um pacote npm, sem monorepo. Publicação estática futura no Cloudflare Pages Free.
+Stack aprovada: TypeScript estrito, React, Vite, CSS Modules, Canvas 2D, Worker, AudioWorklet, IndexedDB, Vitest, Playwright e GitHub Actions. Um pacote npm, sem monorepo. Beta estática publicada em [gameboy-emulator-aox.pages.dev](https://gameboy-emulator-aox.pages.dev/).
 
-| Marco | Entrega                                             | Estado          |
-| ----- | --------------------------------------------------- | --------------- |
-| M00   | Fundação, regras, CI e direção visual               | Concluída       |
-| M01   | Header, ROM Only, bus, serial e runner de ROMs      | Concluída       |
-| M02   | CPU SM83, instruções, flags e ciclos                | Concluída       |
-| M03   | Timers, interrupções, HALT, DMA e suítes de timing  | Concluída       |
-| M04   | PPU, fundo, tiles e scroll                          | Concluída       |
-| M05   | Sprites, janela, joypad e dmg-acid2                 | Concluída       |
-| M06   | MBC1, bateria e biblioteca de demos autorizadas     | Concluída       |
-| M07   | APU, Worker e sincronização de áudio                | Concluída       |
-| M08   | Save states versionados e slots                     | Concluída       |
-| M09   | Interface completa, controles e acessibilidade      | Concluída       |
-| M10   | Desempenho móvel e beta pública                     | Deploy pendente |
-| M11   | Rewind com memória limitada                         | Pendente        |
-| M12   | MBC2, MBC3 com RTC e MBC5                           | Pendente        |
-| M13   | Painel técnico completo                             | Pendente        |
-| M14   | Release, README, portfólio e material para LinkedIn | Pendente        |
+| Marco | Entrega                                             | Estado    |
+| ----- | --------------------------------------------------- | --------- |
+| M00   | Fundação, regras, CI e direção visual               | Concluída |
+| M01   | Header, ROM Only, bus, serial e runner de ROMs      | Concluída |
+| M02   | CPU SM83, instruções, flags e ciclos                | Concluída |
+| M03   | Timers, interrupções, HALT, DMA e suítes de timing  | Concluída |
+| M04   | PPU, fundo, tiles e scroll                          | Concluída |
+| M05   | Sprites, janela, joypad e dmg-acid2                 | Concluída |
+| M06   | MBC1, bateria e biblioteca de demos autorizadas     | Concluída |
+| M07   | APU, Worker e sincronização de áudio                | Concluída |
+| M08   | Save states versionados e slots                     | Concluída |
+| M09   | Interface completa, controles e acessibilidade      | Concluída |
+| M10   | Desempenho e beta pública                           | Concluída |
+| M11   | Rewind com memória limitada                         | Concluída |
+| M12   | MBC2, MBC3 com RTC e MBC5                           | Pendente  |
+| M13   | Painel técnico completo                             | Pendente  |
+| M14   | Release, README, portfólio e material para LinkedIn | Pendente  |
 
 ## Pontos de revisão
 
 Os grupos M00 a M02 e M03 a M05 foram aprovados pelo proprietário. O [roteiro de teste M03 a M05](testing-m03-m05.md) permanece como referência das entregas anteriores.
 
-O grupo M06, M07 e M08 foi aprovado pelo proprietário. O [roteiro de teste M06 a M08](testing-m06-m08.md) permanece como referência. M09, M10 e M11 estão autorizadas, com nova pausa ao concluir a M11. Cada milestone deve ter seu commit validado, push imediato e confirmação no GitHub antes da seguinte. Os commits e resultados da validação ficam disponíveis no histórico e nas execuções de CI do GitHub.
+O grupo M06, M07 e M08 foi aprovado pelo proprietário. O [roteiro de teste M06 a M08](testing-m06-m08.md) permanece como referência. M09, M10 e M11 estão concluídas. O desenvolvimento pausa antes da M12 e aguarda o ok do proprietário após seguir o [roteiro M09 a M11](testing-m09-m11.md). Cada milestone deve ter seu commit validado, push imediato e confirmação no GitHub antes da seguinte. Os commits e resultados da validação ficam disponíveis no histórico e nas execuções de CI do GitHub.
 
-M09 completa preferências, remapeamento de teclado, gamepad padrão, tela cheia e acessibilidade. M10 mede desempenho de produção e prepara a beta estática no Cloudflare Pages Free, com publicação dependente da conexão da conta do proprietário. M11 acrescenta rewind com memória limitada. Como último passo do grupo, o fundo recebe um tom pastel/off-white mais confortável, preservando contraste e aparência do console sem opacidade ou sobreposição.
+M09 completa preferências, remapeamento de teclado, gamepad padrão, tela cheia e acessibilidade. M10 mede desempenho de produção e publica a beta estática no Cloudflare Pages. M11 acrescenta rewind com memória limitada. Como último passo do grupo, o fundo recebeu o creme #eee9df, preservando contraste e aparência do console sem opacidade ou sobreposição.
 
 O cartucho sintético POCKET TEST permite testar CPU, memória e serial sem obter jogos. O [README](../README.md#testar-o-primeiro-grupo-de-milestones) explica o roteiro inicial. M03 adiciona timers, DMA, correção de EI seguido de HALT e prioridades de interrupção durante escrita na pilha, com 42 ROMs externas aprovadas.
 
@@ -42,7 +42,9 @@ M08 adiciona estados completos e versionados, três slots por SHA-256 da ROM e i
 
 M09 acrescenta remapeamento das oito ações do teclado, preferências versionadas em localStorage, gamepads com mapeamento padrão e tela cheia nativa com fallback. Entradas simultâneas mantêm fontes independentes e são liberadas ao perder foco, pausar ou desconectar. A revisão corrige contraste e nomes acessíveis, amplia foco visível, preserva a ativação nativa de painéis e evita anúncios contínuos dos registradores. Os testes incluem axe, larguras de 320, 390 e 1440 pixels e jogo em tela cheia em retrato e paisagem. Controle físico e leitores de tela reais continuam dependendo da revisão manual. Consulte [controles e preferências](controls-and-preferences.md).
 
-M10 tem implementação validada e preparada para publicação. A otimização mantém estado e PCM idênticos e apresenta ganhos nos três cenários de núcleo medidos. O build estático recebe cache, CSP e testes de produção; os benchmarks separam Node, desktop e viewport móvel com CPU simulada. **A publicação pública aguarda a criação e conexão da conta Cloudflare do proprietário.** Não há URL pública verificada. Consulte [metodologia e resultados](performance.md) e [passos de publicação](deployment.md). Essa pendência externa não impede implementar e testar o rewind autorizado da M11.
+M10 está concluída e publicada em [gameboy-emulator-aox.pages.dev](https://gameboy-emulator-aox.pages.dev/). A otimização mantém estado e PCM idênticos e apresenta ganhos nos três cenários de núcleo medidos. O build estático recebe cache, CSP e testes de produção; os benchmarks separam Node, desktop e viewport móvel com CPU simulada. Os dez testes de produção também passaram sob os cabeçalhos reais da Cloudflare, com hashes de assets idênticos aos da build medida e sem erros, violações CSP ou requisições a terceiros. Consulte [metodologia e resultados](performance.md) e [publicação validada](deployment.md).
+
+M11 está concluída. O Worker captura estados a aproximadamente 10 Hz de tempo emulado em uma arena de buffers de 8 MiB, retendo até 20 segundos por sessão. O usuário ativa o recurso, segura R ou o botão de voltar e escolhe um ponto ao soltar. A restauração recupera máquina e RAM, limpa a apresentação de áudio e preserva a pausa quando necessário. Os controles ficam bloqueados até a gravação final da bateria; cancelamentos e falhas de áudio mantêm a máquina recuperável. A interface oferece o gesto por teclado, mouse, toque e tecnologia assistiva, inclusive em tela cheia. A validação inclui 677 testes locais, 87 externos, 26 casos específicos de navegador, revisão de acessibilidade e 14 testes no artefato de produção. O benchmark preservou estado e PCM nos três cenários, incluindo MBC1 de 2 MiB. Consulte [funcionamento e limites](rewind.md) e [medição reproduzível](performance.md#rewind-na-m11).
 
 Cada milestone recebe um commit, com título Conventional Commits em inglês e corpo em pt-br. Sem autoria ou coautoria de ferramentas de IA e sem caracteres de travessão.
 
@@ -59,7 +61,7 @@ Cada commit validado deve receber push imediatamente e ser confirmado no GitHub.
 
 ## Escopo e metas
 
-A beta da M10 terá demo, áudio, toque, teclado, gamepad, paletas, bateria e save states. O lançamento completo adiciona rewind, cartuchos ampliados e debugger.
+A beta pública da M10 inclui demos, áudio, toque, teclado, gamepad, paletas, bateria e save states. A M11 acrescenta rewind; cartuchos ampliados e debugger continuam nas milestones seguintes.
 
 A aplicação atual executa ROM Only de 32 KiB e MBC1 padrão com ROM de até 2 MiB em potência de dois. ROMs de até 512 KiB admitem até 32 KiB de RAM; ROMs de 1 MiB ou 2 MiB admitem até 8 KiB, conforme a fiação física. A convenção homebrew de RAM de 2 KiB é aceita com aviso. MBC1M usa outra fiação, não é implementado e não possui autodetecção.
 

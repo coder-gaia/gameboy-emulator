@@ -12,6 +12,21 @@ interface WorkerObservation {
   romId: string
   playing: boolean
   receivedAt: number
+  rewind: BrowserRewindState | null
+  rewindRestores: number
+  minimumRewindTCycles: number | null
+  batteryFirstByte: number | null
+}
+
+export interface BrowserRewindState {
+  enabled: boolean
+  active: boolean
+  entries: number
+  availableSeconds: number
+  allocatedBytes: number
+  usedBytes: number
+  maxSeconds: number
+  maxBytes: number
 }
 
 interface AudioObservation extends AudioStreamDiagnostics {
@@ -108,10 +123,26 @@ export async function observeProduction(page: Page): Promise<void> {
           romId: '',
           playing: false,
           receivedAt: performance.now(),
+          rewind: null,
+          rewindRestores: 0,
+          minimumRewindTCycles: null,
+          batteryFirstByte: null,
         }
         probe.workers.push(this.observation)
         this.addEventListener('message', ({ data }: MessageEvent<EmulatorMessage>) => {
           if (data.type === 'error' || !data.snapshot) return
+          const rewind = (data.snapshot as typeof data.snapshot & { rewind?: BrowserRewindState })
+            .rewind
+          if (
+            data.snapshot.cpu.totalTCycles < this.observation.totalTCycles &&
+            (rewind?.active || this.observation.rewind?.active)
+          ) {
+            this.observation.rewindRestores += 1
+            this.observation.minimumRewindTCycles = Math.min(
+              this.observation.minimumRewindTCycles ?? Number.POSITIVE_INFINITY,
+              data.snapshot.cpu.totalTCycles,
+            )
+          }
           Object.assign(this.observation, {
             snapshots: this.observation.snapshots + 1,
             frameId: data.snapshot.frameId,
@@ -119,6 +150,8 @@ export async function observeProduction(page: Page): Promise<void> {
             romId: data.snapshot.romId,
             playing: data.snapshot.playing,
             receivedAt: performance.now(),
+            rewind: rewind ? { ...rewind } : null,
+            batteryFirstByte: data.snapshot.batteryRam?.[0] ?? this.observation.batteryFirstByte,
           })
         })
       }

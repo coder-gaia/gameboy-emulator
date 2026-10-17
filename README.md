@@ -2,7 +2,9 @@
 
 Um emulador de Game Boy DMG no navegador, com núcleo TypeScript independente da interface.
 
-Projeto em desenvolvimento, com M00 a M09 concluídas. CPU, timer, DMA, vídeo, sprites, janela, controles, MBC1, saves de bateria, áudio e save states versionados já estão disponíveis. A biblioteca oferece Tobu Tobu Girl e 2048 para jogar sem fornecer arquivos. O jardim interativo continua disponível como ROM própria de diagnóstico. O grupo M06, M07 e M08 foi aprovado pelo proprietário. O grupo autorizado atual é M09 a M11, com nova pausa ao concluir a M11.
+Experimente a [beta pública do Pocket Lab](https://gameboy-emulator-aox.pages.dev/), publicada no Cloudflare Pages.
+
+Projeto em desenvolvimento, com M00 a M11 concluídas. CPU, timer, DMA, vídeo, sprites, janela, controles, MBC1, saves de bateria, áudio, save states versionados e rewind já estão disponíveis. A biblioteca oferece Tobu Tobu Girl e 2048 para jogar sem fornecer arquivos. O jardim interativo continua disponível como ROM própria de diagnóstico. O grupo M09 a M11 está pronto para a revisão do proprietário. O desenvolvimento pausa antes da M12 até receber seu ok.
 
 ## Desenvolvimento local
 
@@ -31,9 +33,9 @@ O Web Worker possui a máquina `GameBoy` e executa todas as instruções. A inte
 
 A M10 acrescenta benchmarks reproduzíveis, avanço interno por T-cycle sem validações repetidas e recálculo do mixer quando a amplitude muda. Os formatos dos estados são preservados. A suíte de produção testa o build final sob CSP, incluindo Worker, áudio e arquivos locais. Consulte [desempenho e metodologia](docs/performance.md).
 
-IndexedDB armazena a RAM de bateria e três slots de estado por cartucho, identificados pelo SHA-256 da ROM. Paleta, volume, mute e teclas usam preferências versionadas em localStorage, separadas desses saves. O destino de publicação é Cloudflare Pages Free, como site estático. Consulte a [arquitetura de áudio e execução](docs/audio-runtime.md), o [formato dos estados salvos](docs/save-states.md) e os [controles e preferências](docs/controls-and-preferences.md).
+IndexedDB armazena a RAM de bateria e três slots de estado por cartucho, identificados pelo SHA-256 da ROM. Paleta, volume, mute e teclas usam preferências versionadas em localStorage, separadas desses saves. A publicação usa arquivos estáticos no Cloudflare Pages. Consulte a [arquitetura de áudio e execução](docs/audio-runtime.md), o [formato dos estados salvos](docs/save-states.md) e os [controles e preferências](docs/controls-and-preferences.md).
 
-O build está preparado para Cloudflare Pages Free, com cache e cabeçalhos de segurança. A publicação pública ainda depende da criação e conexão da conta do proprietário; não existe uma URL pública validada. O [guia de deploy](docs/deployment.md) contém os campos e os passos necessários.
+O endereço público da M10 passou pelos dez testes de produção em desktop e perfil Pixel 7 simulado. Worker, áudio, demos, saves, arquivos locais, teclado e tela cheia funcionaram sob os cabeçalhos reais da Cloudflare, sem requisições a terceiros ou violações CSP. Os hashes de HTML, JavaScript, CSS, Worker e Worklet coincidiram com a build medida. O [guia de deploy](docs/deployment.md) registra a publicação e os comandos de validação. A hospedagem estática dispensa inicialização de um processo de servidor; rede e inicialização no navegador continuam existindo.
 
 ## Cartuchos e testes atuais
 
@@ -94,9 +96,15 @@ Controles USB ou Bluetooth reconhecidos com `mapping="standard"` usam direcional
 
 **Tela cheia** usa o recurso nativo do navegador. Se estiver indisponível ou for recusado, a interface informa o motivo e mantém a página utilizável. O primeiro link ao navegar por Tab, **Ir para o console**, permite saltar o cabeçalho. Consulte [configuração, suporte e roteiro de conferência](docs/controls-and-preferences.md).
 
+## Rewind
+
+O painel **Um instante atrás.** oferece **Ativar rewind**. Depois de ativar e jogar um pouco, segure **R** com a tela em foco ou o botão **Segure para voltar**. Soltar escolhe o ponto atual e retoma somente se a partida estava em execução. Se já estava pausada, permanece assim. Perder foco, ocultar a aba ou cancelar o gesto encerra em pausa. R continua disponível para uma ação do jogo quando estiver remapeado.
+
+O Worker guarda até 20 segundos de tempo emulado, com capturas de aproximadamente 10 Hz e uma arena de buffers limitada a 8 MiB. O histórico é temporário, fica nesta aba e é descartado ao desativar, carregar outro estado ou trocar o cartucho. Voltar também restaura a RAM do jogo; a bateria recebe o ponto final escolhido, sem gravar os pontos intermediários. Consulte [funcionamento e limites](docs/rewind.md) e [medição de custo e restauração](docs/performance.md#rewind-na-m11).
+
 ## Testar as milestones
 
-O [roteiro M06 a M08](docs/testing-m06-m08.md) registra os testes de biblioteca, bateria, áudio, slots e arquivos do grupo aprovado. Para a M09 em entrega, confira [controles e preferências](docs/controls-and-preferences.md#conferir-a-m09). A próxima pausa de revisão será após a M11, com o roteiro completo do grupo M09 a M11.
+O [roteiro M06 a M08](docs/testing-m06-m08.md) registra os testes de biblioteca, bateria, áudio, slots e arquivos do grupo aprovado. O [roteiro M09 a M11](docs/testing-m09-m11.md) reúne controles, preferências, publicação, rewind e o fundo creme para a pausa atual. A entrega tem 677 testes locais e 87 externos aprovados, 130 cenários de navegador cobertos e 14 testes de produção aprovados no build final.
 
 ## Testar o primeiro grupo de milestones
 
@@ -114,7 +122,7 @@ Os registradores da CPU usam inicialização pós boot DMG, incluindo F dependen
 
 A M03 corrige `EI;HALT` com interrupção pendente e a resseleção de interrupção quando a pilha escreve sobre IE. Os testes externos não representam aprovação de todos os comportamentos de todas as revisões do hardware.
 
-Os grupos M00 a M02, M03 a M05 e M06 a M08 foram aprovados pelo proprietário. Os roteiros de teste [M03 a M05](docs/testing-m03-m05.md) e [M06 a M08](docs/testing-m06-m08.md) permanecem como referências das entregas anteriores. M09 está em entrega; o desenvolvimento autorizado segue até a pausa após a M11.
+Os grupos M00 a M02, M03 a M05 e M06 a M08 foram aprovados pelo proprietário. Os roteiros de teste [M03 a M05](docs/testing-m03-m05.md) e [M06 a M08](docs/testing-m06-m08.md) permanecem como referências das entregas anteriores. M09, M10 e M11 estão concluídas e aguardam revisão manual antes da M12.
 
 ## Vídeo e reprodução
 

@@ -5,6 +5,7 @@ import type {
   EmulatorMessage,
   EmulatorSnapshot,
   MachineCheckpoint,
+  RewindStatus,
 } from './worker-protocol'
 
 const audioOwners = new WeakMap<AudioOutput, EmulatorClient>()
@@ -21,6 +22,7 @@ export class EmulatorClient {
   readonly instanceId = ++clientSequence
   private readonly worker: Worker
   private readonly listeners = new Set<() => void>()
+  private readonly rewindListeners = new Set<() => void>()
   private readonly errorListeners = new Set<(error: Error) => void>()
   private readonly pending = new Map<number, PendingRequest>()
   private sequence = 0
@@ -85,6 +87,31 @@ export class EmulatorClient {
 
   get romId(): string {
     return this.current.romId
+  }
+
+  get rewind(): RewindStatus {
+    return this.current.rewind
+  }
+
+  readonly subscribeRewind = (listener: () => void): (() => void) => {
+    this.rewindListeners.add(listener)
+    return () => this.rewindListeners.delete(listener)
+  }
+
+  async setRewindEnabled(enabled: boolean): Promise<void> {
+    await this.request({ type: 'rewind-config', enabled })
+  }
+
+  async beginRewind(): Promise<void> {
+    await this.request({ type: 'rewind-start' })
+    if (this.output && audioOwners.get(this.output) === this)
+      await this.output.pause(this.current.audioEpoch)
+  }
+
+  async endRewind(): Promise<void> {
+    await this.request({ type: 'rewind-end' })
+    if (this.output && audioOwners.get(this.output) === this)
+      await this.output.pause(this.current.audioEpoch)
   }
 
   async captureState(): Promise<MachineCheckpoint> {
@@ -185,14 +212,24 @@ export class EmulatorClient {
     }
     this.pending.clear()
     this.listeners.clear()
+    this.rewindListeners.clear()
     this.errorListeners.clear()
     if (this.output && audioOwners.get(this.output) === this) audioOwners.delete(this.output)
   }
 
   private update(snapshot: EmulatorSnapshot): void {
+    const previous = this.current?.rewind
+    if (
+      previous &&
+      (Object.keys(previous) as (keyof RewindStatus)[]).every(
+        (key) => previous[key] === snapshot.rewind[key],
+      )
+    )
+      snapshot.rewind = previous
     this.current = snapshot
     if (snapshot.batteryRam !== undefined) this.battery = snapshot.batteryRam
     for (const listener of this.listeners) listener()
+    if (snapshot.rewind !== previous) for (const listener of this.rewindListeners) listener()
   }
 
   private reportError(error: Error): void {

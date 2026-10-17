@@ -1,8 +1,14 @@
-# Preparação da publicação
+# Publicação no Cloudflare Pages
 
-A preparação para hospedar o Pocket Lab como arquivos estáticos está concluída. **A publicação pública está pendente da criação e conexão da conta Cloudflare do proprietário.** Ainda não existe uma URL pública verificada. A hospedagem prevista continua sendo Cloudflare Pages Free.
+A beta está publicada em **[gameboy-emulator-aox.pages.dev](https://gameboy-emulator-aox.pages.dev/)**. O proprietário realizou a publicação inicial da M10, e o endereço HTTPS passou pela validação real em 16 de outubro de 2026, no fuso America/Sao_Paulo. A integração Git atualiza o site a cada push em `main`; confira o deploy e a build correspondente a cada entrega.
+
+Os dez testes de produção passaram no endereço público, em desktop e perfil Pixel 7 simulado. Foram exercitados os dois jogos com hashes conferidos, Worker, áudio real no AudioWorklet, slots, reload, importação e exportação de arquivos, remapeamento e tela cheia. Não houve erros de navegador, violações CSP ou requisições da aplicação a terceiros. Essa emulação de navegador não comprova funcionamento em um aparelho Pixel 7 físico.
+
+HTML e assets públicos corresponderam aos SHA-256 da build medida na M10: entrada `index-De27AeGu.js`, CSS `index-yAd_Awak.css`, Worker `emulator.worker-BeJo7_Rn.js` e Worklet `pcm-worklet-C6AScAOB.js`. Os hashes completos permanecem em [resultados de desempenho do navegador](performance-browser-results.json). Os cabeçalhos reais conferiram CSP, `nosniff`, `DENY`, política de permissões e de recursos, revalidação de HTML e cache imutável dos assets.
 
 O visitante não precisa de conta. ROMs próprias, bateria e estados ficam no navegador. O deploy publica somente a interface, o Worker, o AudioWorklet, fontes locais, demos autorizadas e seus créditos. Não há backend, Pages Functions, serviço pago ou upload de ROM.
+
+A M11 acrescenta rewind e o fundo creme. Seu build final passou pelos 14 testes de produção locais, incluindo volta da imagem e da CPU, suspensão do áudio durante o gesto e retomada de PCM real sob CSP. Os nomes dos assets mudam com o conteúdo; a lista acima registra a publicação inicial da M10, e não deve ser usada como identificação fixa das próximas versões.
 
 ## Validar o mesmo build que será publicado
 
@@ -28,16 +34,16 @@ Confira no build local:
 5. O console do navegador não registra violações de CSP nem falhas de Worker ou AudioWorklet.
 6. As requisições de recursos permanecem no mesmo endereço do site. Links de créditos externos só são abertos quando escolhidos pelo visitante.
 
-## Conectar Cloudflare Pages Free
+## Configuração e referência para outra publicação
 
-O proprietário precisa criar uma conta Free e entrar no [painel Cloudflare](https://dash.cloudflare.com/). A instalação do GitHub App autoriza a conexão do repositório. Não envie senha, token ou código de autenticação pelo chat. O fluxo pelo painel dispensa Wrangler e tokens locais.
+O site já está publicado. Os passos abaixo ficam como referência para conferir a configuração ou criar outra publicação no [painel Cloudflare](https://dash.cloudflare.com/). A instalação do GitHub App autoriza a conexão do repositório. O fluxo pelo painel dispensa Wrangler e tokens locais.
 
 1. Em **Workers & Pages**, escolha **Create application**, **Pages** e **Connect to Git**. Dependendo da versão do painel, a opção aparece como **Import an existing Git repository**.
 2. Conecte GitHub e limite o acesso do aplicativo ao repositório `coder-gaia/gameboy-emulator`.
 3. Selecione esse repositório e prossiga para a configuração do build.
 4. Use os valores abaixo, sem adicionar Functions ou bindings.
 5. Confirme os checks do commit que será publicado e escolha **Save and Deploy**.
-6. Aguarde o build terminar. Compartilhe a URL gerada e o commit associado para permitir a validação pública. O nome do projeto pode estar indisponível; não é possível prometer antecipadamente um subdomínio específico.
+6. Aguarde o build terminar e valide a URL gerada contra o commit publicado. O projeto atual usa `gameboy-emulator-aox.pages.dev`; outra publicação pode receber um endereço diferente.
 
 | Campo                  | Valor                                |
 | ---------------------- | ------------------------------------ |
@@ -63,20 +69,23 @@ Não há SharedArrayBuffer e não é necessário ativar COOP ou COEP. O AudioWor
 
 ## Conferir a publicação real
 
-Após receber uma URL pública, repita o roteiro no endereço HTTPS, confira os cabeçalhos das respostas e confirme que Worker, Worklet, fontes e demos não retornam HTML ou 404. Verifique o commit apresentado no painel. Meça abertura inicial com cache vazio separadamente da visita seguinte; uma simulação de celular no desktop não equivale a teste em aparelho físico.
+A publicação da M10 foi validada no endereço HTTPS real. Após cada novo deploy, repita o roteiro, confira os cabeçalhos das respostas e confirme que Worker, Worklet, fontes e demos não retornam HTML ou 404. Verifique o commit apresentado no painel. Meça abertura inicial com cache vazio separadamente da visita seguinte; uma simulação de celular no desktop não equivale a teste em aparelho físico.
 
 Use o endereço estável do projeto para jogar e testar persistência. IndexedDB é separado por origem: localhost, previews, `pages.dev` e um domínio próprio possuem saves diferentes. Antes de trocar a origem, exporte os estados que desejar preservar. O projeto não transfere saves automaticamente entre esses endereços.
 
 O Free admite 500 builds por mês, um build simultâneo, até 20 minutos por build, 20.000 arquivos e 25 MiB por arquivo. Requisições de arquivos estáticos são gratuitas e ilimitadas; Functions possuem regras próprias e não fazem parte deste projeto. [Limites de Pages](https://developers.cloudflare.com/pages/platform/limits/), [preços de recursos estáticos](https://developers.cloudflare.com/pages/functions/pricing/).
 
-Uma publicação só será registrada como concluída depois que o deploy terminar e a URL real passar pelas verificações. Enquanto a conta estiver pendente, o build local e o repositório continuam prontos para revisão.
+A M10 está registrada como concluída e publicada. Novas entregas só recebem essa confirmação depois que o deploy correspondente terminar e o endereço real passar pelas verificações.
 
 Para executar os mesmos testes no endereço HTTPS publicado:
 
 ```powershell
-$env:POCKETLAB_PRODUCTION_URL = 'https://seu-projeto.pages.dev'
-npm.cmd run test:production
-Remove-Item Env:POCKETLAB_PRODUCTION_URL
+$env:POCKETLAB_PRODUCTION_URL = 'https://gameboy-emulator-aox.pages.dev'
+try {
+  npm.cmd run test:production -- --workers=2
+} finally {
+  Remove-Item Env:\POCKETLAB_PRODUCTION_URL -ErrorAction SilentlyContinue
+}
 ```
 
-Substitua o exemplo pela URL real do painel. Com essa variável, a suíte usa o site remoto e não inicia um servidor local.
+Com essa variável, a suíte usa o site remoto e não inicia um servidor local. Execute depois de confirmar o deploy do commit da M11: são 14 casos, incluindo rewind e áudio. Os dados criados pelos testes ficam nos perfis isolados do Playwright.

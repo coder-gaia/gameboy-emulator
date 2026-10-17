@@ -23,6 +23,7 @@
     "test:production": "playwright test --config playwright.production.config.ts",
     "benchmark:browser": "playwright test --config playwright.benchmark.config.ts",
     "benchmark:core": "vite build --ssr scripts/benchmarks/core.ts --outDir .work/bench-core && node .work/bench-core/core.js",
+    "benchmark:rewind": "vite build --ssr scripts/benchmarks/rewind.ts --outDir .work/bench-rewind && node .work/bench-rewind/rewind.js",
     "check:rules": "node scripts/check-rules.mjs",
     "check": "npm run check:rules && npm run format:check && npm run lint && npm run test && npm run build"
   },

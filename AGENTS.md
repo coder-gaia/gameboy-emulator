@@ -13,7 +13,7 @@
 - Pausar ao concluir cada grupo de três milestones para o proprietário testar.
 - Na pausa, entregar instruções concretas de teste e os resultados esperados. Aguardar o ok antes de continuar.
 - Os grupos M00 a M02, M03 a M05 e M06 a M08 foram aprovados pelo proprietário.
-- M09, M10 e M11 estão autorizadas. Pausar ao concluir M11 e entregar roteiro de testes antes de iniciar M12.
+- M09, M10 e M11 estão concluídas. Entregar docs/testing-m09-m11.md e pausar antes da M12, aguardando novo ok do proprietário.
 - Como último passo deste grupo, ajustar o fundo para pastel/off-white confortável, preservando contraste e aparência do console, sem aplicar opacidade ou sobreposição ao Game Boy.
 
 ## Escrita
@@ -24,7 +24,7 @@
 ## Arquitetura e escopo
 
 - Um repositório e um pacote npm. Sem monorepo no V1.
-- TypeScript estrito, React e Vite. Deploy estático futuro no Cloudflare Pages Free.
+- TypeScript estrito, React e Vite. Deploy estático no Cloudflare Pages Free.
 - O núcleo em src/core não importa DOM, React, Web Audio, armazenamento ou APIs de navegador.
 - Usar T-cycles como unidade explícita de tempo. Quatro T-cycles equivalem a um M-cycle.
 - Memória e buffers utilizam arrays tipados. Evitar alocações no caminho quente.

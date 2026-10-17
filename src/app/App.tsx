@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
+import { createPortal } from 'react-dom'
 import {
   ArrowUpRight,
   CodeXml,
@@ -40,6 +41,9 @@ import { AudioOutput } from '../platform/audio'
 import { SaveStates } from '../ui/states/SaveStates'
 import { PreferencesPanel } from '../ui/settings/PreferencesPanel'
 import { keyLabel } from '../platform/input/key-label'
+import { bindRewindShortcut } from '../platform/input/rewind-shortcut'
+import { ConnectedRewindControls } from '../ui/rewind/ConnectedRewindControls'
+import { useRewindSession } from './useRewindSession'
 import styles from './App.module.css'
 
 const palettes = [
@@ -123,6 +127,7 @@ export function App() {
   })
   const [fullscreen, setFullscreen] = useState(false)
   const [fullscreenNotice, setFullscreenNotice] = useState('')
+  const [rewindHost, setRewindHost] = useState<HTMLDivElement | null>(null)
   const consoleSection = useRef<HTMLElement>(null)
   const [cartridge, setCartridge] = useState<LoadedCartridge | null>(null)
   const [cartridgeRevision, setCartridgeRevision] = useState(0)
@@ -153,6 +158,35 @@ export function App() {
       device ? new InputController((button, pressed) => device.setButton(button, pressed)) : null,
     [device],
   )
+  const rewind = useRewindSession({
+    device,
+    playing,
+    disabled: loading || stateBusy || audioBusy,
+    releaseInputs: () => controller?.releaseAll(),
+    setPlaying,
+    canResume: () => !aboutDialog.current?.open && !cartridgeHelp.current?.open,
+    flushBattery: async () => {
+      const session = batterySession.current
+      try {
+        await session?.flush()
+      } catch (cause) {
+        if (session === batterySession.current)
+          setBatteryNotice(
+            cause instanceof Error ? cause.message : 'Não foi possível salvar o progresso.',
+          )
+        throw cause
+      }
+    },
+  })
+  const controlsBusy = loading || stateBusy || rewind.active || rewind.configuring
+  const {
+    isActive: isRewinding,
+    cancel: cancelRewind,
+    canBegin: canBeginRewind,
+    begin: beginRewind,
+    end: endRewind,
+  } = rewind
+  const shortcutAvailable = !Object.values(keyboardBindings).some((codes) => codes.includes('KeyR'))
   const palette = palettes.find((item) => item.id === paletteId) ?? palettes[0]
   const screenStyle = {
     '--lcd-background': palette.background,
@@ -184,11 +218,15 @@ export function App() {
 
   const pausePlayback = useCallback(() => {
     setPlaying(false)
+    if (isRewinding()) {
+      cancelRewind()
+      return
+    }
     const session = batterySession.current
     void device
       ?.pause()
       .then(() => {
-        if (session === batterySession.current) return session?.flush()
+        if (session === batterySession.current && !isRewinding()) return session?.flush()
       })
       .catch((cause: unknown) => {
         if (session === batterySession.current)
@@ -196,7 +234,7 @@ export function App() {
             cause instanceof Error ? cause.message : 'Não foi possível salvar o progresso.',
           )
       })
-  }, [device])
+  }, [device, isRewinding, cancelRewind])
   const playbackError = useCallback((cause: Error) => {
     setPlaying(false)
     setError(cause.message)
@@ -214,6 +252,18 @@ export function App() {
       if (liveDevice.current === device) setStateBusy(busy)
     },
     [device],
+  )
+
+  useEffect(
+    () =>
+      bindRewindShortcut(
+        window,
+        canBeginRewind,
+        () => beginRewind('keyboard'),
+        (resume) => endRewind('keyboard', resume),
+        () => !shortcutAvailable,
+      ),
+    [device, shortcutAvailable, canBeginRewind, beginRewind, endRewind],
   )
 
   useEffect(
@@ -289,36 +339,26 @@ export function App() {
     if (!controller) return
     return controller.bindKeyboard(
       window,
-      () =>
-        playing &&
-        !loading &&
-        !stateBusy &&
-        !aboutDialog.current?.open &&
-        !cartridgeHelp.current?.open,
+      () => playing && !controlsBusy && !aboutDialog.current?.open && !cartridgeHelp.current?.open,
       () => keyboardBindings,
     )
-  }, [controller, playing, loading, stateBusy, keyboardBindings])
+  }, [controller, playing, controlsBusy, keyboardBindings])
 
   useEffect(() => {
     if (!controller) return
     return bindGamepads(
       controller,
       window,
-      () =>
-        playing &&
-        !loading &&
-        !stateBusy &&
-        !aboutDialog.current?.open &&
-        !cartridgeHelp.current?.open,
+      () => playing && !controlsBusy && !aboutDialog.current?.open && !cartridgeHelp.current?.open,
       setGamepadStatus,
     )
-  }, [controller, playing, loading, stateBusy])
+  }, [controller, playing, controlsBusy])
 
   useEffect(() => {
     const session = batterySession.current
     if (!session || !device) return
     const flush = () => {
-      if (batterySession.current !== session) return
+      if (batterySession.current !== session || isRewinding()) return
       void session.flush().catch((cause: unknown) => {
         if (batterySession.current === session)
           setBatteryNotice(
@@ -338,18 +378,18 @@ export function App() {
       document.removeEventListener('visibilitychange', visibility)
       flush()
     }
-  }, [device])
+  }, [device, isRewinding])
 
   useEffect(() => {
     const session = batterySession.current
-    if (!playing)
+    if (!playing && !isRewinding())
       void session?.flush().catch((cause: unknown) => {
         if (batterySession.current === session)
           setBatteryNotice(
             cause instanceof Error ? cause.message : 'Não foi possível salvar o progresso.',
           )
       })
-  }, [playing])
+  }, [playing, isRewinding])
 
   useEffect(() => {
     if (device && activeGameId)
@@ -422,7 +462,7 @@ export function App() {
   }
 
   async function restart() {
-    if (stateBusy || !cartridge?.metadata.isSupported) return
+    if (controlsBusy || !cartridge?.metadata.isSupported) return
     const request = ++loadRequest.current
     setPlaying(false)
     setLoading(true)
@@ -437,7 +477,7 @@ export function App() {
   }
 
   async function loadFiles(files: FileList | null) {
-    if (stateBusy) return
+    if (controlsBusy) return
     const request = ++loadRequest.current
     setError('')
     setLoading(false)
@@ -462,7 +502,7 @@ export function App() {
   }
 
   async function openFixture(rom: Uint8Array, fileName: string, autoplay: boolean) {
-    if (stateBusy || loading) return
+    if (controlsBusy) return
     const request = ++loadRequest.current
     setPlaying(false)
     setLoading(true)
@@ -484,7 +524,7 @@ export function App() {
   }
 
   async function openDemo(game: DemoGame) {
-    if (stateBusy || loading) return
+    if (controlsBusy) return
     const request = ++loadRequest.current
     setPlaying(false)
     setLoading(true)
@@ -569,9 +609,11 @@ export function App() {
               <span className={styles.powerLabel}>
                 <span className={styles.powerLight} />
                 {device
-                  ? playing
-                    ? 'EM EXECUÇÃO'
-                    : 'PAUSADO'
+                  ? rewind.active
+                    ? 'VOLTANDO NO TEMPO'
+                    : playing
+                      ? 'EM EXECUÇÃO'
+                      : 'PAUSADO'
                   : cartridge
                     ? 'CARTUCHO LIDO'
                     : 'EM ESPERA'}
@@ -626,7 +668,7 @@ export function App() {
               </div>
             </div>
 
-            <TouchControls controller={controller} disabled={!playing || loading || stateBusy} />
+            <TouchControls controller={controller} disabled={!playing || controlsBusy} />
             <div className={styles.consoleBottom} aria-hidden="true">
               <span>BOAS HISTÓRIAS CABEM NO BOLSO.</span>
               <div className={styles.speaker}>
@@ -641,65 +683,72 @@ export function App() {
           </div>
 
           {device && (
-            <div className={styles.transport} role="group" aria-label="Reprodução">
-              <button
-                type="button"
-                onClick={() => (playing ? pausePlayback() : setPlaying(true))}
-                disabled={Boolean(error) || loading || stateBusy}
-              >
-                {playing ? (
-                  <Pause size={15} aria-hidden="true" />
-                ) : (
-                  <Play size={15} aria-hidden="true" />
-                )}
-                {playing ? 'Pausar' : 'Iniciar'}
-              </button>
-              <button type="button" onClick={() => void restart()} disabled={loading || stateBusy}>
-                <RotateCcw size={15} aria-hidden="true" />
-                Reiniciar
-              </button>
-              <button
-                type="button"
-                onClick={() => void toggleFullscreen()}
-                disabled={loading || stateBusy}
-              >
-                {fullscreen ? (
-                  <Minimize size={15} aria-hidden="true" />
-                ) : (
-                  <Maximize size={15} aria-hidden="true" />
-                )}
-                {fullscreen ? 'Sair da tela cheia' : 'Tela cheia'}
-              </button>
-              <div className={styles.soundControls}>
+            <div className={styles.playbackFooter}>
+              <div className={styles.transport} role="group" aria-label="Reprodução">
                 <button
                   type="button"
-                  onClick={() => void toggleAudio()}
-                  disabled={audioBusy || stateBusy}
-                  aria-pressed={audioReady && !muted}
+                  onClick={() => (playing ? pausePlayback() : setPlaying(true))}
+                  disabled={Boolean(error) || controlsBusy}
                 >
-                  {audioReady && !muted ? (
-                    <Volume2 size={15} aria-hidden="true" />
+                  {playing ? (
+                    <Pause size={15} aria-hidden="true" />
                   ) : (
-                    <VolumeX size={15} aria-hidden="true" />
+                    <Play size={15} aria-hidden="true" />
                   )}
-                  {audioBusy ? 'Abrindo som...' : audioReady && !muted ? 'Silenciar' : 'Ativar som'}
+                  {playing ? 'Pausar' : 'Iniciar'}
                 </button>
-                <label className={styles.volumeControl}>
-                  <span className="sr-only">Volume</span>
-                  <input
-                    type="range"
-                    min="0"
-                    max="100"
-                    value={volume * 100}
-                    onChange={(event) => {
-                      const next = Number(event.currentTarget.value) / 100
-                      setVolume(next)
-                      updatePreferences({ volume: next })
-                      audioOutput.current?.setVolume(next)
-                    }}
-                  />
-                </label>
+                <button type="button" onClick={() => void restart()} disabled={controlsBusy}>
+                  <RotateCcw size={15} aria-hidden="true" />
+                  Reiniciar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void toggleFullscreen()}
+                  disabled={controlsBusy}
+                >
+                  {fullscreen ? (
+                    <Minimize size={15} aria-hidden="true" />
+                  ) : (
+                    <Maximize size={15} aria-hidden="true" />
+                  )}
+                  {fullscreen ? 'Sair da tela cheia' : 'Tela cheia'}
+                </button>
+                <div className={styles.soundControls}>
+                  <button
+                    type="button"
+                    onClick={() => void toggleAudio()}
+                    disabled={audioBusy || controlsBusy}
+                    aria-pressed={audioReady && !muted}
+                  >
+                    {audioReady && !muted ? (
+                      <Volume2 size={15} aria-hidden="true" />
+                    ) : (
+                      <VolumeX size={15} aria-hidden="true" />
+                    )}
+                    {audioBusy
+                      ? 'Abrindo som...'
+                      : audioReady && !muted
+                        ? 'Silenciar'
+                        : 'Ativar som'}
+                  </button>
+                  <label className={styles.volumeControl}>
+                    <span className="sr-only">Volume</span>
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      value={volume * 100}
+                      onChange={(event) => {
+                        const next = Number(event.currentTarget.value) / 100
+                        setVolume(next)
+                        updatePreferences({ volume: next })
+                        audioOutput.current?.setVolume(next)
+                      }}
+                    />
+                  </label>
+                </div>
               </div>
+              <div className={styles.rewindHost} ref={setRewindHost} />
             </div>
           )}
 
@@ -764,7 +813,7 @@ export function App() {
           </p>
 
           <GameLibrary
-            loading={loading || stateBusy}
+            loading={controlsBusy}
             activeGameId={activeGameId}
             onSelect={(game) => void openDemo(game)}
           />
@@ -791,7 +840,7 @@ export function App() {
             <button
               className={styles.loadButton}
               type="button"
-              disabled={loading || stateBusy}
+              disabled={controlsBusy}
               onClick={() => fileInput.current?.click()}
               aria-describedby="cartridge-help"
             >
@@ -828,7 +877,7 @@ export function App() {
               className={styles.visualButton}
               type="button"
               onClick={openVisualCartridge}
-              disabled={loading || stateBusy}
+              disabled={controlsBusy}
             >
               Explorar jardim <Play size={14} aria-hidden="true" />
             </button>
@@ -836,7 +885,7 @@ export function App() {
               className={styles.diagnosticButton}
               type="button"
               onClick={openDiagnosticCartridge}
-              disabled={loading || stateBusy}
+              disabled={controlsBusy}
             >
               Experimentar cartucho de diagnóstico <ArrowUpRight size={13} aria-hidden="true" />
             </button>
@@ -854,7 +903,7 @@ export function App() {
                 key={cartridgeRevision}
                 device={device}
                 playing={playing}
-                disabled={loading || stateBusy}
+                disabled={controlsBusy}
                 onAdvance={refreshScreen}
                 onReset={() => void restart()}
               />
@@ -866,7 +915,7 @@ export function App() {
               key={device.instanceId}
               device={device}
               title={cartridge?.metadata.title ?? 'cartucho'}
-              disabled={loading || audioBusy}
+              disabled={loading || audioBusy || rewind.active || rewind.configuring}
               onBusyChange={stateBusyChanged}
               onPause={async () => {
                 if (liveDevice.current !== device) throw new Error('O cartucho foi trocado.')
@@ -890,6 +939,25 @@ export function App() {
               }}
             />
           )}
+
+          {device &&
+            (() => {
+              const panel = (
+                <ConnectedRewindControls
+                  device={device}
+                  active={rewind.active}
+                  disabled={loading || stateBusy || audioBusy || rewind.configuring}
+                  shortcutAvailable={shortcutAvailable}
+                  notice={rewind.notice}
+                  compact={fullscreen}
+                  onToggle={rewind.toggle}
+                  onBegin={() => rewind.begin('button')}
+                  onEnd={(resume) => rewind.end('button', resume)}
+                  onStep={rewind.step}
+                />
+              )
+              return fullscreen && rewindHost ? createPortal(panel, rewindHost) : panel
+            })()}
 
           <PreferencesPanel
             bindings={keyboardBindings}

@@ -8,6 +8,17 @@ export interface MachineCheckpoint {
   serial: string
 }
 
+export interface RewindStatus {
+  enabled: boolean
+  active: boolean
+  entries: number
+  availableSeconds: number
+  allocatedBytes: number
+  usedBytes: number
+  maxSeconds: number
+  maxBytes: number
+}
+
 export interface EmulatorSnapshot {
   framebuffer: Uint8Array
   frameId: number
@@ -19,6 +30,7 @@ export interface EmulatorSnapshot {
   playing: boolean
   audioEpoch: number
   romId: string
+  rewind: RewindStatus
 }
 
 export type EmulatorCommand =
@@ -33,6 +45,9 @@ export type EmulatorCommand =
   | { type: 'audio-disable' }
   | { type: 'capture-state' }
   | { type: 'load-state'; checkpoint: unknown }
+  | { type: 'rewind-config'; enabled: boolean }
+  | { type: 'rewind-start' }
+  | { type: 'rewind-end' }
 
 export interface EmulatorRequest {
   id: number

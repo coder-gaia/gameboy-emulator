@@ -1,0 +1,2099 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-10-17T00:13:07.172Z",
+  "source": {
+    "baseRevision": "1f7fc37276bd5fba6ac65d7694056ff464456064",
+    "worktreeDirty": true,
+    "sourceSha256": "e9f7e9376037ca75b82548a383eafcc60e8fbe13d35ba892509be768f3b03660",
+    "executedBundleSha256": "d0e19f21e8a4cfbf55609720c9cc95b7d30a9088e7dbcb223e46d12bc9ee448e",
+    "scope": "src/core, src/runtime/rewind e este script. Worker, React, Canvas e Worklet não executam neste benchmark."
+  },
+  "environment": {
+    "node": "v22.13.0",
+    "v8": "12.4.254.21-node.22",
+    "platform": "win32",
+    "release": "10.0.26300",
+    "architecture": "x64",
+    "cpu": "AMD Ryzen 7 5700U with Radeon Graphics         ",
+    "availableParallelism": 16
+  },
+  "protocol": {
+    "secondsPerPass": 25,
+    "captureHz": 10,
+    "warmupPassesPerMode": 1,
+    "measuredPassesPerMode": 5,
+    "restoresPerCase": 100,
+    "audioSampleRate": 48000,
+    "order": "Desligado/ativo nas repetições ímpares; ativo/desligado nas pares.",
+    "speedFormula": "T-cycles / 4194304 / segundos reais medidos.",
+    "measurement": "Tempo acumulado de avanço, entrada programada, drenagem PCM e captura síncrona a cada 0,1 s emulado. Preparação, restauração inicial, alocação da arena e hashes ficam fora das janelas forward. Cada restore mede separadamente XOR+decode e GameBoy.restoreState seguro.",
+    "memoryScope": "Arena única de 8 MiB inclui âncora, cursor, scratch e ring de deltas. Não inclui payloads decodificados, snapshots temporários, candidatas de restauração, ROM, heap ou consumo total do processo.",
+    "limitation": "Node nesta máquina, sem Worker, Canvas, AudioWorklet, renderização ou hardware móvel. Entradas são programadas; o cenário Tobu não garante permanência na mesma fase durante toda a janela."
+  },
+  "cases": [
+    {
+      "id": "garden",
+      "romId": "3bb2342c70b4d09c5a930fe416a74098d0af13cfdb93d49778cfa0653b86e770",
+      "romBytes": 32768,
+      "ramBytes": 0,
+      "forward": [
+        {
+          "enabled": false,
+          "elapsedMs": 4254.6107000000075,
+          "tCycles": 104857600,
+          "speed": 5.875978265179457,
+          "captures": 0,
+          "finalStateSha256": "7c548a58c2e9652831f1b32ab01fbb54d91441cad4e59257316b3d0eec5425cd",
+          "pcmSha256": "357f2e9f18332520964ad74d3ea22adff3f72a709b6a9307269da018a095abd3",
+          "pcmEnergy": 0,
+          "history": null
+        },
+        {
+          "enabled": true,
+          "elapsedMs": 4134.511700000014,
+          "tCycles": 104857600,
+          "speed": 6.046663261347143,
+          "captures": 251,
+          "finalStateSha256": "7c548a58c2e9652831f1b32ab01fbb54d91441cad4e59257316b3d0eec5425cd",
+          "pcmSha256": "357f2e9f18332520964ad74d3ea22adff3f72a709b6a9307269da018a095abd3",
+          "pcmEnergy": 0,
+          "history": {
+            "entries": 201,
+            "availableSeconds": 20,
+            "allocatedBytes": 8388608,
+            "usedBytes": 493504,
+            "maxSeconds": 20,
+            "maxBytes": 8388608
+          }
+        },
+        {
+          "enabled": true,
+          "elapsedMs": 3844.1551000000036,
+          "tCycles": 104857600,
+          "speed": 6.503379637309633,
+          "captures": 251,
+          "finalStateSha256": "7c548a58c2e9652831f1b32ab01fbb54d91441cad4e59257316b3d0eec5425cd",
+          "pcmSha256": "357f2e9f18332520964ad74d3ea22adff3f72a709b6a9307269da018a095abd3",
+          "pcmEnergy": 0,
+          "history": {
+            "entries": 201,
+            "availableSeconds": 20,
+            "allocatedBytes": 8388608,
+            "usedBytes": 493504,
+            "maxSeconds": 20,
+            "maxBytes": 8388608
+          }
+        },
+        {
+          "enabled": false,
+          "elapsedMs": 3548.5242999999864,
+          "tCycles": 104857600,
+          "speed": 7.0451821338803,
+          "captures": 0,
+          "finalStateSha256": "7c548a58c2e9652831f1b32ab01fbb54d91441cad4e59257316b3d0eec5425cd",
+          "pcmSha256": "357f2e9f18332520964ad74d3ea22adff3f72a709b6a9307269da018a095abd3",
+          "pcmEnergy": 0,
+          "history": null
+        },
+        {
+          "enabled": false,
+          "elapsedMs": 4447.623300000003,
+          "tCycles": 104857600,
+          "speed": 5.620979636472357,
+          "captures": 0,
+          "finalStateSha256": "7c548a58c2e9652831f1b32ab01fbb54d91441cad4e59257316b3d0eec5425cd",
+          "pcmSha256": "357f2e9f18332520964ad74d3ea22adff3f72a709b6a9307269da018a095abd3",
+          "pcmEnergy": 0,
+          "history": null
+        },
+        {
+          "enabled": true,
+          "elapsedMs": 3701.8689999999915,
+          "tCycles": 104857600,
+          "speed": 6.753345404713149,
+          "captures": 251,
+          "finalStateSha256": "7c548a58c2e9652831f1b32ab01fbb54d91441cad4e59257316b3d0eec5425cd",
+          "pcmSha256": "357f2e9f18332520964ad74d3ea22adff3f72a709b6a9307269da018a095abd3",
+          "pcmEnergy": 0,
+          "history": {
+            "entries": 201,
+            "availableSeconds": 20,
+            "allocatedBytes": 8388608,
+            "usedBytes": 493504,
+            "maxSeconds": 20,
+            "maxBytes": 8388608
+          }
+        },
+        {
+          "enabled": true,
+          "elapsedMs": 3881.6119000000217,
+          "tCycles": 104857600,
+          "speed": 6.440623288484833,
+          "captures": 251,
+          "finalStateSha256": "7c548a58c2e9652831f1b32ab01fbb54d91441cad4e59257316b3d0eec5425cd",
+          "pcmSha256": "357f2e9f18332520964ad74d3ea22adff3f72a709b6a9307269da018a095abd3",
+          "pcmEnergy": 0,
+          "history": {
+            "entries": 201,
+            "availableSeconds": 20,
+            "allocatedBytes": 8388608,
+            "usedBytes": 493504,
+            "maxSeconds": 20,
+            "maxBytes": 8388608
+          }
+        },
+        {
+          "enabled": false,
+          "elapsedMs": 3547.618800000011,
+          "tCycles": 104857600,
+          "speed": 7.04698035764156,
+          "captures": 0,
+          "finalStateSha256": "7c548a58c2e9652831f1b32ab01fbb54d91441cad4e59257316b3d0eec5425cd",
+          "pcmSha256": "357f2e9f18332520964ad74d3ea22adff3f72a709b6a9307269da018a095abd3",
+          "pcmEnergy": 0,
+          "history": null
+        },
+        {
+          "enabled": false,
+          "elapsedMs": 4063.9258999999947,
+          "tCycles": 104857600,
+          "speed": 6.151686968505019,
+          "captures": 0,
+          "finalStateSha256": "7c548a58c2e9652831f1b32ab01fbb54d91441cad4e59257316b3d0eec5425cd",
+          "pcmSha256": "357f2e9f18332520964ad74d3ea22adff3f72a709b6a9307269da018a095abd3",
+          "pcmEnergy": 0,
+          "history": null
+        },
+        {
+          "enabled": true,
+          "elapsedMs": 3801.3219000000245,
+          "tCycles": 104857600,
+          "speed": 6.576659556245379,
+          "captures": 251,
+          "finalStateSha256": "7c548a58c2e9652831f1b32ab01fbb54d91441cad4e59257316b3d0eec5425cd",
+          "pcmSha256": "357f2e9f18332520964ad74d3ea22adff3f72a709b6a9307269da018a095abd3",
+          "pcmEnergy": 0,
+          "history": {
+            "entries": 201,
+            "availableSeconds": 20,
+            "allocatedBytes": 8388608,
+            "usedBytes": 493504,
+            "maxSeconds": 20,
+            "maxBytes": 8388608
+          }
+        }
+      ],
+      "forwardSummary": {
+        "disabledMedianSpeed": 6.151686968505019,
+        "enabledMedianSpeed": 6.503379637309633,
+        "disabledMedianMs": 4063.9258999999947,
+        "enabledMedianMs": 3844.1551000000036,
+        "overheadPercent": -5.407844665671469,
+        "stateAndPcmIdentical": true
+      },
+      "historyBeforeRestores": {
+        "entries": 201,
+        "availableSeconds": 20,
+        "allocatedBytes": 8388608,
+        "usedBytes": 493504,
+        "maxSeconds": 20,
+        "maxBytes": 8388608
+      },
+      "restores": {
+        "count": 100,
+        "medianDecodeMs": 0.15085000000181026,
+        "p95DecodeMs": 0.47880000000441214,
+        "medianRestoreMs": 1.5514000000002852,
+        "p95RestoreMs": 3.095600000000559,
+        "medianTotalMs": 1.7281000000039057,
+        "p95TotalMs": 3.483700000004319,
+        "samples": [
+          {
+            "decodeMs": 0.9202000000004773,
+            "restoreMs": 1.593300000000454,
+            "totalMs": 2.5135000000009313
+          },
+          {
+            "decodeMs": 0.2489999999961583,
+            "restoreMs": 1.3191999999980908,
+            "totalMs": 1.568199999994249
+          },
+          {
+            "decodeMs": 0.28880000000208383,
+            "restoreMs": 1.7934000000022934,
+            "totalMs": 2.082200000004377
+          },
+          {
+            "decodeMs": 0.40249999999650754,
+            "restoreMs": 1.7823999999964144,
+            "totalMs": 2.184899999992922
+          },
+          {
+            "decodeMs": 0.2658999999985099,
+            "restoreMs": 2.350700000002689,
+            "totalMs": 2.616600000001199
+          },
+          {
+            "decodeMs": 0.3176000000021304,
+            "restoreMs": 1.7304000000003725,
+            "totalMs": 2.048000000002503
+          },
+          {
+            "decodeMs": 0.1636999999973341,
+            "restoreMs": 1.3516000000017812,
+            "totalMs": 1.5152999999991152
+          },
+          {
+            "decodeMs": 0.15010000000620494,
+            "restoreMs": 1.463499999998021,
+            "totalMs": 1.6136000000042259
+          },
+          {
+            "decodeMs": 0.16349999999511056,
+            "restoreMs": 1.3667999999961467,
+            "totalMs": 1.5302999999912572
+          },
+          {
+            "decodeMs": 0.47880000000441214,
+            "restoreMs": 1.9865999999965425,
+            "totalMs": 2.4654000000009546
+          },
+          {
+            "decodeMs": 0.1702000000004773,
+            "restoreMs": 1.4498999999996158,
+            "totalMs": 1.6201000000000931
+          },
+          {
+            "decodeMs": 0.16079999999783468,
+            "restoreMs": 1.3911000000007334,
+            "totalMs": 1.551899999998568
+          },
+          {
+            "decodeMs": 0.14319999999861466,
+            "restoreMs": 1.4931999999971595,
+            "totalMs": 1.6363999999957741
+          },
+          {
+            "decodeMs": 0.15159999999741558,
+            "restoreMs": 1.6402000000016415,
+            "totalMs": 1.791799999999057
+          },
+          {
+            "decodeMs": 0.24199999999837019,
+            "restoreMs": 1.8562000000019907,
+            "totalMs": 2.098200000000361
+          },
+          {
+            "decodeMs": 0.1437000000005355,
+            "restoreMs": 1.4774000000033993,
+            "totalMs": 1.6211000000039348
+          },
+          {
+            "decodeMs": 0.16339999999763677,
+            "restoreMs": 1.423399999999674,
+            "totalMs": 1.5867999999973108
+          },
+          {
+            "decodeMs": 0.18869999999878928,
+            "restoreMs": 2.0512000000016997,
+            "totalMs": 2.239900000000489
+          },
+          {
+            "decodeMs": 0.4037000000025728,
+            "restoreMs": 2.5491000000038184,
+            "totalMs": 2.952800000006391
+          },
+          {
+            "decodeMs": 0.3497999999963213,
+            "restoreMs": 1.8513000000020838,
+            "totalMs": 2.201099999998405
+          },
+          {
+            "decodeMs": 0.1856000000043423,
+            "restoreMs": 1.558499999999185,
+            "totalMs": 1.7441000000035274
+          },
+          {
+            "decodeMs": 0.15639999999984866,
+            "restoreMs": 1.5420000000012806,
+            "totalMs": 1.6984000000011292
+          },
+          {
+            "decodeMs": 0.20390000000043074,
+            "restoreMs": 1.5443000000013853,
+            "totalMs": 1.748200000001816
+          },
+          {
+            "decodeMs": 0.1334999999962747,
+            "restoreMs": 2.4188999999969383,
+            "totalMs": 2.552399999993213
+          },
+          {
+            "decodeMs": 0.18430000000080327,
+            "restoreMs": 2.0239999999976135,
+            "totalMs": 2.2082999999984168
+          },
+          {
+            "decodeMs": 0.1555000000007567,
+            "restoreMs": 1.662899999995716,
+            "totalMs": 1.8183999999964726
+          },
+          {
+            "decodeMs": 0.1683000000048196,
+            "restoreMs": 1.4860000000044238,
+            "totalMs": 1.6543000000092434
+          },
+          {
+            "decodeMs": 0.14209999999729916,
+            "restoreMs": 1.3912000000054832,
+            "totalMs": 1.5333000000027823
+          },
+          {
+            "decodeMs": 0.11490000000048894,
+            "restoreMs": 2.2717000000047847,
+            "totalMs": 2.3866000000052736
+          },
+          {
+            "decodeMs": 0.1275999999998021,
+            "restoreMs": 1.3061999999990803,
+            "totalMs": 1.4337999999988824
+          },
+          {
+            "decodeMs": 0.21459999999933643,
+            "restoreMs": 2.1957000000038533,
+            "totalMs": 2.41030000000319
+          },
+          {
+            "decodeMs": 0.2433000000019092,
+            "restoreMs": 3.133799999995972,
+            "totalMs": 3.3770999999978812
+          },
+          {
+            "decodeMs": 0.26269999999931315,
+            "restoreMs": 7.002899999999499,
+            "totalMs": 7.265599999998813
+          },
+          {
+            "decodeMs": 0.15220000000408618,
+            "restoreMs": 9.11030000000028,
+            "totalMs": 9.262500000004366
+          },
+          {
+            "decodeMs": 0.12529999999969732,
+            "restoreMs": 1.4269999999960419,
+            "totalMs": 1.5522999999957392
+          },
+          {
+            "decodeMs": 0.1385999999984051,
+            "restoreMs": 1.6171999999933178,
+            "totalMs": 1.7557999999917229
+          },
+          {
+            "decodeMs": 0.10710000000108266,
+            "restoreMs": 1.2866999999969266,
+            "totalMs": 1.3937999999980093
+          },
+          {
+            "decodeMs": 0.0864000000001397,
+            "restoreMs": 1.327499999999418,
+            "totalMs": 1.4138999999995576
+          },
+          {
+            "decodeMs": 0.12369999999646097,
+            "restoreMs": 1.3418000000019674,
+            "totalMs": 1.4654999999984284
+          },
+          {
+            "decodeMs": 1.5543000000034226,
+            "restoreMs": 3.14709999999468,
+            "totalMs": 4.701399999998102
+          },
+          {
+            "decodeMs": 0.12810000000172295,
+            "restoreMs": 1.4306999999971595,
+            "totalMs": 1.5587999999988824
+          },
+          {
+            "decodeMs": 0.17050000000017462,
+            "restoreMs": 2.2894999999989523,
+            "totalMs": 2.459999999999127
+          },
+          {
+            "decodeMs": 0.2393000000010943,
+            "restoreMs": 2.7036000000007334,
+            "totalMs": 2.9429000000018277
+          },
+          {
+            "decodeMs": 0.1610000000000582,
+            "restoreMs": 2.8185000000012224,
+            "totalMs": 2.9795000000012806
+          },
+          {
+            "decodeMs": 0.3096000000005006,
+            "restoreMs": 1.9882999999972526,
+            "totalMs": 2.297899999997753
+          },
+          {
+            "decodeMs": 0.22069999999803258,
+            "restoreMs": 1.5953000000008615,
+            "totalMs": 1.815999999998894
+          },
+          {
+            "decodeMs": 0.13109999999869615,
+            "restoreMs": 1.5353000000031898,
+            "totalMs": 1.666400000001886
+          },
+          {
+            "decodeMs": 0.1360999999960768,
+            "restoreMs": 1.4795000000012806,
+            "totalMs": 1.6155999999973574
+          },
+          {
+            "decodeMs": 0.4154000000053202,
+            "restoreMs": 2.008399999998801,
+            "totalMs": 2.423800000004121
+          },
+          {
+            "decodeMs": 0.1062000000019907,
+            "restoreMs": 1.2900000000008731,
+            "totalMs": 1.3962000000028638
+          },
+          {
+            "decodeMs": 0.08509999999660067,
+            "restoreMs": 1.3049000000028173,
+            "totalMs": 1.389999999999418
+          },
+          {
+            "decodeMs": 0.13450000000011642,
+            "restoreMs": 1.6988999999957741,
+            "totalMs": 1.8333999999958905
+          },
+          {
+            "decodeMs": 0.15750000000116415,
+            "restoreMs": 1.4198000000033062,
+            "totalMs": 1.5773000000044703
+          },
+          {
+            "decodeMs": 0.6805000000022119,
+            "restoreMs": 1.8005000000048312,
+            "totalMs": 2.481000000007043
+          },
+          {
+            "decodeMs": 0.25909999999566935,
+            "restoreMs": 1.4244000000035157,
+            "totalMs": 1.683499999999185
+          },
+          {
+            "decodeMs": 0.12419999999838183,
+            "restoreMs": 1.4122999999963213,
+            "totalMs": 1.536499999994703
+          },
+          {
+            "decodeMs": 0.11439999999856809,
+            "restoreMs": 1.6454999999987194,
+            "totalMs": 1.7598999999972875
+          },
+          {
+            "decodeMs": 0.13360000000102445,
+            "restoreMs": 1.3118000000031316,
+            "totalMs": 1.445400000004156
+          },
+          {
+            "decodeMs": 0.3245999999999185,
+            "restoreMs": 1.9970000000030268,
+            "totalMs": 2.3216000000029453
+          },
+          {
+            "decodeMs": 0.17770000000018626,
+            "restoreMs": 1.4075000000011642,
+            "totalMs": 1.5852000000013504
+          },
+          {
+            "decodeMs": 0.12109999999665888,
+            "restoreMs": 1.4496999999973923,
+            "totalMs": 1.5707999999940512
+          },
+          {
+            "decodeMs": 0.13390000000072177,
+            "restoreMs": 1.8087000000014086,
+            "totalMs": 1.9426000000021304
+          },
+          {
+            "decodeMs": 0.14970000000175787,
+            "restoreMs": 1.903200000000652,
+            "totalMs": 2.05290000000241
+          },
+          {
+            "decodeMs": 0.11010000000533182,
+            "restoreMs": 1.395299999996496,
+            "totalMs": 1.5054000000018277
+          },
+          {
+            "decodeMs": 0.11569999999483116,
+            "restoreMs": 1.355600000002596,
+            "totalMs": 1.4712999999974272
+          },
+          {
+            "decodeMs": 0.11200000000098953,
+            "restoreMs": 1.4615000000048894,
+            "totalMs": 1.573500000005879
+          },
+          {
+            "decodeMs": 0.14150000000518048,
+            "restoreMs": 2.084499999997206,
+            "totalMs": 2.2260000000023865
+          },
+          {
+            "decodeMs": 0.12840000000142027,
+            "restoreMs": 3.3572999999960302,
+            "totalMs": 3.4856999999974505
+          },
+          {
+            "decodeMs": 0.13960000000224682,
+            "restoreMs": 1.8410000000003492,
+            "totalMs": 1.980600000002596
+          },
+          {
+            "decodeMs": 0.13360000000102445,
+            "restoreMs": 1.3990999999950873,
+            "totalMs": 1.5326999999961117
+          },
+          {
+            "decodeMs": 0.11419999999634456,
+            "restoreMs": 1.3672000000005937,
+            "totalMs": 1.4813999999969383
+          },
+          {
+            "decodeMs": 0.10589999999501742,
+            "restoreMs": 1.3271000000022468,
+            "totalMs": 1.4329999999972642
+          },
+          {
+            "decodeMs": 0.4310999999943306,
+            "restoreMs": 3.095600000000559,
+            "totalMs": 3.5266999999948894
+          },
+          {
+            "decodeMs": 0.17609999999694992,
+            "restoreMs": 1.8732999999992899,
+            "totalMs": 2.04939999999624
+          },
+          {
+            "decodeMs": 0.14689999999973224,
+            "restoreMs": 1.4985999999989872,
+            "totalMs": 1.6454999999987194
+          },
+          {
+            "decodeMs": 0.12230000000272412,
+            "restoreMs": 1.5058000000062748,
+            "totalMs": 1.628100000008999
+          },
+          {
+            "decodeMs": 0.1143000000010943,
+            "restoreMs": 1.3666999999986729,
+            "totalMs": 1.4809999999997672
+          },
+          {
+            "decodeMs": 0.23970000000554137,
+            "restoreMs": 1.7762000000002445,
+            "totalMs": 2.015900000005786
+          },
+          {
+            "decodeMs": 0.10229999999864958,
+            "restoreMs": 1.2741000000023632,
+            "totalMs": 1.3764000000010128
+          },
+          {
+            "decodeMs": 0.08780000000115251,
+            "restoreMs": 1.2404000000024098,
+            "totalMs": 1.3282000000035623
+          },
+          {
+            "decodeMs": 0.09590000000025611,
+            "restoreMs": 1.3902000000016415,
+            "totalMs": 1.4861000000018976
+          },
+          {
+            "decodeMs": 0.1558999999979278,
+            "restoreMs": 1.713499999998021,
+            "totalMs": 1.8693999999959487
+          },
+          {
+            "decodeMs": 0.1754000000000815,
+            "restoreMs": 1.6952000000019325,
+            "totalMs": 1.870600000002014
+          },
+          {
+            "decodeMs": 0.1370999999999185,
+            "restoreMs": 1.3822000000000116,
+            "totalMs": 1.5192999999999302
+          },
+          {
+            "decodeMs": 0.19610000000102445,
+            "restoreMs": 1.7030999999988126,
+            "totalMs": 1.899199999999837
+          },
+          {
+            "decodeMs": 0.10139999999955762,
+            "restoreMs": 1.2514999999984866,
+            "totalMs": 1.3528999999980442
+          },
+          {
+            "decodeMs": 0.0812999999980093,
+            "restoreMs": 2.078799999995681,
+            "totalMs": 2.1600999999936903
+          },
+          {
+            "decodeMs": 0.11529999999766005,
+            "restoreMs": 1.3170000000027358,
+            "totalMs": 1.4323000000003958
+          },
+          {
+            "decodeMs": 0.14959999999700813,
+            "restoreMs": 1.71480000000156,
+            "totalMs": 1.864399999998568
+          },
+          {
+            "decodeMs": 0.15200000000186265,
+            "restoreMs": 1.5239999999976135,
+            "totalMs": 1.6759999999994761
+          },
+          {
+            "decodeMs": 0.13060000000405125,
+            "restoreMs": 1.5815000000002328,
+            "totalMs": 1.712100000004284
+          },
+          {
+            "decodeMs": 0.7273000000059255,
+            "restoreMs": 2.7563999999983935,
+            "totalMs": 3.483700000004319
+          },
+          {
+            "decodeMs": 0.11720000000059372,
+            "restoreMs": 1.2446000000054482,
+            "totalMs": 1.361800000006042
+          },
+          {
+            "decodeMs": 0.08150000000023283,
+            "restoreMs": 1.2147000000040862,
+            "totalMs": 1.296200000004319
+          },
+          {
+            "decodeMs": 0.08239999999932479,
+            "restoreMs": 1.198500000005879,
+            "totalMs": 1.2809000000052038
+          },
+          {
+            "decodeMs": 0.07729999999719439,
+            "restoreMs": 1.2498999999952503,
+            "totalMs": 1.3271999999924446
+          },
+          {
+            "decodeMs": 0.5434000000022934,
+            "restoreMs": 2.8222999999998137,
+            "totalMs": 3.365700000002107
+          },
+          {
+            "decodeMs": 0.2102999999988242,
+            "restoreMs": 1.7494999999980791,
+            "totalMs": 1.9597999999969034
+          },
+          {
+            "decodeMs": 0.15330000000540167,
+            "restoreMs": 1.9618999999947846,
+            "totalMs": 2.1152000000001863
+          },
+          {
+            "decodeMs": 0.1265999999959604,
+            "restoreMs": 1.3840999999956694,
+            "totalMs": 1.5106999999916297
+          }
+        ]
+      },
+      "historyAfterRestores": {
+        "entries": 101,
+        "availableSeconds": 10,
+        "allocatedBytes": 8388608,
+        "usedBytes": 443394,
+        "maxSeconds": 20,
+        "maxBytes": 8388608
+      }
+    },
+    {
+      "id": "tobu-tobu-girl",
+      "romId": "5d3871cae77db2287807e8914fd21f76203e73aa3fec20955489d45cb4571d8f",
+      "romBytes": 262144,
+      "ramBytes": 8192,
+      "forward": [
+        {
+          "enabled": false,
+          "elapsedMs": 5486.323699999892,
+          "tCycles": 104857600,
+          "speed": 4.556785448150006,
+          "captures": 0,
+          "finalStateSha256": "8fe3d2d72df7bd4fa938b62664052c9451c648e8f1e21c6b220c4fb4fd54e70b",
+          "pcmSha256": "4baa114945554600a7ef69f2451f670610c678514471de71c8ef3e070505ad34",
+          "pcmEnergy": 9999.972562033707,
+          "history": null
+        },
+        {
+          "enabled": true,
+          "elapsedMs": 5420.639899999995,
+          "tCycles": 104857600,
+          "speed": 4.61200161995635,
+          "captures": 251,
+          "finalStateSha256": "8fe3d2d72df7bd4fa938b62664052c9451c648e8f1e21c6b220c4fb4fd54e70b",
+          "pcmSha256": "4baa114945554600a7ef69f2451f670610c678514471de71c8ef3e070505ad34",
+          "pcmEnergy": 9999.972562033707,
+          "history": {
+            "entries": 201,
+            "availableSeconds": 20,
+            "allocatedBytes": 8388608,
+            "usedBytes": 1386426,
+            "maxSeconds": 20,
+            "maxBytes": 8388608
+          }
+        },
+        {
+          "enabled": true,
+          "elapsedMs": 5170.533200000049,
+          "tCycles": 104857600,
+          "speed": 4.835091282268483,
+          "captures": 251,
+          "finalStateSha256": "8fe3d2d72df7bd4fa938b62664052c9451c648e8f1e21c6b220c4fb4fd54e70b",
+          "pcmSha256": "4baa114945554600a7ef69f2451f670610c678514471de71c8ef3e070505ad34",
+          "pcmEnergy": 9999.972562033707,
+          "history": {
+            "entries": 201,
+            "availableSeconds": 20,
+            "allocatedBytes": 8388608,
+            "usedBytes": 1386426,
+            "maxSeconds": 20,
+            "maxBytes": 8388608
+          }
+        },
+        {
+          "enabled": false,
+          "elapsedMs": 5052.959100000007,
+          "tCycles": 104857600,
+          "speed": 4.947595954220165,
+          "captures": 0,
+          "finalStateSha256": "8fe3d2d72df7bd4fa938b62664052c9451c648e8f1e21c6b220c4fb4fd54e70b",
+          "pcmSha256": "4baa114945554600a7ef69f2451f670610c678514471de71c8ef3e070505ad34",
+          "pcmEnergy": 9999.972562033707,
+          "history": null
+        },
+        {
+          "enabled": false,
+          "elapsedMs": 5081.360099999991,
+          "tCycles": 104857600,
+          "speed": 4.9199425956841845,
+          "captures": 0,
+          "finalStateSha256": "8fe3d2d72df7bd4fa938b62664052c9451c648e8f1e21c6b220c4fb4fd54e70b",
+          "pcmSha256": "4baa114945554600a7ef69f2451f670610c678514471de71c8ef3e070505ad34",
+          "pcmEnergy": 9999.972562033707,
+          "history": null
+        },
+        {
+          "enabled": true,
+          "elapsedMs": 4998.474900000001,
+          "tCycles": 104857600,
+          "speed": 5.001525565327935,
+          "captures": 251,
+          "finalStateSha256": "8fe3d2d72df7bd4fa938b62664052c9451c648e8f1e21c6b220c4fb4fd54e70b",
+          "pcmSha256": "4baa114945554600a7ef69f2451f670610c678514471de71c8ef3e070505ad34",
+          "pcmEnergy": 9999.972562033707,
+          "history": {
+            "entries": 201,
+            "availableSeconds": 20,
+            "allocatedBytes": 8388608,
+            "usedBytes": 1386426,
+            "maxSeconds": 20,
+            "maxBytes": 8388608
+          }
+        },
+        {
+          "enabled": true,
+          "elapsedMs": 5103.334799999822,
+          "tCycles": 104857600,
+          "speed": 4.898757573185454,
+          "captures": 251,
+          "finalStateSha256": "8fe3d2d72df7bd4fa938b62664052c9451c648e8f1e21c6b220c4fb4fd54e70b",
+          "pcmSha256": "4baa114945554600a7ef69f2451f670610c678514471de71c8ef3e070505ad34",
+          "pcmEnergy": 9999.972562033707,
+          "history": {
+            "entries": 201,
+            "availableSeconds": 20,
+            "allocatedBytes": 8388608,
+            "usedBytes": 1386426,
+            "maxSeconds": 20,
+            "maxBytes": 8388608
+          }
+        },
+        {
+          "enabled": false,
+          "elapsedMs": 5180.334299999828,
+          "tCycles": 104857600,
+          "speed": 4.825943375893875,
+          "captures": 0,
+          "finalStateSha256": "8fe3d2d72df7bd4fa938b62664052c9451c648e8f1e21c6b220c4fb4fd54e70b",
+          "pcmSha256": "4baa114945554600a7ef69f2451f670610c678514471de71c8ef3e070505ad34",
+          "pcmEnergy": 9999.972562033707,
+          "history": null
+        },
+        {
+          "enabled": false,
+          "elapsedMs": 5063.8197999999975,
+          "tCycles": 104857600,
+          "speed": 4.9369845269770485,
+          "captures": 0,
+          "finalStateSha256": "8fe3d2d72df7bd4fa938b62664052c9451c648e8f1e21c6b220c4fb4fd54e70b",
+          "pcmSha256": "4baa114945554600a7ef69f2451f670610c678514471de71c8ef3e070505ad34",
+          "pcmEnergy": 9999.972562033707,
+          "history": null
+        },
+        {
+          "enabled": true,
+          "elapsedMs": 5131.124499999991,
+          "tCycles": 104857600,
+          "speed": 4.872226351163385,
+          "captures": 251,
+          "finalStateSha256": "8fe3d2d72df7bd4fa938b62664052c9451c648e8f1e21c6b220c4fb4fd54e70b",
+          "pcmSha256": "4baa114945554600a7ef69f2451f670610c678514471de71c8ef3e070505ad34",
+          "pcmEnergy": 9999.972562033707,
+          "history": {
+            "entries": 201,
+            "availableSeconds": 20,
+            "allocatedBytes": 8388608,
+            "usedBytes": 1386426,
+            "maxSeconds": 20,
+            "maxBytes": 8388608
+          }
+        }
+      ],
+      "forwardSummary": {
+        "disabledMedianSpeed": 4.9199425956841845,
+        "enabledMedianSpeed": 4.872226351163385,
+        "disabledMedianMs": 5081.360099999991,
+        "enabledMedianMs": 5131.124499999991,
+        "overheadPercent": 0.979351965234665,
+        "stateAndPcmIdentical": true
+      },
+      "historyBeforeRestores": {
+        "entries": 201,
+        "availableSeconds": 20,
+        "allocatedBytes": 8388608,
+        "usedBytes": 1386426,
+        "maxSeconds": 20,
+        "maxBytes": 8388608
+      },
+      "restores": {
+        "count": 100,
+        "medianDecodeMs": 0.1558500000028289,
+        "p95DecodeMs": 0.4621999999944819,
+        "medianRestoreMs": 2.893949999990582,
+        "p95RestoreMs": 3.8082999999896856,
+        "medianTotalMs": 3.0680500000016764,
+        "p95TotalMs": 4.36260000000766,
+        "samples": [
+          {
+            "decodeMs": 0.41150000000197906,
+            "restoreMs": 3.3166999999957625,
+            "totalMs": 3.7281999999977415
+          },
+          {
+            "decodeMs": 0.2666999999928521,
+            "restoreMs": 2.6441000000049826,
+            "totalMs": 2.9107999999978347
+          },
+          {
+            "decodeMs": 0.5209000000031665,
+            "restoreMs": 2.6529999999911524,
+            "totalMs": 3.173899999994319
+          },
+          {
+            "decodeMs": 0.24590000000898726,
+            "restoreMs": 2.684900000007474,
+            "totalMs": 2.930800000016461
+          },
+          {
+            "decodeMs": 0.35199999999895226,
+            "restoreMs": 3.0478000000002794,
+            "totalMs": 3.3997999999992317
+          },
+          {
+            "decodeMs": 0.8723000000027241,
+            "restoreMs": 3.490300000004936,
+            "totalMs": 4.36260000000766
+          },
+          {
+            "decodeMs": 0.22550000000046566,
+            "restoreMs": 3.0549000000028173,
+            "totalMs": 3.280400000003283
+          },
+          {
+            "decodeMs": 0.16470000000845175,
+            "restoreMs": 3.208599999998114,
+            "totalMs": 3.373300000006566
+          },
+          {
+            "decodeMs": 0.15109999998821877,
+            "restoreMs": 3.0417000000015832,
+            "totalMs": 3.192799999989802
+          },
+          {
+            "decodeMs": 0.1765999999915948,
+            "restoreMs": 2.764000000010128,
+            "totalMs": 2.940600000001723
+          },
+          {
+            "decodeMs": 0.1499000000039814,
+            "restoreMs": 2.9619999999995343,
+            "totalMs": 3.1119000000035157
+          },
+          {
+            "decodeMs": 0.14620000000286382,
+            "restoreMs": 2.6739999999990687,
+            "totalMs": 2.8202000000019325
+          },
+          {
+            "decodeMs": 0.13599999999860302,
+            "restoreMs": 2.708700000002864,
+            "totalMs": 2.844700000001467
+          },
+          {
+            "decodeMs": 0.1416999999928521,
+            "restoreMs": 2.974499999996624,
+            "totalMs": 3.116199999989476
+          },
+          {
+            "decodeMs": 0.14660000000731088,
+            "restoreMs": 3.1224999999976717,
+            "totalMs": 3.2691000000049826
+          },
+          {
+            "decodeMs": 0.36920000000100117,
+            "restoreMs": 3.23059999999532,
+            "totalMs": 3.5997999999963213
+          },
+          {
+            "decodeMs": 0.1337000000057742,
+            "restoreMs": 2.483699999997043,
+            "totalMs": 2.6174000000028173
+          },
+          {
+            "decodeMs": 0.1416999999928521,
+            "restoreMs": 2.301500000001397,
+            "totalMs": 2.443199999994249
+          },
+          {
+            "decodeMs": 0.1275000000023283,
+            "restoreMs": 3.3077999999950407,
+            "totalMs": 3.435299999997369
+          },
+          {
+            "decodeMs": 0.15720000000146683,
+            "restoreMs": 3.2127999999938766,
+            "totalMs": 3.3699999999953434
+          },
+          {
+            "decodeMs": 0.19130000000586733,
+            "restoreMs": 2.727100000003702,
+            "totalMs": 2.9184000000095693
+          },
+          {
+            "decodeMs": 0.1723000000056345,
+            "restoreMs": 2.6340999999956694,
+            "totalMs": 2.806400000001304
+          },
+          {
+            "decodeMs": 0.15450000000419095,
+            "restoreMs": 2.535700000007637,
+            "totalMs": 2.690200000011828
+          },
+          {
+            "decodeMs": 0.18340000000898726,
+            "restoreMs": 3.095500000010361,
+            "totalMs": 3.2789000000193482
+          },
+          {
+            "decodeMs": 0.327900000003865,
+            "restoreMs": 4.107099999993807,
+            "totalMs": 4.434999999997672
+          },
+          {
+            "decodeMs": 0.24610000000393484,
+            "restoreMs": 3.1854000000021188,
+            "totalMs": 3.4315000000060536
+          },
+          {
+            "decodeMs": 0.10960000001068693,
+            "restoreMs": 2.718399999997928,
+            "totalMs": 2.8280000000086147
+          },
+          {
+            "decodeMs": 0.1941999999980908,
+            "restoreMs": 3.071299999995972,
+            "totalMs": 3.265499999994063
+          },
+          {
+            "decodeMs": 0.1653000000078464,
+            "restoreMs": 2.8466999999945983,
+            "totalMs": 3.0120000000024447
+          },
+          {
+            "decodeMs": 0.12129999999888241,
+            "restoreMs": 2.6722000000008848,
+            "totalMs": 2.793499999999767
+          },
+          {
+            "decodeMs": 0.15109999998821877,
+            "restoreMs": 2.6414999999979045,
+            "totalMs": 2.7925999999861233
+          },
+          {
+            "decodeMs": 0.11309999998775311,
+            "restoreMs": 2.661000000007334,
+            "totalMs": 2.7740999999950873
+          },
+          {
+            "decodeMs": 0.30589999999210704,
+            "restoreMs": 3.46129999999539,
+            "totalMs": 3.767199999987497
+          },
+          {
+            "decodeMs": 0.1474000000016531,
+            "restoreMs": 2.916800000006333,
+            "totalMs": 3.064200000007986
+          },
+          {
+            "decodeMs": 0.19689999999536667,
+            "restoreMs": 4.277600000001257,
+            "totalMs": 4.474499999996624
+          },
+          {
+            "decodeMs": 0.11809999999240972,
+            "restoreMs": 2.8695000000006985,
+            "totalMs": 2.987599999993108
+          },
+          {
+            "decodeMs": 0.15580000000772998,
+            "restoreMs": 3.134299999990617,
+            "totalMs": 3.290099999998347
+          },
+          {
+            "decodeMs": 0.16990000000805594,
+            "restoreMs": 3.0406999999977415,
+            "totalMs": 3.2106000000057975
+          },
+          {
+            "decodeMs": 0.12169999998877756,
+            "restoreMs": 2.9614000000001397,
+            "totalMs": 3.0830999999889173
+          },
+          {
+            "decodeMs": 0.11490000000048894,
+            "restoreMs": 2.749500000005355,
+            "totalMs": 2.864400000005844
+          },
+          {
+            "decodeMs": 0.11190000000351574,
+            "restoreMs": 3.3392000000021653,
+            "totalMs": 3.451100000005681
+          },
+          {
+            "decodeMs": 0.19999999999708962,
+            "restoreMs": 3.493900000001304,
+            "totalMs": 3.6938999999983935
+          },
+          {
+            "decodeMs": 0.13899999999557622,
+            "restoreMs": 2.814300000012736,
+            "totalMs": 2.953300000008312
+          },
+          {
+            "decodeMs": 0.132499999992433,
+            "restoreMs": 2.7603000000090105,
+            "totalMs": 2.8928000000014435
+          },
+          {
+            "decodeMs": 0.2726999999867985,
+            "restoreMs": 2.8052999999927124,
+            "totalMs": 3.077999999979511
+          },
+          {
+            "decodeMs": 0.21210000000428408,
+            "restoreMs": 2.9909000000043306,
+            "totalMs": 3.2030000000086147
+          },
+          {
+            "decodeMs": 0.14609999999811407,
+            "restoreMs": 2.6837999999988824,
+            "totalMs": 2.8298999999969965
+          },
+          {
+            "decodeMs": 0.15929999999934807,
+            "restoreMs": 2.6353000000090105,
+            "totalMs": 2.7946000000083586
+          },
+          {
+            "decodeMs": 0.1437000000005355,
+            "restoreMs": 2.7105000000010477,
+            "totalMs": 2.8542000000015832
+          },
+          {
+            "decodeMs": 0.13440000000991859,
+            "restoreMs": 2.6389000000053784,
+            "totalMs": 2.773300000015297
+          },
+          {
+            "decodeMs": 0.208600000012666,
+            "restoreMs": 3.849399999991874,
+            "totalMs": 4.05800000000454
+          },
+          {
+            "decodeMs": 0.14530000000377186,
+            "restoreMs": 2.9037000000098487,
+            "totalMs": 3.0490000000136206
+          },
+          {
+            "decodeMs": 0.15880000000470318,
+            "restoreMs": 2.9725000000034925,
+            "totalMs": 3.1313000000081956
+          },
+          {
+            "decodeMs": 0.6220000000030268,
+            "restoreMs": 4.640800000008312,
+            "totalMs": 5.262800000011339
+          },
+          {
+            "decodeMs": 0.23510000000533182,
+            "restoreMs": 3.2823999999964144,
+            "totalMs": 3.5175000000017462
+          },
+          {
+            "decodeMs": 0.1929999999993015,
+            "restoreMs": 3.45329999999376,
+            "totalMs": 3.6462999999930616
+          },
+          {
+            "decodeMs": 0.15619999999762513,
+            "restoreMs": 3.1080000000074506,
+            "totalMs": 3.2642000000050757
+          },
+          {
+            "decodeMs": 0.168599999989965,
+            "restoreMs": 3.242499999993015,
+            "totalMs": 3.41109999998298
+          },
+          {
+            "decodeMs": 0.13490000000456348,
+            "restoreMs": 3.3905000000086147,
+            "totalMs": 3.525400000013178
+          },
+          {
+            "decodeMs": 0.1790000000037253,
+            "restoreMs": 3.283900000009453,
+            "totalMs": 3.462900000013178
+          },
+          {
+            "decodeMs": 0.21399999999266583,
+            "restoreMs": 3.114000000001397,
+            "totalMs": 3.327999999994063
+          },
+          {
+            "decodeMs": 0.1606000000028871,
+            "restoreMs": 2.8990999999950873,
+            "totalMs": 3.0596999999979744
+          },
+          {
+            "decodeMs": 0.13530000000901055,
+            "restoreMs": 3.0504999999975553,
+            "totalMs": 3.185800000006566
+          },
+          {
+            "decodeMs": 0.5479000000050291,
+            "restoreMs": 2.8135000000038417,
+            "totalMs": 3.361400000008871
+          },
+          {
+            "decodeMs": 0.14130000000295695,
+            "restoreMs": 2.900500000003376,
+            "totalMs": 3.041800000006333
+          },
+          {
+            "decodeMs": 0.13460000000486616,
+            "restoreMs": 2.4695000000065193,
+            "totalMs": 2.6041000000113854
+          },
+          {
+            "decodeMs": 0.11830000000190921,
+            "restoreMs": 2.356099999989965,
+            "totalMs": 2.474399999991874
+          },
+          {
+            "decodeMs": 0.09949999999662396,
+            "restoreMs": 2.508700000005774,
+            "totalMs": 2.608200000002398
+          },
+          {
+            "decodeMs": 0.1735999999946216,
+            "restoreMs": 2.5279999999911524,
+            "totalMs": 2.701599999985774
+          },
+          {
+            "decodeMs": 0.15780000000086147,
+            "restoreMs": 2.4250000000029104,
+            "totalMs": 2.582800000003772
+          },
+          {
+            "decodeMs": 0.15579999999317806,
+            "restoreMs": 2.4068000000115717,
+            "totalMs": 2.5626000000047497
+          },
+          {
+            "decodeMs": 0.2059000000008382,
+            "restoreMs": 2.9992999999958556,
+            "totalMs": 3.205199999996694
+          },
+          {
+            "decodeMs": 0.1650999999983469,
+            "restoreMs": 2.5557000000117114,
+            "totalMs": 2.7208000000100583
+          },
+          {
+            "decodeMs": 1.6722999999910826,
+            "restoreMs": 3.072200000009616,
+            "totalMs": 4.7445000000006985
+          },
+          {
+            "decodeMs": 0.16220000000612345,
+            "restoreMs": 2.535100000008242,
+            "totalMs": 2.6973000000143657
+          },
+          {
+            "decodeMs": 0.13280000000668224,
+            "restoreMs": 3.8082999999896856,
+            "totalMs": 3.941099999996368
+          },
+          {
+            "decodeMs": 0.14930000000458676,
+            "restoreMs": 2.6938999999983935,
+            "totalMs": 2.8432000000029802
+          },
+          {
+            "decodeMs": 0.1371999999973923,
+            "restoreMs": 3.5133000000059837,
+            "totalMs": 3.650500000003376
+          },
+          {
+            "decodeMs": 0.13599999999860302,
+            "restoreMs": 2.8333999999886146,
+            "totalMs": 2.9693999999872176
+          },
+          {
+            "decodeMs": 0.13100000000849832,
+            "restoreMs": 2.8887999999860767,
+            "totalMs": 3.019799999994575
+          },
+          {
+            "decodeMs": 0.13979999998991843,
+            "restoreMs": 3.1230000000068685,
+            "totalMs": 3.262799999996787
+          },
+          {
+            "decodeMs": 0.12660000000323635,
+            "restoreMs": 2.8070000000006985,
+            "totalMs": 2.933600000003935
+          },
+          {
+            "decodeMs": 0.4621999999944819,
+            "restoreMs": 4.576000000000931,
+            "totalMs": 5.038199999995413
+          },
+          {
+            "decodeMs": 0.1713000000017928,
+            "restoreMs": 2.9363000000012107,
+            "totalMs": 3.1076000000030035
+          },
+          {
+            "decodeMs": 0.1987000000081025,
+            "restoreMs": 2.7779000000009546,
+            "totalMs": 2.976600000009057
+          },
+          {
+            "decodeMs": 0.1300000000046566,
+            "restoreMs": 2.690499999996973,
+            "totalMs": 2.82050000000163
+          },
+          {
+            "decodeMs": 0.11559999999008141,
+            "restoreMs": 3.2674999999871943,
+            "totalMs": 3.3830999999772757
+          },
+          {
+            "decodeMs": 0.12330000000656582,
+            "restoreMs": 2.681299999996554,
+            "totalMs": 2.80460000000312
+          },
+          {
+            "decodeMs": 0.20810000000346918,
+            "restoreMs": 2.8185000000084983,
+            "totalMs": 3.0266000000119675
+          },
+          {
+            "decodeMs": 0.1558999999979278,
+            "restoreMs": 2.6934000000037486,
+            "totalMs": 2.8493000000016764
+          },
+          {
+            "decodeMs": 0.1177999999927124,
+            "restoreMs": 2.810700000001816,
+            "totalMs": 2.9284999999945285
+          },
+          {
+            "decodeMs": 0.151400000002468,
+            "restoreMs": 3.122799999997369,
+            "totalMs": 3.274199999999837
+          },
+          {
+            "decodeMs": 0.15700000000651926,
+            "restoreMs": 3.1472999999969034,
+            "totalMs": 3.3043000000034226
+          },
+          {
+            "decodeMs": 0.10919999999168795,
+            "restoreMs": 2.4373000000050524,
+            "totalMs": 2.5464999999967404
+          },
+          {
+            "decodeMs": 0.11710000000311993,
+            "restoreMs": 2.9547999999922467,
+            "totalMs": 3.0718999999953667
+          },
+          {
+            "decodeMs": 0.1170000000129221,
+            "restoreMs": 2.3941000000049826,
+            "totalMs": 2.5111000000179047
+          },
+          {
+            "decodeMs": 0.15030000000842847,
+            "restoreMs": 2.732899999988149,
+            "totalMs": 2.8831999999965774
+          },
+          {
+            "decodeMs": 0.17309999999997672,
+            "restoreMs": 2.757500000006985,
+            "totalMs": 2.9306000000069616
+          },
+          {
+            "decodeMs": 0.23440000000118744,
+            "restoreMs": 2.8825999999971827,
+            "totalMs": 3.11699999999837
+          },
+          {
+            "decodeMs": 0.11959999999089632,
+            "restoreMs": 2.579200000007404,
+            "totalMs": 2.6987999999983003
+          }
+        ]
+      },
+      "historyAfterRestores": {
+        "entries": 101,
+        "availableSeconds": 10,
+        "allocatedBytes": 8388608,
+        "usedBytes": 870459,
+        "maxSeconds": 20,
+        "maxBytes": 8388608
+      }
+    },
+    {
+      "id": "mbc1-2mib",
+      "romId": "3de87de349dfda035ce1db96be767be34ad7d9a7d8f7b8381a003d57df7e70e7",
+      "romBytes": 2097152,
+      "ramBytes": 8192,
+      "forward": [
+        {
+          "enabled": false,
+          "elapsedMs": 3967.9423000000825,
+          "tCycles": 104857600,
+          "speed": 6.300494843385066,
+          "captures": 0,
+          "finalStateSha256": "7aca271450dbaf5bcb5c8253e6c66ec5b23f44371f7933eb05c871bda4f9db9a",
+          "pcmSha256": "357f2e9f18332520964ad74d3ea22adff3f72a709b6a9307269da018a095abd3",
+          "pcmEnergy": 0,
+          "history": null
+        },
+        {
+          "enabled": true,
+          "elapsedMs": 3561.526199999964,
+          "tCycles": 104857600,
+          "speed": 7.019462611281718,
+          "captures": 251,
+          "finalStateSha256": "7aca271450dbaf5bcb5c8253e6c66ec5b23f44371f7933eb05c871bda4f9db9a",
+          "pcmSha256": "357f2e9f18332520964ad74d3ea22adff3f72a709b6a9307269da018a095abd3",
+          "pcmEnergy": 0,
+          "history": {
+            "entries": 201,
+            "availableSeconds": 20,
+            "allocatedBytes": 8388608,
+            "usedBytes": 507904,
+            "maxSeconds": 20,
+            "maxBytes": 8388608
+          }
+        },
+        {
+          "enabled": true,
+          "elapsedMs": 4190.88370000002,
+          "tCycles": 104857600,
+          "speed": 5.965328983001815,
+          "captures": 251,
+          "finalStateSha256": "7aca271450dbaf5bcb5c8253e6c66ec5b23f44371f7933eb05c871bda4f9db9a",
+          "pcmSha256": "357f2e9f18332520964ad74d3ea22adff3f72a709b6a9307269da018a095abd3",
+          "pcmEnergy": 0,
+          "history": {
+            "entries": 201,
+            "availableSeconds": 20,
+            "allocatedBytes": 8388608,
+            "usedBytes": 507904,
+            "maxSeconds": 20,
+            "maxBytes": 8388608
+          }
+        },
+        {
+          "enabled": false,
+          "elapsedMs": 3042.0296999999555,
+          "tCycles": 104857600,
+          "speed": 8.218197212210113,
+          "captures": 0,
+          "finalStateSha256": "7aca271450dbaf5bcb5c8253e6c66ec5b23f44371f7933eb05c871bda4f9db9a",
+          "pcmSha256": "357f2e9f18332520964ad74d3ea22adff3f72a709b6a9307269da018a095abd3",
+          "pcmEnergy": 0,
+          "history": null
+        },
+        {
+          "enabled": false,
+          "elapsedMs": 3045.38000000015,
+          "tCycles": 104857600,
+          "speed": 8.209156164419142,
+          "captures": 0,
+          "finalStateSha256": "7aca271450dbaf5bcb5c8253e6c66ec5b23f44371f7933eb05c871bda4f9db9a",
+          "pcmSha256": "357f2e9f18332520964ad74d3ea22adff3f72a709b6a9307269da018a095abd3",
+          "pcmEnergy": 0,
+          "history": null
+        },
+        {
+          "enabled": true,
+          "elapsedMs": 3200.1663000001863,
+          "tCycles": 104857600,
+          "speed": 7.81209401523869,
+          "captures": 251,
+          "finalStateSha256": "7aca271450dbaf5bcb5c8253e6c66ec5b23f44371f7933eb05c871bda4f9db9a",
+          "pcmSha256": "357f2e9f18332520964ad74d3ea22adff3f72a709b6a9307269da018a095abd3",
+          "pcmEnergy": 0,
+          "history": {
+            "entries": 201,
+            "availableSeconds": 20,
+            "allocatedBytes": 8388608,
+            "usedBytes": 507904,
+            "maxSeconds": 20,
+            "maxBytes": 8388608
+          }
+        },
+        {
+          "enabled": true,
+          "elapsedMs": 3778.7691000001214,
+          "tCycles": 104857600,
+          "speed": 6.615910985405061,
+          "captures": 251,
+          "finalStateSha256": "7aca271450dbaf5bcb5c8253e6c66ec5b23f44371f7933eb05c871bda4f9db9a",
+          "pcmSha256": "357f2e9f18332520964ad74d3ea22adff3f72a709b6a9307269da018a095abd3",
+          "pcmEnergy": 0,
+          "history": {
+            "entries": 201,
+            "availableSeconds": 20,
+            "allocatedBytes": 8388608,
+            "usedBytes": 507904,
+            "maxSeconds": 20,
+            "maxBytes": 8388608
+          }
+        },
+        {
+          "enabled": false,
+          "elapsedMs": 3701.4570999999996,
+          "tCycles": 104857600,
+          "speed": 6.75409692037225,
+          "captures": 0,
+          "finalStateSha256": "7aca271450dbaf5bcb5c8253e6c66ec5b23f44371f7933eb05c871bda4f9db9a",
+          "pcmSha256": "357f2e9f18332520964ad74d3ea22adff3f72a709b6a9307269da018a095abd3",
+          "pcmEnergy": 0,
+          "history": null
+        },
+        {
+          "enabled": false,
+          "elapsedMs": 4069.615499999665,
+          "tCycles": 104857600,
+          "speed": 6.143086490603856,
+          "captures": 0,
+          "finalStateSha256": "7aca271450dbaf5bcb5c8253e6c66ec5b23f44371f7933eb05c871bda4f9db9a",
+          "pcmSha256": "357f2e9f18332520964ad74d3ea22adff3f72a709b6a9307269da018a095abd3",
+          "pcmEnergy": 0,
+          "history": null
+        },
+        {
+          "enabled": true,
+          "elapsedMs": 3452.114899999695,
+          "tCycles": 104857600,
+          "speed": 7.241937399013633,
+          "captures": 251,
+          "finalStateSha256": "7aca271450dbaf5bcb5c8253e6c66ec5b23f44371f7933eb05c871bda4f9db9a",
+          "pcmSha256": "357f2e9f18332520964ad74d3ea22adff3f72a709b6a9307269da018a095abd3",
+          "pcmEnergy": 0,
+          "history": {
+            "entries": 201,
+            "availableSeconds": 20,
+            "allocatedBytes": 8388608,
+            "usedBytes": 507904,
+            "maxSeconds": 20,
+            "maxBytes": 8388608
+          }
+        }
+      ],
+      "forwardSummary": {
+        "disabledMedianSpeed": 6.75409692037225,
+        "enabledMedianSpeed": 7.019462611281718,
+        "disabledMedianMs": 3701.4570999999996,
+        "enabledMedianMs": 3561.526199999964,
+        "overheadPercent": -3.7804274430206397,
+        "stateAndPcmIdentical": true
+      },
+      "historyBeforeRestores": {
+        "entries": 201,
+        "availableSeconds": 20,
+        "allocatedBytes": 8388608,
+        "usedBytes": 507904,
+        "maxSeconds": 20,
+        "maxBytes": 8388608
+      },
+      "restores": {
+        "count": 100,
+        "medianDecodeMs": 0.1288499999936903,
+        "p95DecodeMs": 0.4098999999987427,
+        "medianRestoreMs": 13.15734999999404,
+        "p95RestoreMs": 14.841199999995297,
+        "medianTotalMs": 13.325400000001537,
+        "p95TotalMs": 15.105599999980768,
+        "samples": [
+          {
+            "decodeMs": 0.3030999999900814,
+            "restoreMs": 13.852000000013504,
+            "totalMs": 14.155100000003586
+          },
+          {
+            "decodeMs": 0.4501999999920372,
+            "restoreMs": 15.08410000000731,
+            "totalMs": 15.534299999999348
+          },
+          {
+            "decodeMs": 0.4604999999864958,
+            "restoreMs": 14.597099999984493,
+            "totalMs": 15.05759999997099
+          },
+          {
+            "decodeMs": 0.15979999999399297,
+            "restoreMs": 12.665500000002794,
+            "totalMs": 12.825299999996787
+          },
+          {
+            "decodeMs": 0.24790000001667067,
+            "restoreMs": 12.917099999991478,
+            "totalMs": 13.165000000008149
+          },
+          {
+            "decodeMs": 0.5205999999889173,
+            "restoreMs": 14.841199999995297,
+            "totalMs": 15.361799999984214
+          },
+          {
+            "decodeMs": 0.1608000000123866,
+            "restoreMs": 13.153300000005402,
+            "totalMs": 13.314100000017788
+          },
+          {
+            "decodeMs": 0.11619999998947605,
+            "restoreMs": 12.911300000007031,
+            "totalMs": 13.027499999996508
+          },
+          {
+            "decodeMs": 0.13310000000637956,
+            "restoreMs": 13.632400000002235,
+            "totalMs": 13.765500000008615
+          },
+          {
+            "decodeMs": 0.13680000000749715,
+            "restoreMs": 13.281400000007125,
+            "totalMs": 13.418200000014622
+          },
+          {
+            "decodeMs": 0.2968000000109896,
+            "restoreMs": 13.769300000014482,
+            "totalMs": 14.066100000025472
+          },
+          {
+            "decodeMs": 0.10719999999855645,
+            "restoreMs": 13.243600000016158,
+            "totalMs": 13.350800000014715
+          },
+          {
+            "decodeMs": 0.1394999999902211,
+            "restoreMs": 12.887199999997392,
+            "totalMs": 13.026699999987613
+          },
+          {
+            "decodeMs": 0.11790000001201406,
+            "restoreMs": 12.807800000009593,
+            "totalMs": 12.925700000021607
+          },
+          {
+            "decodeMs": 0.12390000000596046,
+            "restoreMs": 13.028500000014901,
+            "totalMs": 13.152400000020862
+          },
+          {
+            "decodeMs": 0.28890000001410954,
+            "restoreMs": 13.901099999988219,
+            "totalMs": 14.190000000002328
+          },
+          {
+            "decodeMs": 0.12330000000656582,
+            "restoreMs": 13.998299999977462,
+            "totalMs": 14.121599999984028
+          },
+          {
+            "decodeMs": 0.16229999999632128,
+            "restoreMs": 13.800599999987753,
+            "totalMs": 13.962899999984074
+          },
+          {
+            "decodeMs": 0.10540000000037253,
+            "restoreMs": 13.048899999994319,
+            "totalMs": 13.154299999994691
+          },
+          {
+            "decodeMs": 0.10700000001816079,
+            "restoreMs": 13.541500000021188,
+            "totalMs": 13.648500000039348
+          },
+          {
+            "decodeMs": 0.1872000000148546,
+            "restoreMs": 14.686499999981606,
+            "totalMs": 14.873699999996461
+          },
+          {
+            "decodeMs": 0.10990000001038425,
+            "restoreMs": 12.50680000000284,
+            "totalMs": 12.616700000013225
+          },
+          {
+            "decodeMs": 0.12510000000474975,
+            "restoreMs": 12.396000000007916,
+            "totalMs": 12.521100000012666
+          },
+          {
+            "decodeMs": 0.12639999997918494,
+            "restoreMs": 13.148400000005495,
+            "totalMs": 13.27479999998468
+          },
+          {
+            "decodeMs": 0.1481999999959953,
+            "restoreMs": 12.797300000005635,
+            "totalMs": 12.94550000000163
+          },
+          {
+            "decodeMs": 0.20499999998719431,
+            "restoreMs": 13.161399999982677,
+            "totalMs": 13.366399999969872
+          },
+          {
+            "decodeMs": 0.1362000000081025,
+            "restoreMs": 12.834999999991851,
+            "totalMs": 12.971199999999953
+          },
+          {
+            "decodeMs": 0.11079999999492429,
+            "restoreMs": 12.05580000000191,
+            "totalMs": 12.166599999996834
+          },
+          {
+            "decodeMs": 0.10519999999087304,
+            "restoreMs": 12.041400000016438,
+            "totalMs": 12.14660000000731
+          },
+          {
+            "decodeMs": 0.39400000000023283,
+            "restoreMs": 13.111699999979464,
+            "totalMs": 13.505699999979697
+          },
+          {
+            "decodeMs": 0.12459999998100102,
+            "restoreMs": 12.376699999993434,
+            "totalMs": 12.501299999974435
+          },
+          {
+            "decodeMs": 0.11780000000726432,
+            "restoreMs": 13.649600000004284,
+            "totalMs": 13.767400000011548
+          },
+          {
+            "decodeMs": 0.13779999999678694,
+            "restoreMs": 12.890500000008615,
+            "totalMs": 13.028300000005402
+          },
+          {
+            "decodeMs": 0.1075999999884516,
+            "restoreMs": 12.529000000009546,
+            "totalMs": 12.636599999997998
+          },
+          {
+            "decodeMs": 0.4098999999987427,
+            "restoreMs": 13.225099999981467,
+            "totalMs": 13.63499999998021
+          },
+          {
+            "decodeMs": 0.11829999997280538,
+            "restoreMs": 13.220000000001164,
+            "totalMs": 13.33829999997397
+          },
+          {
+            "decodeMs": 0.16099999999278225,
+            "restoreMs": 14.220600000000559,
+            "totalMs": 14.381599999993341
+          },
+          {
+            "decodeMs": 0.13029999998980202,
+            "restoreMs": 13.8353000000061,
+            "totalMs": 13.965599999995902
+          },
+          {
+            "decodeMs": 0.13209999998798594,
+            "restoreMs": 12.796099999977741,
+            "totalMs": 12.928199999965727
+          },
+          {
+            "decodeMs": 0.1695000000181608,
+            "restoreMs": 13.199000000022352,
+            "totalMs": 13.368500000040513
+          },
+          {
+            "decodeMs": 0.11079999999492429,
+            "restoreMs": 13.434700000012526,
+            "totalMs": 13.54550000000745
+          },
+          {
+            "decodeMs": 0.1157999999995809,
+            "restoreMs": 12.587599999998929,
+            "totalMs": 12.70339999999851
+          },
+          {
+            "decodeMs": 0.12540000001899898,
+            "restoreMs": 13.988700000016252,
+            "totalMs": 14.11410000003525
+          },
+          {
+            "decodeMs": 0.1185000000114087,
+            "restoreMs": 12.5458000000217,
+            "totalMs": 12.664300000033109
+          },
+          {
+            "decodeMs": 0.14429999998537824,
+            "restoreMs": 13.743000000016764,
+            "totalMs": 13.887300000002142
+          },
+          {
+            "decodeMs": 0.14739999998710118,
+            "restoreMs": 13.650499999988824,
+            "totalMs": 13.797899999975925
+          },
+          {
+            "decodeMs": 0.11810000002151355,
+            "restoreMs": 12.820300000021234,
+            "totalMs": 12.938400000042748
+          },
+          {
+            "decodeMs": 0.10370000000693835,
+            "restoreMs": 12.84450000000652,
+            "totalMs": 12.948200000013458
+          },
+          {
+            "decodeMs": 0.14199999999254942,
+            "restoreMs": 12.302700000000186,
+            "totalMs": 12.444699999992736
+          },
+          {
+            "decodeMs": 0.16129999997792765,
+            "restoreMs": 12.862800000002608,
+            "totalMs": 13.024099999980535
+          },
+          {
+            "decodeMs": 0.09960000001592562,
+            "restoreMs": 12.68039999998291,
+            "totalMs": 12.779999999998836
+          },
+          {
+            "decodeMs": 0.18709999998100102,
+            "restoreMs": 13.149600000004284,
+            "totalMs": 13.336699999985285
+          },
+          {
+            "decodeMs": 0.11650000000372529,
+            "restoreMs": 13.91339999999036,
+            "totalMs": 14.029899999994086
+          },
+          {
+            "decodeMs": 0.15200000000186265,
+            "restoreMs": 14.927100000000792,
+            "totalMs": 15.079100000002654
+          },
+          {
+            "decodeMs": 0.3201999999873806,
+            "restoreMs": 15.45329999999376,
+            "totalMs": 15.77349999998114
+          },
+          {
+            "decodeMs": 0.1411999999836553,
+            "restoreMs": 15.109599999996135,
+            "totalMs": 15.25079999997979
+          },
+          {
+            "decodeMs": 0.15880000000470318,
+            "restoreMs": 13.46249999999418,
+            "totalMs": 13.621299999998882
+          },
+          {
+            "decodeMs": 0.15380000000004657,
+            "restoreMs": 12.805099999997765,
+            "totalMs": 12.958899999997811
+          },
+          {
+            "decodeMs": 0.10480000000097789,
+            "restoreMs": 12.934199999988778,
+            "totalMs": 13.038999999989755
+          },
+          {
+            "decodeMs": 0.19980000000214204,
+            "restoreMs": 13.677900000009686,
+            "totalMs": 13.877700000011828
+          },
+          {
+            "decodeMs": 0.1157999999995809,
+            "restoreMs": 13.586700000014389,
+            "totalMs": 13.70250000001397
+          },
+          {
+            "decodeMs": 0.12649999998393469,
+            "restoreMs": 13.504799999995157,
+            "totalMs": 13.631299999979092
+          },
+          {
+            "decodeMs": 0.12469999998575076,
+            "restoreMs": 12.401700000016717,
+            "totalMs": 12.526400000002468
+          },
+          {
+            "decodeMs": 0.09609999999520369,
+            "restoreMs": 14.231700000003912,
+            "totalMs": 14.327799999999115
+          },
+          {
+            "decodeMs": 0.12079999997513369,
+            "restoreMs": 13.465100000001257,
+            "totalMs": 13.585899999976391
+          },
+          {
+            "decodeMs": 0.11719999997876585,
+            "restoreMs": 13.339800000016112,
+            "totalMs": 13.456999999994878
+          },
+          {
+            "decodeMs": 0.12189999999827705,
+            "restoreMs": 13.299800000007963,
+            "totalMs": 13.42170000000624
+          },
+          {
+            "decodeMs": 0.11869999999180436,
+            "restoreMs": 12.9940999999817,
+            "totalMs": 13.112799999973504
+          },
+          {
+            "decodeMs": 0.42989999998826534,
+            "restoreMs": 16.05470000000787,
+            "totalMs": 16.484599999996135
+          },
+          {
+            "decodeMs": 0.15959999998449348,
+            "restoreMs": 14.3353000000061,
+            "totalMs": 14.494899999990594
+          },
+          {
+            "decodeMs": 0.12029999998048879,
+            "restoreMs": 13.382299999997485,
+            "totalMs": 13.502599999977974
+          },
+          {
+            "decodeMs": 0.12719999998807907,
+            "restoreMs": 12.854099999996834,
+            "totalMs": 12.981299999984913
+          },
+          {
+            "decodeMs": 0.11209999999846332,
+            "restoreMs": 12.402199999982258,
+            "totalMs": 12.514299999980722
+          },
+          {
+            "decodeMs": 0.15630000000237487,
+            "restoreMs": 13.286099999997532,
+            "totalMs": 13.442399999999907
+          },
+          {
+            "decodeMs": 0.14050000000861473,
+            "restoreMs": 12.831899999990128,
+            "totalMs": 12.972399999998743
+          },
+          {
+            "decodeMs": 0.1222999999881722,
+            "restoreMs": 12.168000000005122,
+            "totalMs": 12.290299999993294
+          },
+          {
+            "decodeMs": 0.11830000000190921,
+            "restoreMs": 12.490699999994831,
+            "totalMs": 12.60899999999674
+          },
+          {
+            "decodeMs": 0.1309999999939464,
+            "restoreMs": 12.25800000000163,
+            "totalMs": 12.388999999995576
+          },
+          {
+            "decodeMs": 0.1640999999945052,
+            "restoreMs": 14.252500000002328,
+            "totalMs": 14.416599999996834
+          },
+          {
+            "decodeMs": 0.11780000000726432,
+            "restoreMs": 12.70910000000731,
+            "totalMs": 12.826900000014575
+          },
+          {
+            "decodeMs": 0.12890000001061708,
+            "restoreMs": 12.451700000005076,
+            "totalMs": 12.580600000015693
+          },
+          {
+            "decodeMs": 0.10439999998197891,
+            "restoreMs": 13.208899999997811,
+            "totalMs": 13.31329999997979
+          },
+          {
+            "decodeMs": 0.1197999999858439,
+            "restoreMs": 12.427100000000792,
+            "totalMs": 12.546899999986636
+          },
+          {
+            "decodeMs": 0.21220000000903383,
+            "restoreMs": 13.955300000001444,
+            "totalMs": 14.167500000010477
+          },
+          {
+            "decodeMs": 0.11190000001806766,
+            "restoreMs": 13.543600000004517,
+            "totalMs": 13.655500000022585
+          },
+          {
+            "decodeMs": 0.12889999998151325,
+            "restoreMs": 13.071900000009919,
+            "totalMs": 13.200799999991432
+          },
+          {
+            "decodeMs": 0.10089999999036081,
+            "restoreMs": 13.097200000018347,
+            "totalMs": 13.198100000008708
+          },
+          {
+            "decodeMs": 0.10899999999674037,
+            "restoreMs": 12.649700000009034,
+            "totalMs": 12.758700000005774
+          },
+          {
+            "decodeMs": 0.41519999998854473,
+            "restoreMs": 14.690399999992223,
+            "totalMs": 15.105599999980768
+          },
+          {
+            "decodeMs": 0.13260000001173466,
+            "restoreMs": 13.232399999978952,
+            "totalMs": 13.364999999990687
+          },
+          {
+            "decodeMs": 0.12880000000586733,
+            "restoreMs": 13.411799999972573,
+            "totalMs": 13.54059999997844
+          },
+          {
+            "decodeMs": 0.14879999999538995,
+            "restoreMs": 12.717399999994086,
+            "totalMs": 12.866199999989476
+          },
+          {
+            "decodeMs": 0.1015999999945052,
+            "restoreMs": 13.117599999997765,
+            "totalMs": 13.21919999999227
+          },
+          {
+            "decodeMs": 0.229300000006333,
+            "restoreMs": 12.94350000002305,
+            "totalMs": 13.172800000029383
+          },
+          {
+            "decodeMs": 0.10989999998128042,
+            "restoreMs": 13.163899999985006,
+            "totalMs": 13.273799999966286
+          },
+          {
+            "decodeMs": 0.13339999999152496,
+            "restoreMs": 12.640099999989616,
+            "totalMs": 12.77349999998114
+          },
+          {
+            "decodeMs": 0.12479999999050051,
+            "restoreMs": 12.442999999999302,
+            "totalMs": 12.567799999989802
+          },
+          {
+            "decodeMs": 0.10420000000158325,
+            "restoreMs": 14.025000000023283,
+            "totalMs": 14.129200000024866
+          },
+          {
+            "decodeMs": 0.2061999999859836,
+            "restoreMs": 13.919300000008661,
+            "totalMs": 14.125499999994645
+          },
+          {
+            "decodeMs": 0.12129999999888241,
+            "restoreMs": 12.747499999997672,
+            "totalMs": 12.868799999996554
+          }
+        ]
+      },
+      "historyAfterRestores": {
+        "entries": 101,
+        "availableSeconds": 10,
+        "allocatedBytes": 8388608,
+        "usedBytes": 450594,
+        "maxSeconds": 20,
+        "maxBytes": 8388608
+      }
+    }
+  ]
+}

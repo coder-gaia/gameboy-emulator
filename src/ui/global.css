@@ -1,12 +1,12 @@
 :root {
   font-family: 'DM Sans', sans-serif;
   color: #30322d;
-  background: #f4f2ec;
+  background: var(--color-paper);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  --color-paper: #f4f2ec;
+  --color-paper: #eee9df;
   --color-ink: #30322d;
   --color-muted: #626659;
   --color-accent: #5b477d;

@@ -3,6 +3,7 @@ import { DMG_CLOCK_HZ, DMG_FRAME_T_CYCLES } from '../core/model'
 import type { EmulatorMessage, EmulatorRequest, EmulatorSnapshot } from './worker-protocol'
 import type { MachineCheckpoint } from './worker-protocol'
 import { stateInteger, stateRecord } from '../core/state/validation'
+import { RewindHistory, REWIND_CAPTURE_HZ, REWIND_MAX_BYTES, REWIND_MAX_SECONDS } from './rewind'
 
 interface WorkerEndpoint {
   onmessage: ((event: MessageEvent<EmulatorRequest>) => void) | null
@@ -22,6 +23,63 @@ let audioPort: MessagePort | null = null
 let audioEpoch = 0
 let audioDriven = false
 let audioSampleRate: number | null = null
+let rewindHistory: RewindHistory | null = null
+let rewinding = false
+let rewindTimer: ReturnType<typeof setTimeout> | null = null
+let nextRewindCapture = 0
+
+function checkpoint(): MachineCheckpoint {
+  if (!device) throw new Error('O emulador ainda não está pronto.')
+  if (device.bus.serial.pendingOutputBytes)
+    serial = (serial + device.bus.serial.drainOutput().text).slice(-4096)
+  return { version: 1, core: device.snapshotState(), serial }
+}
+
+function scheduleRewindCapture(): void {
+  if (!device) return
+  const index = Math.floor((device.bus.tCycles / DMG_CLOCK_HZ) * REWIND_CAPTURE_HZ) + 1
+  nextRewindCapture = Math.floor((index * DMG_CLOCK_HZ) / REWIND_CAPTURE_HZ)
+}
+
+function captureRewind(force = false): void {
+  if (!rewindHistory || !device || rewinding) return
+  if (!force && device.bus.tCycles < nextRewindCapture) return
+  rewindHistory.record(checkpoint(), device.bus.tCycles)
+  scheduleRewindCapture()
+}
+
+function resetRewindHistory(): void {
+  rewindHistory?.clear()
+  captureRewind(true)
+}
+
+function stopRewindTimer(): void {
+  if (rewindTimer !== null) clearTimeout(rewindTimer)
+  rewindTimer = null
+}
+
+function restorePrevious(): void {
+  const saved = rewindHistory?.stepBack()
+  if (!device || !saved) return
+  device.restoreState(saved.core)
+  serial = saved.serial
+  device.releaseButtons()
+  device.bus.apu.discardSamples()
+  publishedFrame = -1
+}
+
+function rewindClock(): void {
+  rewindTimer = null
+  if (!rewinding || !device) return
+  try {
+    restorePrevious()
+    publishFrame()
+    if ((rewindHistory?.stats.availableSeconds ?? 0) > 0)
+      rewindTimer = setTimeout(rewindClock, 1000 / REWIND_CAPTURE_HZ)
+  } catch (cause) {
+    fail(cause)
+  }
+}
 
 function snapshot(includeBattery = false): EmulatorSnapshot {
   if (!device) throw new Error('O emulador ainda não está pronto.')
@@ -38,8 +96,20 @@ function snapshot(includeBattery = false): EmulatorSnapshot {
     playing,
     audioEpoch,
     romId: device.romId,
+    rewind: {
+      enabled: rewindHistory !== null,
+      active: rewinding,
+      ...(rewindHistory?.stats ?? {
+        entries: 0,
+        availableSeconds: 0,
+        allocatedBytes: 0,
+        usedBytes: 0,
+        maxSeconds: REWIND_MAX_SECONDS,
+        maxBytes: REWIND_MAX_BYTES,
+      }),
+    },
   }
-  if (includeBattery || publishedBatteryRevision !== state.batteryRevision) {
+  if (!rewinding && (includeBattery || publishedBatteryRevision !== state.batteryRevision)) {
     state.batteryRam = device.cartridge.exportBatteryRam()
     publishedBatteryRevision = state.batteryRevision
   }
@@ -71,6 +141,8 @@ function stopTimer(): void {
 function fail(cause: unknown): void {
   playing = false
   stopTimer()
+  stopRewindTimer()
+  rewinding = false
   endpoint.postMessage({
     type: 'error',
     error: cause instanceof Error ? cause.message : String(cause),
@@ -88,6 +160,7 @@ function clock(): void {
         DMG_FRAME_T_CYCLES * 4,
       )
       if (debt >= 1) debt -= device.runCycles(Math.floor(debt))
+      captureRewind()
       device.bus.apu.discardSamples()
       publishFrame()
     }
@@ -114,6 +187,7 @@ function onAudio(event: MessageEvent<{ type: string; frames: number; epoch: numb
     const apu = device.bus.apu
     const maximum = Math.ceil((request.frames * DMG_CLOCK_HZ) / apu.sampleRate) + 24
     device.runCycles(maximum)
+    captureRewind()
     const samples = apu.drainSamples()
     audioPort?.postMessage({ type: 'samples', samples, epoch: audioEpoch }, [samples.buffer])
     publishFrame()
@@ -124,13 +198,16 @@ function onAudio(event: MessageEvent<{ type: string; frames: number; epoch: numb
 
 endpoint.onmessage = ({ data: request }) => {
   try {
-    let checkpoint: MachineCheckpoint | undefined
+    let captured: MachineCheckpoint | undefined
     const command = request.command
     if (command.type === 'init') {
       stopTimer()
       playing = false
       audioDriven = false
       audioSampleRate = null
+      stopRewindTimer()
+      rewinding = false
+      rewindHistory = null
       audioPort?.close()
       audioPort = null
       device = new GameBoy(command.rom)
@@ -141,6 +218,10 @@ endpoint.onmessage = ({ data: request }) => {
       if (!device) throw new Error('O emulador ainda não está pronto.')
       switch (command.type) {
         case 'play':
+          if (rewinding) {
+            if (command.playing) throw new Error('Solte o rewind antes de iniciar a partida.')
+            break
+          }
           stopTimer()
           playing = command.playing
           device.bus.apu.discardSamples()
@@ -156,25 +237,34 @@ endpoint.onmessage = ({ data: request }) => {
           device.releaseButtons()
           break
         case 'step':
-          if (playing) throw new Error('Pause a reprodução antes de avançar instruções.')
+          if (playing || rewinding)
+            throw new Error('Pause a reprodução antes de avançar instruções.')
           if (!Number.isInteger(command.count) || command.count < 1 || command.count > 1000)
             throw new Error('A quantidade de instruções é inválida.')
           for (let index = 0; index < command.count; index += 1) {
             if (device.step() === 0) break
           }
           device.bus.apu.discardSamples()
+          captureRewind()
           break
         case 'import-battery':
-          if (playing) throw new Error('Pause a reprodução antes de recuperar o progresso.')
+          if (playing || rewinding)
+            throw new Error('Pause a reprodução antes de recuperar o progresso.')
           device.cartridge.importBatteryRam(command.bytes)
+          resetRewindHistory()
           break
         case 'audio-port':
+          if (rewinding) throw new Error('Solte o rewind antes de ativar o som.')
           stopTimer()
           audioPort?.close()
           audioPort = command.port
           audioEpoch = command.epoch
           audioSampleRate = command.sampleRate
-          device.bus.apu.setSampleRate(command.sampleRate)
+          {
+            const changedRate = device.bus.apu.sampleRate !== command.sampleRate
+            device.bus.apu.setSampleRate(command.sampleRate)
+            if (changedRate) resetRewindHistory()
+          }
           device.bus.apu.discardSamples()
           audioDriven = true
           audioPort.onmessage = onAudio
@@ -193,13 +283,12 @@ endpoint.onmessage = ({ data: request }) => {
         case 'inspect':
           break
         case 'capture-state':
-          if (playing) throw new Error('Pause a reprodução antes de salvar um estado.')
-          if (device.bus.serial.pendingOutputBytes)
-            serial = (serial + device.bus.serial.drainOutput().text).slice(-4096)
-          checkpoint = { version: 1, core: device.snapshotState(), serial }
+          if (playing || rewinding) throw new Error('Pause a reprodução antes de salvar um estado.')
+          captured = checkpoint()
           break
         case 'load-state': {
-          if (playing) throw new Error('Pause a reprodução antes de carregar um estado.')
+          if (playing || rewinding)
+            throw new Error('Pause a reprodução antes de carregar um estado.')
           const saved = stateRecord(command.checkpoint, 'Estado da sessão')
           stateInteger(saved.version, 1, 1, 'Versão da sessão')
           if (typeof saved.serial !== 'string' || saved.serial.length > 4096)
@@ -216,14 +305,48 @@ endpoint.onmessage = ({ data: request }) => {
           audioEpoch += 1
           publishedFrame = -1
           publishedBatteryRevision = -1
+          resetRewindHistory()
           break
         }
+        case 'rewind-config':
+          if (rewinding) throw new Error('Solte o rewind antes de alterar o histórico.')
+          if (command.enabled && !rewindHistory) {
+            rewindHistory = new RewindHistory()
+            captureRewind(true)
+          } else if (!command.enabled) rewindHistory = null
+          break
+        case 'rewind-start':
+          if (rewinding) break
+          if (!rewindHistory) throw new Error('Ative o rewind antes de voltar no tempo.')
+          captureRewind(true)
+          if (rewindHistory.stats.availableSeconds <= 0)
+            throw new Error('Jogue um pouco para guardar um histórico e voltar no tempo.')
+          stopTimer()
+          playing = false
+          device.releaseButtons()
+          device.bus.apu.discardSamples()
+          audioEpoch += 1
+          rewinding = true
+          restorePrevious()
+          if (rewindHistory.stats.availableSeconds > 0)
+            rewindTimer = setTimeout(rewindClock, 1000 / REWIND_CAPTURE_HZ)
+          break
+        case 'rewind-end':
+          stopRewindTimer()
+          rewinding = false
+          playing = false
+          device.releaseButtons()
+          device.bus.apu.discardSamples()
+          audioEpoch += 1
+          scheduleRewindCapture()
+          publishedBatteryRevision = -1
+          break
       }
     }
     if (request.id === 0) return
     const state = snapshot(request.command.type === 'init')
     endpoint.postMessage(
-      { type: 'reply', id: request.id, snapshot: state, checkpoint },
+      { type: 'reply', id: request.id, snapshot: state, checkpoint: captured },
       transfers(state),
     )
   } catch (cause) {

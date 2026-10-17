@@ -248,6 +248,11 @@
 .screenActive::after {
   display: none;
 }
+
+.rewindHost:empty {
+  display: none;
+}
+
 .transport {
   display: flex;
   align-items: center;
@@ -837,7 +842,7 @@
 .dialog > p:not(.tinyLabel) {
   font-size: 13px;
   line-height: 1.8;
-  color: #676c60;
+  color: var(--color-muted);
 }
 
 .closeButton {
@@ -900,10 +905,22 @@
   flex-shrink: 0;
 }
 
-.consoleSection:fullscreen .transport {
-  width: min(560px, 100%);
+.consoleSection:fullscreen .playbackFooter {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  width: min(820px, 100%);
   justify-content: center;
+}
+
+.consoleSection:fullscreen .transport {
+  display: contents;
   margin: 0;
+}
+
+.consoleSection:fullscreen .soundControls {
+  margin-left: 0;
 }
 
 @media (max-height: 520px) and (min-width: 600px) {
