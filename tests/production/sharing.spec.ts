@@ -31,7 +31,7 @@ test('oferece uma prévia estática válida para o crawler do LinkedIn', async (
   const canonical = headTags(head!, 'link').find(
     (attributes) => attributes.rel === 'canonical',
   )?.href
-  expect(canonical).toBe('https://gameboy-emulator-aox.pages.dev/')
+  expect(canonical).toBe('https://pocketlab.alexandregaia.me/')
   expect(metadata.get('og:url')).toBe(canonical)
   expect(metadata.get('og:type')).toBe('website')
   expect(metadata.get('og:title')).toBe(/<title>(.*?)<\/title>/i.exec(head!)?.[1])

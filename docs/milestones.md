@@ -1,6 +1,6 @@
 # Entregas e próximos marcos
 
-Um pacote npm, sem monorepo. Revisão **1.0.0-rc.3** publicada no [Pocket Lab](https://gameboy-emulator-aox.pages.dev/), ainda como candidata a lançamento.
+Um pacote npm, sem monorepo. Revisão **1.0.0-rc.3** publicada no [Pocket Lab](https://pocketlab.alexandregaia.me/), ainda como candidata a lançamento.
 
 | Marco | Entrega                                            | Estado    |
 | ----- | -------------------------------------------------- | --------- |

@@ -1,10 +1,12 @@
 # Deploy no Cloudflare Pages
 
-Produção: **[gameboy-emulator-aox.pages.dev](https://gameboy-emulator-aox.pages.dev/)**. O projeto já está conectado ao GitHub. O site é estático, sem Functions, backend, tokens locais ou upload de ROM.
+Produção: **[pocketlab.alexandregaia.me](https://pocketlab.alexandregaia.me/)**. O projeto já está conectado ao GitHub. O site é estático, sem Functions, backend, tokens locais ou upload de ROM.
+
+O projeto Pages se chama `gameboy-emulator-aox` e mantém o hostname técnico `gameboy-emulator-aox.pages.dev`. O endereço público é associado em **Custom domains** no mesmo projeto. No DNS externo, o CNAME `pocketlab` aponta para `gameboy-emulator-aox.pages.dev`, sem protocolo ou caminho.
 
 ## Acompanhar uma atualização
 
-1. Entre no [painel Cloudflare](https://dash.cloudflare.com/), abra **Workers & Pages** e selecione o projeto desse domínio.
+1. Entre no [painel Cloudflare](https://dash.cloudflare.com/), abra **Workers & Pages** e selecione o projeto `gameboy-emulator-aox`.
 2. Em **Deployments**, abra a publicação de **Production** mais recente. Confira a branch `main`, o commit e o resultado do build.
 3. Confira também o workflow **Quality** do mesmo commit no GitHub. A pipeline da Cloudflare é independente dos checks.
 4. Abra o site, recarregue a aba e confira a versão em **Sobre o projeto**. A candidata desta revisão é **1.0.0-rc.3**.
@@ -31,7 +33,7 @@ Se o painel exigir configuração explícita de Node, use `NODE_VERSION=22.13.0`
 Na raiz, execute `npm.cmd run check` e `npm.cmd run test:production`. A suíte de produção usa o build local com CSP. Para a URL já publicada:
 
 ```powershell
-$env:POCKETLAB_PRODUCTION_URL = 'https://gameboy-emulator-aox.pages.dev'
+$env:POCKETLAB_PRODUCTION_URL = 'https://pocketlab.alexandregaia.me'
 try {
   npm.cmd run test:production -- --workers=2
 } finally {
@@ -43,4 +45,4 @@ Confirme jogos, Worker e AudioWorklet sem 404 ou violações CSP. `public/_heade
 
 Áudio exige HTTPS ou localhost e uma ação do usuário. A hospedagem estática elimina o início de um processo de servidor na visita; download e inicialização no navegador continuam existindo.
 
-Saves pertencem à origem. Produção, previews e localhost possuem dados separados. Recarregar atualiza a página sem apagar saves; limpar dados do site os remove. Exporte estados antes de trocar de endereço.
+Saves pertencem à origem. Produção, previews e localhost possuem dados separados. Recarregar atualiza a página sem apagar saves; limpar dados do site os remove. Exporte estados antes de trocar de endereço. Os saves do hostname `pages.dev` não são transferidos automaticamente para o domínio próprio.

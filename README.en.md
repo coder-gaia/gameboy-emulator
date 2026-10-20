@@ -6,7 +6,7 @@
 
 A Game Boy DMG in your browser, written in TypeScript. Play, rewind a few seconds, and explore the hardware behind every pixel.
 
-**[Open Pocket Lab](https://gameboy-emulator-aox.pages.dev/)** · [Architecture](docs/architecture.md) · [Cartridges](docs/cartridges.md)
+**[Open Pocket Lab](https://pocketlab.alexandregaia.me/)** · [Architecture](docs/architecture.md) · [Cartridges](docs/cartridges.md)
 
 ![Pocket Lab console running the original garden](docs/media/pocket-lab-desktop.png)
 
